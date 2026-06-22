@@ -1102,3 +1102,13 @@ body {
 .mb-add.off { opacity: .45; cursor: default; filter: grayscale(.4); }
 /* la card del menú en la rejilla, con un guiño de "personalizable" */
 .prod-card.is-menu { outline: 1px dashed rgba(255,191,16,.4); outline-offset: -4px; }
+
+/* ── Cards del TPV con el "fondo de cromo" de la Carta: panel oscuro + acento por tipo ── */
+.prod-card.sm { background: #0e0e11; border-color: color-mix(in srgb, var(--type, #ffbf10) 30%, var(--line)); }
+.prod-card.sm .pc-body { background: #0e0e11; position: relative; }
+/* velo superior sutil sobre el panel (como .cc-panel de la Carta) */
+.prod-card.sm .pc-body::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--type, #ffbf10) 9%, transparent), transparent 60%); pointer-events: none; }
+.prod-card.sm .pc-name, .prod-card.sm .pc-price { position: relative; }
+.prod-card.sm .pc-price { color: var(--type, var(--gold)); }
+.prod-card.sm:hover { border-color: color-mix(in srgb, var(--type, #ffbf10) 62%, transparent); transform: translateY(-3px); box-shadow: 0 16px 32px -14px rgba(0,0,0,.72); }
+.prod-card.sm.active { border-color: var(--type, var(--gold)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--type, #ffbf10) 45%, transparent), 0 14px 30px -14px rgba(0,0,0,.7); }

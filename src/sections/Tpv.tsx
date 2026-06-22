@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { SectionHeader, Badge } from '../components/ui'
 import { eur } from '../lib/data'
-import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, type Producto } from '../lib/products'
+import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
@@ -179,7 +179,7 @@ export default function Tpv() {
             {prods.map((p, i) => {
               const q = qtyOf(p.id)
               return (
-                <button key={p.id} className={'prod-card sm' + (q ? ' active' : '') + (isMenu(p) ? ' is-menu' : '')} onClick={() => choose(p)}>
+                <button key={p.id} className={'prod-card sm' + (q ? ' active' : '') + (isMenu(p) ? ' is-menu' : '')} style={{ ['--type' as string]: colorOf(p.cat) }} onClick={() => choose(p)}>
                   {i < 9 && <span className="pc-key">{i + 1}</span>}
                   <img className="pc-img" src={p.img} alt={p.name} loading="lazy" />
                   <span className="pc-body">

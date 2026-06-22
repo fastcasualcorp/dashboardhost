@@ -12,6 +12,17 @@ export type Producto = {
 
 export const CAT_ORDER = ['Burgers', 'Menús', 'Sides', 'Bebidas', 'Postres']
 
+/* Color de acento por categoría (mismo "tipo" que los cromos de la Carta).
+   Fuente única para que TPV, Carta, etc. tiñan igual cada producto. */
+export const CAT_COLOR: Record<string, string> = {
+  Burgers: '#ff6b3d',
+  Menús: '#ffb300',
+  Sides: '#f5a524',
+  Bebidas: '#3a86ff',
+  Postres: '#c46bff',
+}
+export const colorOf = (cat: string) => CAT_COLOR[cat] ?? '#ffbf10'
+
 export const PRODUCTOS: Producto[] = [
   { id: 'classic', name: 'REBELL Classic', price: 11.0, cat: 'Burgers', img: '/img/products/classic.jpg', iva: 10, mods: ['Extra queso', 'Bacon'] },
   { id: 'doble', name: 'Doble Bacon', price: 13.0, cat: 'Burgers', img: '/img/products/doble.jpg', iva: 10, mods: ['Doble carne', 'Extra bacon'] },
