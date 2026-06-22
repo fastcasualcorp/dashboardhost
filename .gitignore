@@ -28,3 +28,6 @@ dist-ssr
 *.sln
 *.sw?
 .playwright-mcp/
+
+# Cloudflare deploy token (NUNCA subir)
+.cf-token
