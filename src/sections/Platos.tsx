@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, animate, useMotionValue, useTransform } from 'motion/react'
 import { SectionHeader, Badge } from '../components/ui'
 import { eur } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, type Producto } from '../lib/products'
@@ -32,6 +32,67 @@ const Pencil = () => (
   </svg>
 )
 
+type Stats = { ventas: number; margen: number; rating: string }
+
+/* Una carta del coverflow. El z-index se deriva de la posición REAL (motion value),
+   no del índice — así nunca hay un salto de z a mitad de transición (era el solape feo). */
+function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit }: {
+  p: Producto; off: number; focus: boolean; spread: number; num: string
+  ti: TypeInfo; st: Stats; onSelect: () => void; onEdit: () => void
+}) {
+  const x = useMotionValue(off * spread)
+  const zIndex = useTransform(x, (v) => 200 - Math.round(Math.abs(v) / 4))
+  useEffect(() => {
+    const c = animate(x, off * spread, { type: 'spring', stiffness: 300, damping: 34, mass: 0.7 })
+    return () => c.stop()
+  }, [off, spread, x])
+
+  return (
+    <motion.div
+      className={'carta-card' + (focus ? ' focus' : '')}
+      style={{ x, zIndex, ['--type' as string]: ti.color }}
+      animate={{
+        scale: focus ? 1 : 0.82,
+        rotateY: Math.max(-2, Math.min(2, off)) * -14,
+        opacity: focus ? 1 : 0.6,
+        filter: focus ? 'brightness(1)' : 'brightness(0.6)',
+      }}
+      transition={{ type: 'spring', stiffness: 300, damping: 34, mass: 0.7 }}
+      onClick={onSelect}
+      role="button"
+      aria-label={p.name}
+    >
+      <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
+
+      {focus && (
+        <button className="cc-edit" onClick={(e) => { e.stopPropagation(); onEdit() }} aria-label="Editar carta">
+          <Pencil />
+        </button>
+      )}
+      <span className="cc-id tnum">#{num}</span>
+
+      {focus && (
+        <span className="cc-balance">
+          <b className="cc-bal-num tnum">{st.ventas}</b>
+          <small className="cc-bal-lab">Ventas / mes</small>
+        </span>
+      )}
+
+      <span className="cc-panel">
+        <span className="cc-tab">
+          <b className="cc-name">{p.name}</b>
+          <span className="cc-sub">{ti.emoji} {ti.label}{p.mods[0] ? ' · ' + p.mods[0] : ''}</span>
+          <span className="cc-notch" aria-hidden="true" />
+        </span>
+        <span className="cc-pfoot">
+          <span className="cc-pf"><b className="cc-price tnum">{eur(p.price)} €</b><i>Precio</i></span>
+          {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
+        </span>
+      </span>
+    </motion.div>
+  )
+}
+
 export default function Platos() {
   const [prods, setProds] = useState<Producto[]>(PRODUCTOS)
   const [cat, setCat] = useState('Todos')
@@ -60,13 +121,13 @@ export default function Platos() {
   function go(dir: number) {
     setSel((s) => {
       const n = Math.max(0, Math.min(list.length - 1, s + dir))
-      if (n !== s) play('nav', 0.4)
+      if (n !== s) play('tap', 0.55, 1.12) // tick de selector
       return n
     })
   }
   function select(i: number) {
     if (i === sel) return
-    play('nav', 0.4)
+    play('tap', 0.55, 1.12) // tick de selector
     setSel(i)
   }
   function changeCat(c: string) {
@@ -118,56 +179,20 @@ export default function Platos() {
         <div className="carta-track">
           {list.map((p, i) => {
             const off = i - sel
-            const abs = Math.abs(off)
-            const ti = typeOf(p.cat)
-            if (abs > 2) return null
-            const focus = off === 0
-            const st = statsOf(p)
+            if (Math.abs(off) > 2) return null
             return (
-              <motion.div
+              <CartaCard
                 key={p.id}
-                className={'carta-card' + (focus ? ' focus' : '')}
-                style={{ ['--type' as string]: ti.color, zIndex: 20 - abs }}
-                animate={{
-                  x: off * SPREAD,
-                  scale: focus ? 1 : 0.8,
-                  rotateY: Math.max(-2, Math.min(2, off)) * -15,
-                  opacity: focus ? 1 : 0.6,
-                  filter: focus ? 'brightness(1)' : 'brightness(0.6)',
-                }}
-                transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.7 }}
-                onClick={() => select(i)}
-                role="button"
-                aria-label={p.name}
-              >
-                <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
-
-                {focus && (
-                  <button className="cc-edit" onClick={(e) => { e.stopPropagation(); openEdit() }} aria-label="Editar carta">
-                    <Pencil />
-                  </button>
-                )}
-                <span className="cc-id tnum">#{String(prods.findIndex((x) => x.id === p.id) + 1).padStart(3, '0')}</span>
-
-                {focus && (
-                  <span className="cc-balance">
-                    <b className="cc-bal-num tnum">{st.ventas}</b>
-                    <small className="cc-bal-lab">Ventas / mes</small>
-                  </span>
-                )}
-
-                <span className="cc-panel">
-                  <span className="cc-tab">
-                    <b className="cc-name">{p.name}</b>
-                    <span className="cc-sub">{ti.emoji} {ti.label}{p.mods[0] ? ' · ' + p.mods[0] : ''}</span>
-                    <span className="cc-notch" aria-hidden="true" />
-                  </span>
-                  <span className="cc-pfoot">
-                    <span className="cc-pf"><b className="cc-price tnum">{eur(p.price)} €</b><i>Precio</i></span>
-                    {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
-                  </span>
-                </span>
-              </motion.div>
+                p={p}
+                off={off}
+                focus={off === 0}
+                spread={SPREAD}
+                num={String(prods.findIndex((x) => x.id === p.id) + 1).padStart(3, '0')}
+                ti={typeOf(p.cat)}
+                st={statsOf(p)}
+                onSelect={() => select(i)}
+                onEdit={openEdit}
+              />
             )
           })}
         </div>
