@@ -31,3 +31,6 @@ dist-ssr
 
 # Cloudflare deploy token (NUNCA subir)
 .cf-token
+
+# avatares fuente (working dir local)
+.avatar-test/

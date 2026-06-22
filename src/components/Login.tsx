@@ -10,10 +10,10 @@ import { play } from '../lib/sound'
 export type Profile = { id: string; name: string; sub: string; accent: string; color: string; avatar: string }
 
 export const PROFILES: Profile[] = [
-  { id: 'bertamirans', name: 'Bertamiráns', sub: 'REBELL', accent: 'gold', color: '#ffbf10', avatar: '/img/avatars/tiger.jpg' },
-  { id: 'madrid', name: 'Madrid Centro', sub: 'REBELL', accent: 'azul', color: '#3a86ff', avatar: '/img/avatars/wolf.jpg' },
-  { id: 'barcelona', name: 'Barcelona', sub: 'REBELL', accent: 'rosa', color: '#e0457a', avatar: '/img/avatars/fox.jpg' },
-  { id: 'central', name: 'Administración', sub: 'Central', accent: 'violeta', color: '#8b6df0', avatar: '/img/avatars/panther.jpg' },
+  { id: 'bertamirans', name: 'Bertamiráns', sub: 'REBELL', accent: 'gold', color: '#ffbf10', avatar: '/img/avatars/lion.png' },
+  { id: 'madrid', name: 'Madrid Centro', sub: 'REBELL', accent: 'azul', color: '#3a86ff', avatar: '/img/avatars/wolf.png' },
+  { id: 'barcelona', name: 'Barcelona', sub: 'REBELL', accent: 'rosa', color: '#e0457a', avatar: '/img/avatars/fox.png' },
+  { id: 'central', name: 'Administración', sub: 'Central', accent: 'violeta', color: '#8b6df0', avatar: '/img/avatars/panther.png' },
 ]
 
 export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
