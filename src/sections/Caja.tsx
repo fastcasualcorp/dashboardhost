@@ -4,7 +4,7 @@ import { useGSAP } from '@gsap/react'
 import SalesChart from '../components/SalesChart'
 import { play } from '../lib/sound'
 import {
-  CAJA, subM, subT, totalDia, avgT, OBJ,
+  CAJA, subM, subT, totalDia, avgT, OBJ, META_DIA,
   FRANJAS_M, FRANJAS_T, eur, reduceMotion,
 } from '../lib/data'
 
@@ -79,11 +79,18 @@ export default function Caja() {
   const balanceRef = useRef<HTMLDivElement>(null)
   const confettiRef = useRef<HTMLCanvasElement>(null)
   const cerradoRef = useRef(false)
+  const ringRef = useRef<SVGCircleElement>(null)
+  const objRef = useRef<HTMLElement>(null)
 
   const [descuadre, setDescuadre] = useState(false)
   const [cerrado, setCerrado] = useState(false)
   const [celebrate, setCelebrate] = useState(false)
   const [shine, setShine] = useState(false)
+
+  // Progreso hacia la META del día (el "anillo" del medidor).
+  const progress = Math.min(1, totalDia / META_DIA)
+  const pct = Math.round((totalDia / META_DIA) * 100)
+  const beat = totalDia >= META_DIA
 
   useEffect(() => {
     cerradoRef.current = cerrado
@@ -147,6 +154,19 @@ export default function Caja() {
       // Solo el total cuenta y las barras se rellenan, sobre elementos ya visibles → sensación de "vivo", no de "tarde".
       rollOdo()
       fillBars()
+      // Anillo de progreso al objetivo, sincronizado con el count-up del total.
+      const ring = ringRef.current
+      if (ring) {
+        const C = 2 * Math.PI * 106
+        gsap.set(ring, { strokeDasharray: C })
+        if (reduceMotion()) {
+          gsap.set(ring, { strokeDashoffset: C * (1 - progress) })
+        } else {
+          gsap.set(ring, { strokeDashoffset: C })
+          gsap.to(ring, { strokeDashoffset: C * (1 - progress), duration: 1.15, ease: 'power3.out', delay: 0.15 })
+        }
+      }
+      countTo(objRef.current, pct, (n) => String(Math.round(n)), 1.0, 0.15)
       countTo(ordersRef.current, CAJA.pedidos, (n) => String(Math.round(n)), 0.7, 0.05, () => kpiReact(ordersRef.current))
       countTo(avgRef.current, avgT, eur, 0.7, 0.07, () => kpiReact(avgRef.current?.parentElement as HTMLElement))
       gsap.delayedCall(0.9, reshine)
@@ -335,31 +355,54 @@ export default function Caja() {
       </div>
 
       <div className="wrap">
-        <section className={'hero' + (descuadre ? ' warn' : '') + (celebrate ? ' celebrate' : '')} id="hero" ref={heroRef}>
+        <section className={'hero' + (descuadre ? ' warn' : '') + (celebrate ? ' celebrate' : '') + (beat ? ' beat' : '')} id="hero" ref={heroRef}>
           <div className={'seal' + (descuadre ? ' warn' : '')} ref={sealRef}>
             {descuadre ? warnIcon : okIcon}
           </div>
-          <div className="hlabel">Total del día</div>
-          <div className="odo">
-            <span className="odonum" ref={odoRef}>
-              0,00
-            </span>
-            <span className="cur">€</span>
+
+          <div className="hero-gauge">
+            <svg className="gauge" viewBox="0 0 240 240" aria-hidden="true">
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0" style={{ stopColor: 'var(--gold-deep)' }} />
+                  <stop offset="1" style={{ stopColor: 'var(--gold-soft)' }} />
+                </linearGradient>
+              </defs>
+              <circle className="gauge-track" cx="120" cy="120" r="106" />
+              <circle className="gauge-fill" ref={ringRef} cx="120" cy="120" r="106" />
+            </svg>
+            <div className="gauge-center">
+              <span className="g-label">Total del día</span>
+              <div className="odo">
+                <span className="odonum" ref={odoRef}>0,00</span>
+                <span className="cur">€</span>
+              </div>
+            </div>
           </div>
-          <div className="hrow">
-            <span className="delta">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 17 17 7M9 7h8v8" />
-              </svg>
-              9,0% <span className="sub">vs ayer</span>
-            </span>
-          </div>
-          <div className={'balance' + (descuadre ? ' warn' : '')} ref={balanceRef}>
-            <span className="ic">{descuadre ? warnIcon : okIcon}</span>
-            <span className="txt">
-              {descuadre ? 'Descuadre de −12,40 €' : 'Caja cuadrada'}
-              <small>{descuadre ? 'El efectivo declarado no coincide con los pedidos cobrados' : 'Efectivo declarado coincide con los pedidos cobrados'}</small>
-            </span>
+
+          <div className="hero-side">
+            <div className="hs-row">
+              <span className="hs-k">Vs ayer</span>
+              <span className="hs-v up">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                9,0%
+              </span>
+            </div>
+            <div className="hs-row">
+              <span className="hs-k">Objetivo del día</span>
+              <span className="hs-v"><b ref={objRef} className="tnum">0</b>%{beat ? ' ✓' : ''}</span>
+            </div>
+            <div className="hs-row">
+              <span className="hs-k">Racha</span>
+              <span className="hs-v">5 días</span>
+            </div>
+            <div className={'balance' + (descuadre ? ' warn' : '')} ref={balanceRef}>
+              <span className="ic">{descuadre ? warnIcon : okIcon}</span>
+              <span className="txt">
+                {descuadre ? 'Descuadre de −12,40 €' : 'Caja cuadrada'}
+                <small>{descuadre ? 'El efectivo declarado no coincide con los pedidos cobrados' : 'Efectivo declarado coincide con los pedidos cobrados'}</small>
+              </span>
+            </div>
           </div>
         </section>
 

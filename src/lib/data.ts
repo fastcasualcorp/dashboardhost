@@ -10,6 +10,7 @@ export const subT = CAJA.tarde.efectivo + CAJA.tarde.tarjeta + CAJA.tarde.domici
 export const totalDia = subM + subT
 export const avgT = totalDia / CAJA.pedidos
 export const OBJ = 1492 // media objetivo (€) — referencia del "peso emocional"
+export const META_DIA = 2000 // meta de facturación del día (€) — la que mide el anillo
 
 /* desgloses por franjas (para las shift-cards) */
 export const FRANJAS_M: [string, number, number][] = [
