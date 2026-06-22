@@ -111,7 +111,8 @@ export default function Tpv() {
       if (k < 1) raf.current = requestAnimationFrame(tick)
     }
     raf.current = requestAnimationFrame(tick)
-    play('success', 0.5)
+    // ka-ching escalado: cuanto mayor el ticket, más grave suena (más "peso").
+    play('success', 0.5, total > 50 ? 0.84 : total > 25 ? 0.92 : 1)
     setVentasHoy(next)
     setPulse((p) => p + 1)
     setPaid(true)
