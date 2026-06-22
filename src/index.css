@@ -843,24 +843,35 @@ body {
 .carta-section { display: flex; flex-direction: column; }
 .carta-stage { position: relative; height: 524px; perspective: 2000px; margin-top: 8px; overflow: hidden; }
 .carta-track { position: absolute; inset: 0; display: grid; place-items: center; transform-style: preserve-3d; }
-.carta-card { grid-area: 1 / 1; width: clamp(320px, 40vw, 560px); height: clamp(440px, 62vh, 582px); border-radius: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: #101014; cursor: pointer; padding: 0; transform-style: preserve-3d; box-shadow: 0 32px 64px -22px rgba(0,0,0,.78); -webkit-tap-highlight-color: transparent; will-change: transform, opacity; }
+.carta-card { grid-area: 1 / 1; width: clamp(330px, 28vw, 430px); height: clamp(480px, 64vh, 588px); border-radius: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: #101014; cursor: pointer; padding: 0; transform-style: preserve-3d; box-shadow: 0 32px 64px -22px rgba(0,0,0,.78); -webkit-tap-highlight-color: transparent; will-change: transform, opacity; }
 @media (min-width: 900px) {
   .carta-section { height: calc(100dvh - 116px); overflow: hidden; }
   .carta-stage { flex: 1; height: auto; min-height: 0; }
 }
 .carta-card.focus { cursor: default; }
 .carta-card.focus { border-color: color-mix(in srgb, var(--type) 55%, transparent); box-shadow: 0 44px 84px -26px rgba(0,0,0,.85); cursor: default; }
-.cc-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-.carta-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,8,10,.05) 30%, rgba(8,8,10,.55) 60%, rgba(8,8,10,.96) 100%); pointer-events: none; }
-.cc-aura { position: absolute; inset: 0; background: radial-gradient(72% 46% at 50% 2%, color-mix(in srgb, var(--type) 48%, transparent), transparent 62%); mix-blend-mode: screen; pointer-events: none; z-index: 1; }
-.cc-num { position: absolute; top: 13px; right: 16px; z-index: 3; font-size: 14px; font-weight: 800; color: rgba(255,255,255,.62); letter-spacing: -.02em; }
-.cc-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 3; text-align: left; }
-.cc-types { display: flex; gap: 6px; }
-.cc-type { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 100px; white-space: nowrap; }
-.cc-type.main { background: color-mix(in srgb, var(--type) 86%, #000); color: #fff; }
-.cc-type.alt { background: rgba(255,255,255,.16); color: #fff; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-.cc-name { font-family: var(--font-display); font-weight: 600; font-size: 26px; line-height: 1.05; color: #fff; letter-spacing: -.01em; }
-.cc-price { font-family: var(--font-num); font-weight: 700; font-size: 22px; color: color-mix(in srgb, var(--type) 62%, #fff); text-shadow: 0 0 16px color-mix(in srgb, var(--type) 55%, transparent); }
+.cc-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 34%; display: block; }
+/* solo un velo arriba para que se lea el número; la foto queda visible */
+.carta-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,8,10,.5), transparent 24%); pointer-events: none; z-index: 1; }
+.cc-id { position: absolute; top: 19px; left: 64px; z-index: 4; font-family: var(--font-num); font-size: 13px; font-weight: 800; color: rgba(255,255,255,.6); letter-spacing: -.02em; }
+
+/* número grande arriba-derecha sobre la foto (estilo tarjeta bancaria $80.600) */
+.cc-balance { position: absolute; top: 16px; right: 20px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.cc-bal-num { font-family: var(--font-num); font-weight: 700; font-size: 46px; line-height: .9; color: #fff; letter-spacing: -.03em; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
+.cc-bal-lab { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.85); margin-top: 4px; }
+
+/* panel oscuro inferior con pestaña de muesca curva (referencia banking card) */
+.cc-panel { --pc: #0e0e11; position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: var(--pc); border-radius: 0 24px 27px 27px; z-index: 3; box-shadow: 0 -12px 30px -16px rgba(0,0,0,.6); }
+.cc-tab { position: absolute; left: 0; bottom: calc(100% - 1px); max-width: 74%; padding: 13px 22px 11px; background: var(--pc); border-radius: 22px 22px 0 0; display: flex; flex-direction: column; gap: 3px; }
+.cc-notch { position: absolute; left: 100%; bottom: 0; width: 24px; height: 24px; background: var(--pc); -webkit-mask: radial-gradient(circle at top right, transparent 0 24px, #000 24px); mask: radial-gradient(circle at top right, transparent 0 24px, #000 24px); }
+.cc-name { font-family: var(--font-display); font-weight: 600; font-size: 22px; line-height: 1.05; color: #fff; letter-spacing: -.01em; }
+.cc-sub { font-size: 12.5px; font-weight: 600; color: color-mix(in srgb, var(--type) 58%, #fff); }
+.cc-pfoot { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 22px 19px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.cc-pf { display: flex; flex-direction: column; gap: 3px; }
+.cc-pf.right { text-align: right; }
+.cc-pf b { font-family: var(--font-num); font-weight: 800; font-size: 21px; color: #fff; line-height: 1; }
+.cc-pf .cc-price { color: color-mix(in srgb, var(--type) 66%, #fff); }
+.cc-pf i { font-style: normal; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.5); }
 
 /* botón editar dentro de la carta (arriba-izquierda) */
 .cc-edit { position: absolute; top: 14px; left: 14px; z-index: 4; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(10,10,12,.5); border: 1px solid rgba(255,255,255,.22); color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: transform .14s var(--ease-spring), background .2s; }
@@ -868,16 +879,7 @@ body {
 .cc-edit:active { transform: scale(.9); }
 .cc-edit svg { width: 17px; height: 17px; }
 
-/* stats superpuestos estilo tarjeta premium (número grande + glow de acento) */
-.cc-stats { position: absolute; left: 16px; right: 16px; bottom: 134px; z-index: 3; border-radius: 18px; overflow: hidden; background: rgba(8,8,10,.78); border: 1px solid color-mix(in srgb, var(--type) 30%, transparent); -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px); box-shadow: 0 14px 30px -12px rgba(0,0,0,.6); }
-.cs-grad { position: relative; padding: 15px 17px 22px; background: linear-gradient(135deg, color-mix(in srgb, var(--type) 96%, #000), var(--type) 56%, color-mix(in srgb, var(--type) 70%, #000)); border-radius: 18px 18px 50px 18px / 18px 18px 34px 18px; }
-.cs-grad::after { content: ''; position: absolute; inset: 0; background: linear-gradient(116deg, rgba(255,255,255,.5), rgba(255,255,255,0) 46%); pointer-events: none; }
-.cs-num { position: relative; z-index: 1; display: block; font-family: var(--font-num); font-weight: 700; font-size: 52px; line-height: 1; letter-spacing: -.02em; color: #fff; text-shadow: 0 1px 12px rgba(0,0,0,.28); }
-.cs-lab { position: relative; z-index: 1; display: block; font-size: 10px; font-weight: 700; letter-spacing: .09em; color: rgba(255,255,255,.88); margin-top: 6px; }
-.cs-meta { display: flex; gap: 22px; padding: 9px 17px 12px; }
-.cs-row { display: flex; align-items: center; gap: 7px; }
-.cs-row i { font-style: normal; font-size: 10.5px; color: rgba(255,255,255,.5); }
-.cs-row b { font-family: var(--font-num); font-weight: 700; font-size: 14px; color: #fff; }
+/* (panel de stats antiguo retirado — ahora va en .cc-panel con muesca curva) */
 
 /* modal de edición de carta */
 .carta-edit-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.62); z-index: 120; display: flex; align-items: center; justify-content: center; padding: 24px; animation: none !important; }

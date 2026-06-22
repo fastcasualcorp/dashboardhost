@@ -140,36 +140,32 @@ export default function Platos() {
                 role="button"
                 aria-label={p.name}
               >
-                <span className="cc-aura" />
                 <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
-                <span className="cc-num tnum">#{String(prods.findIndex((x) => x.id === p.id) + 1).padStart(3, '0')}</span>
 
                 {focus && (
                   <button className="cc-edit" onClick={(e) => { e.stopPropagation(); openEdit() }} aria-label="Editar carta">
                     <Pencil />
                   </button>
                 )}
+                <span className="cc-id tnum">#{String(prods.findIndex((x) => x.id === p.id) + 1).padStart(3, '0')}</span>
 
                 {focus && (
-                  <span className="cc-stats">
-                    <span className="cs-grad">
-                      <b className="cs-num tnum">{st.ventas}</b>
-                      <small className="cs-lab">VENTAS / MES</small>
-                    </span>
-                    <span className="cs-meta">
-                      <span className="cs-row"><i>Margen</i><b className="tnum">{st.margen}%</b></span>
-                      <span className="cs-row"><i>Valoración</i><b className="tnum">{st.rating}</b></span>
-                    </span>
+                  <span className="cc-balance">
+                    <b className="cc-bal-num tnum">{st.ventas}</b>
+                    <small className="cc-bal-lab">Ventas / mes</small>
                   </span>
                 )}
 
-                <span className="cc-foot">
-                  <span className="cc-types">
-                    <span className="cc-type main">{ti.emoji} {ti.label}</span>
-                    {p.mods[0] && <span className="cc-type alt">{p.mods[0]}</span>}
+                <span className="cc-panel">
+                  <span className="cc-tab">
+                    <b className="cc-name">{p.name}</b>
+                    <span className="cc-sub">{ti.emoji} {ti.label}{p.mods[0] ? ' · ' + p.mods[0] : ''}</span>
+                    <span className="cc-notch" aria-hidden="true" />
                   </span>
-                  <span className="cc-name">{p.name}</span>
-                  <span className="cc-price tnum">{eur(p.price)} €</span>
+                  <span className="cc-pfoot">
+                    <span className="cc-pf"><b className="cc-price tnum">{eur(p.price)} €</b><i>Precio</i></span>
+                    {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
+                  </span>
                 </span>
               </motion.div>
             )
