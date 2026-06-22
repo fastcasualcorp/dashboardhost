@@ -3,7 +3,7 @@ import { AnimatePresence } from 'motion/react'
 import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
 import { play, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
-import DesignMode from './DesignMode'
+import EditLayer from './EditLayer'
 import { beastById } from '../lib/beasts'
 import { renderSection } from '../sections/registry'
 
@@ -233,7 +233,7 @@ export default function Shell() {
         )}
       </AnimatePresence>
 
-      <DesignMode />
+      <EditLayer />
     </div>
   )
 }

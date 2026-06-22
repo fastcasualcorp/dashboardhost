@@ -360,7 +360,7 @@ export default function Caja() {
             {descuadre ? warnIcon : okIcon}
           </div>
 
-          <div className="hero-gauge">
+          <div className="hero-gauge" data-ds="caja.gauge">
             <svg className="gauge" viewBox="0 0 240 240" aria-hidden="true">
               <defs>
                 <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
@@ -373,7 +373,7 @@ export default function Caja() {
             </svg>
             <div className="gauge-center">
               <span className="g-label">Total del día</span>
-              <div className="odo">
+              <div className="odo" data-ds="caja.heronum">
                 <span className="odonum" ref={odoRef}>0,00</span>
                 <span className="cur">€</span>
               </div>

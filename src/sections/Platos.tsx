@@ -65,6 +65,7 @@ function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit, editi
 
   return (
     <motion.div
+      data-ds="carta.card"
       className={'carta-card' + (focus ? ' focus' : '') + (flipped ? ' flipped' : '')}
       style={{ x, zIndex, ['--type' as string]: ti.color }}
       animate={{
@@ -94,19 +95,19 @@ function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit, editi
 
         {focus && (
           <span className="cc-balance">
-            <b className="cc-bal-num tnum">{st.ventas}</b>
+            <b className="cc-bal-num tnum" data-ds="carta.balnum">{st.ventas}</b>
             <small className="cc-bal-lab">Ventas / mes</small>
           </span>
         )}
 
         <span className="cc-panel">
           <span className="cc-tab">
-            <b className="cc-name">{p.name}</b>
+            <b className="cc-name" data-ds="carta.name">{p.name}</b>
             <span className="cc-sub">{ti.emoji} {ti.label}{p.mods[0] ? ' · ' + p.mods[0] : ''}</span>
             <span className="cc-notch" aria-hidden="true" />
           </span>
           <span className="cc-pfoot">
-            <span className="cc-pf"><b className="cc-price tnum">{eur(p.price)} €</b><i>Precio</i></span>
+            <span className="cc-pf"><b className="cc-price tnum" data-ds="carta.price">{eur(p.price)} €</b><i>Precio</i></span>
             {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
           </span>
         </span>
