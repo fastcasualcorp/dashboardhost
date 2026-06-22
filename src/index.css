@@ -1155,3 +1155,35 @@ body {
 @keyframes pf-wink { 0%, 100% { transform: scaleY(1); } 38%, 62% { transform: scaleY(.1); } }
 .login-hint { font-size: 13px; color: var(--faint); font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .pf.sel .eye { animation: none; } }
+
+/* ════════════════════════════════════════════════════════════════
+   KDS — tablero de cocina en vivo
+   ════════════════════════════════════════════════════════════════ */
+.kds-board { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 4px; }
+@media (min-width: 760px) { .kds-board { grid-template-columns: repeat(3, 1fr); align-items: start; } }
+.kds-col { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; min-height: 140px; }
+.kds-col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 2px; }
+.kch-lab { font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+.kch-n { min-width: 22px; height: 22px; padding: 0 7px; display: grid; place-items: center; border-radius: 100px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12px; font-weight: 700; font-family: var(--font-num); color: var(--faint); }
+.kds-col-body { display: flex; flex-direction: column; gap: 11px; }
+.kds-empty { text-align: center; color: var(--faint); font-size: 22px; padding: 18px 0; opacity: .4; }
+
+.kds-ticket {
+  position: relative; background: #0e0e11; border: 1px solid var(--line); border-left: 3px solid var(--src, var(--gold));
+  border-radius: 14px; padding: 13px 14px; overflow: hidden;
+}
+.kds-ticket.warn { border-color: rgba(245,179,65,.4); }
+.kds-ticket.late { border-color: rgba(245,90,90,.5); box-shadow: 0 0 0 1px rgba(245,90,90,.18); }
+.kt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.kt-n { font-family: var(--font-num); font-weight: 800; font-size: 15px; color: var(--ink); }
+.kt-src { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--src, var(--gold)); background: color-mix(in srgb, var(--src, var(--gold)) 14%, transparent); border: 1px solid color-mix(in srgb, var(--src, var(--gold)) 30%, transparent); padding: 2px 8px; border-radius: 100px; }
+.kt-time { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kds-ticket.warn .kt-time { color: var(--warn); }
+.kds-ticket.late .kt-time { color: #f5675a; }
+.kt-items { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.kt-item { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; }
+.kt-q { font-family: var(--font-num); font-weight: 800; color: var(--src, var(--gold)); min-width: 24px; }
+.kt-name { font-weight: 600; color: var(--ink); }
+.kt-btn { width: 100%; padding: 9px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink); border-radius: 10px; font-family: var(--font); font-weight: 650; font-size: 13px; cursor: pointer; transition: transform .14s var(--ease-spring), background .2s, border-color .2s; }
+.kt-btn:hover { border-color: var(--src, var(--gold)); background: color-mix(in srgb, var(--src, var(--gold)) 10%, var(--surface-2)); }
+.kt-btn:active { transform: scale(.97); }
