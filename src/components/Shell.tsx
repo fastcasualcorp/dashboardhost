@@ -4,21 +4,8 @@ import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
 import { play, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import DesignMode from './DesignMode'
+import { beastById } from '../lib/beasts'
 import { renderSection } from '../sections/registry'
-
-const Horns = () => (
-  <svg className="horns" viewBox="0 0 48 48" fill="none">
-    <path d="M6 13c0 11 6 17 18 17S42 24 42 13c-5 5-9 7-12 7 3-3 4-6 4-9-4 4-7 5-10 5s-6-1-10-5c0 3 1 6 4 9-3 0-7-2-12-7Z" fill="url(#gg)" />
-    <circle className="eye" cx="19" cy="26" r="2.1" fill="#08080a" />
-    <circle className="eye" cx="29" cy="26" r="2.1" fill="#08080a" />
-    <defs>
-      <linearGradient id="gg" x1="6" y1="9" x2="42" y2="30">
-        <stop stopColor="#ffd45e" />
-        <stop offset="1" stopColor="#e8ab0c" />
-      </linearGradient>
-    </defs>
-  </svg>
-)
 
 type Theme = 'dark' | 'light'
 
@@ -44,6 +31,20 @@ export default function Shell() {
     const a = typeof localStorage !== 'undefined' ? localStorage.getItem('rebell-accent') : null
     return (a as AccentKey) || 'gold'
   })
+  const [beast, setBeast] = useState<string>(() => {
+    try {
+      return localStorage.getItem('rebell-beast') || 'lion'
+    } catch {
+      return 'lion'
+    }
+  })
+  const localName = (() => {
+    try {
+      return localStorage.getItem('rebell-profile-name') || 'Bertamiráns'
+    } catch {
+      return 'Bertamiráns'
+    }
+  })()
 
   useEffect(() => {
     preloadSfx()
@@ -94,6 +95,16 @@ export default function Shell() {
     }
     play('tap')
   }
+  function changeBeast(id: string) {
+    setBeast(id)
+    try {
+      localStorage.setItem('rebell-beast', id)
+    } catch {
+      /* sin localStorage */
+    }
+    // la bestia trae su color → cambiamos también el acento (changeAccent ya suena)
+    changeAccent(beastById(id).accent as AccentKey)
+  }
 
   function selectSection(id: string) {
     if (id !== active) {
@@ -140,10 +151,10 @@ export default function Shell() {
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
         <button className={'side-brand' + (settingsOpen ? ' open' : '')} onClick={openSettings} aria-label="Perfil y ajustes del negocio">
-          <Horns />
+          <img className="side-beast" src={beastById(beast).img} alt="" draggable={false} />
           <div className="sb-txt">
             <b>REBELL</b>
-            <span>Bertamiráns</span>
+            <span>{localName}</span>
           </div>
           <svg className="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
@@ -217,7 +228,7 @@ export default function Shell() {
         {settingsOpen && (
           <>
             <div className="sp-scrim" onClick={() => setSettingsOpen(false)} />
-            <SettingsPanel font={font} onFont={changeFont} accent={accent} onAccent={changeAccent} />
+            <SettingsPanel font={font} onFont={changeFont} accent={accent} onAccent={changeAccent} beast={beast} onBeast={changeBeast} />
           </>
         )}
       </AnimatePresence>

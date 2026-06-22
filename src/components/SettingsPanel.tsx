@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
+import { BEASTS } from '../lib/beasts'
 
 export type FontKey = 'clash' | 'inter' | 'roundo'
 export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora'
@@ -31,11 +32,15 @@ export default function SettingsPanel({
   onFont,
   accent,
   onAccent,
+  beast,
+  onBeast,
 }: {
   font: FontKey
   onFont: (f: FontKey) => void
   accent: AccentKey
   onAccent: (a: AccentKey) => void
+  beast: string
+  onBeast: (id: string) => void
 }) {
   const [pwOpen, setPwOpen] = useState(false)
 
@@ -109,6 +114,29 @@ export default function SettingsPanel({
               <span className="acc-check">
                 <Check />
               </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="sp-section">
+        <div className="lab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 13c0 5 3 8 8 8s8-3 8-8c-2 2-4 3-5 3 1-1.5 1.5-3 1.5-4-2 2-3.5 2.5-4.5 2.5S6.5 9.5 4.5 7.5C4.5 8.5 5 10 6 11.5 5 11.5 3 10.5 1.5 8.5" />
+          </svg>
+          Bestia del local
+        </div>
+        <div className="sp-beasts">
+          {BEASTS.map((b) => (
+            <button
+              key={b.id}
+              className={'beast-sw' + (beast === b.id ? ' on' : '')}
+              onClick={() => onBeast(b.id)}
+              aria-label={b.name}
+              title={b.name}
+              style={{ ['--bc' as string]: b.color }}
+            >
+              <img src={b.img} alt={b.name} loading="lazy" />
             </button>
           ))}
         </div>

@@ -397,7 +397,7 @@ body {
 .side-brand { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px; margin-bottom: 8px; border: 1px solid transparent; border-radius: 12px; background: transparent; cursor: pointer; text-align: left; transition: background .2s, border-color .2s; }
 .side-brand:hover { background: rgba(255,255,255,.05); }
 .side-brand.open { background: rgba(255,191,16,.08); border-color: rgba(255,191,16,.22); }
-.side-brand .horns { width: 30px; height: 30px; flex: none; }
+.side-beast { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; flex: none; border: 1px solid var(--line); }
 .sb-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .sb-txt b { font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; color: var(--ink); }
 .sb-txt span { font-size: 11px; color: var(--faint); font-weight: 500; }
@@ -1118,14 +1118,29 @@ body {
    ════════════════════════════════════════════════════════════════ */
 .login {
   position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 30px; padding: 40px 24px; overflow: hidden; text-align: center;
-  background:
-    radial-gradient(130% 80% at 50% -15%, rgba(255,191,16,.08), transparent 52%),
-    radial-gradient(80% 60% at 90% 6%, rgba(74,163,255,.05), transparent 50%),
-    linear-gradient(180deg, var(--bg-2), var(--bg) 42%);
+  padding: 40px 24px; overflow: hidden; text-align: center; background: var(--bg);
   transition: opacity .5s var(--ease);
 }
 .login.leaving { opacity: 0; transition: opacity .5s var(--ease) .3s; pointer-events: none; }
+/* fondo cocina (2.5D) + capa oscura + parpadeo de neón — pantalla de carga estilo videojuego */
+.login-bg {
+  position: absolute; inset: -4%; z-index: 0;
+  background: url(/img/login-bg.jpg) center/cover no-repeat;
+  transform: scale(1.12) translate(var(--bgx, 0), var(--bgy, 0));
+  transition: transform .25s ease-out; will-change: transform;
+}
+.login-veil { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(115% 80% at 50% 42%, rgba(8,8,10,.6), rgba(8,8,10,.42) 62%, rgba(8,8,10,.68) 100%); }
+.login-flicker { position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(38% 46% at 30% 30%, rgba(34,211,180,.18), transparent 62%);
+  animation: neon-flicker 6s steps(1, end) infinite; }
+@keyframes neon-flicker {
+  0%, 14%, 17%, 49%, 52%, 100% { opacity: .55; }
+  15% { opacity: .12; } 16% { opacity: .85; }
+  50% { opacity: .25; } 51% { opacity: .7; }
+  73% { opacity: .9; } 74% { opacity: .4; }
+}
+.login-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%; max-width: 760px; }
 .login-top { display: flex; align-items: center; gap: 11px; }
 .lg-mark { width: 34px; height: 34px; }
 .lg-word { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: .4px; }
@@ -1141,11 +1156,12 @@ body {
   border: 2.5px solid transparent; transition: transform .22s var(--ease-spring), border-color .22s, box-shadow .22s;
 }
 .pf-av { overflow: hidden; }
-.pf-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+.pf-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; transition: transform .18s var(--ease); will-change: transform; }
 .pf-name { font-weight: 650; font-size: 15.5px; color: var(--muted); transition: color .22s; }
 .pf-sub { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-top: -7px; }
 .pf:hover { transform: translateY(-2px); }
-.pf:hover .pf-av { transform: scale(1.06); border-color: var(--pc); box-shadow: 0 18px 40px -14px rgba(0,0,0,.7); }
+/* glow del color de la bestia alrededor del cuadrado al pasar el ratón */
+.pf:hover .pf-av { border-color: var(--pc); box-shadow: 0 0 30px -2px color-mix(in srgb, var(--pc) 62%, transparent), 0 0 0 1.5px color-mix(in srgb, var(--pc) 60%, transparent), 0 18px 42px -14px rgba(0,0,0,.72); }
 .pf:hover .pf-name { color: var(--ink); }
 .pf:active .pf-av { transform: scale(.97); }
 .pf.dim { opacity: .25; transform: scale(.92); }
@@ -1153,7 +1169,15 @@ body {
 .pf.sel .pf-name { color: var(--ink); }
 @keyframes pf-pop { 0% { transform: scale(1); } 38% { transform: scale(1.22) rotate(-2deg); } 70% { transform: scale(1.08) rotate(1deg); } 100% { transform: scale(1.14) rotate(0); } }
 .login-hint { font-size: 13px; color: var(--faint); font-weight: 500; }
-@media (prefers-reduced-motion: reduce) { .pf.sel .eye { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .pf.sel .pf-av { animation: none; } .pf-img { transition: none; } .login-flicker { animation: none; } .login-bg { transition: none; } }
+
+/* selector de bestia (en Ajustes) */
+.sp-beasts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.beast-sw { aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); padding: 0; cursor: pointer; background: #0e0e11; position: relative; transition: transform .14s var(--ease-spring), border-color .2s, box-shadow .2s; }
+.beast-sw:hover { border-color: var(--line-strong); }
+.beast-sw:active { transform: scale(.93); }
+.beast-sw.on { border-color: var(--bc, var(--gold)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bc, var(--gold)) 38%, transparent); }
+.beast-sw img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* ════════════════════════════════════════════════════════════════
    KDS — tablero de cocina en vivo

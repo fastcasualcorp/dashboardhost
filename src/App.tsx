@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Shell from './components/Shell'
 import Login, { type Profile } from './components/Login'
+import { beastById } from './lib/beasts'
 
 function readProfile(): string | null {
   try {
@@ -18,10 +19,12 @@ export default function App() {
       <Login
         onEnter={(p: Profile) => {
           try {
+            const beast = beastById(p.beast)
             localStorage.setItem('rebell-profile', p.id)
             localStorage.setItem('rebell-profile-name', p.name)
-            // cada local entra con su color de acento
-            localStorage.setItem('rebell-accent', p.accent)
+            localStorage.setItem('rebell-beast', beast.id)
+            // cada local entra con el color de su bestia
+            localStorage.setItem('rebell-accent', beast.accent)
           } catch {
             /* sin localStorage */
           }
