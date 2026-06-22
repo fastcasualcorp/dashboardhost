@@ -22,7 +22,15 @@ const Horns = () => (
 type Theme = 'dark' | 'light'
 
 export default function Shell() {
-  const [active, setActive] = useState('caja')
+  const [active, setActive] = useState<string>(() => {
+    try {
+      const s = localStorage.getItem('rebell-active')
+      if (s && itemById(s)) return s
+    } catch {
+      /* sin localStorage (modo privado) */
+    }
+    return 'caja'
+  })
   const [font, setFont] = useState<FontKey>('clash')
   const [audioOn, setAudioOn] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -39,6 +47,15 @@ export default function Shell() {
   useEffect(() => {
     preloadSfx()
   }, [])
+
+  // Recordar la sección activa entre recargas (no volver siempre a Caja).
+  useEffect(() => {
+    try {
+      localStorage.setItem('rebell-active', active)
+    } catch {
+      /* sin localStorage */
+    }
+  }, [active])
 
   // Borde dorado spotlight que sigue el cursor en TODAS las tarjetas (.panel-card),
   // no solo en la Caja. Un único listener delegado para las actuales y las futuras.
