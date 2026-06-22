@@ -3,6 +3,7 @@ import { AnimatePresence } from 'motion/react'
 import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
 import { play, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
+import DesignMode from './DesignMode'
 import { renderSection } from '../sections/registry'
 
 const Horns = () => (
@@ -220,6 +221,8 @@ export default function Shell() {
           </>
         )}
       </AnimatePresence>
+
+      <DesignMode />
     </div>
   )
 }
