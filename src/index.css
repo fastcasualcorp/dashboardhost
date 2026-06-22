@@ -843,16 +843,44 @@ body {
 .carta-section { display: flex; flex-direction: column; }
 .carta-stage { position: relative; height: 524px; perspective: 2000px; margin-top: 8px; overflow: hidden; }
 .carta-track { position: absolute; inset: 0; display: grid; place-items: center; transform-style: preserve-3d; }
-.carta-card { grid-area: 1 / 1; width: var(--ds-card-w, clamp(330px, 28vw, 430px)); height: var(--ds-card-h, clamp(480px, 64vh, 588px)); border-radius: var(--ds-card-radius, 28px); overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: #101014; cursor: pointer; padding: 0; transform-style: preserve-3d; box-shadow: 0 32px 64px -22px rgba(0,0,0,.78); -webkit-tap-highlight-color: transparent; will-change: transform, opacity; }
+/* OJO: nada de `will-change:transform` aquí. Promociona la card a capa compuesta y
+   ROMPE el backface-visibility de las caras (el flip mostraría el frente espejado).
+   Las animaciones de transform ya van por GPU sin necesidad del hint. */
+.carta-card { grid-area: 1 / 1; width: var(--ds-card-w, clamp(330px, 28vw, 430px)); height: var(--ds-card-h, clamp(480px, 64vh, 588px)); border-radius: var(--ds-card-radius, 28px); cursor: pointer; padding: 0; transform-style: preserve-3d; box-shadow: 0 32px 64px -22px rgba(0,0,0,.78); -webkit-tap-highlight-color: transparent; }
+/* Cada cara con su propio overflow:hidden — la card solo lleva preserve-3d (si el
+   overflow vive en la card, el 3D se aplana y el flip se rompe). */
+.cc-face { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: #101014; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.cc-back { transform: rotateY(180deg); background: #0e0e11; display: flex; flex-direction: column; pointer-events: none; }
+.cc-back .cc-edit { position: static; }
+.carta-card.flipped .cc-front { pointer-events: none; }
+.carta-card.flipped .cc-back { pointer-events: auto; }
+/* Oscurecido de las cards laterales por CSS (no por `filter` en el animate, que
+   aplanaría el 3D). Sólo afecta a .cc-front cuando NO está enfocada → nunca gira. */
+.cc-front { transition: filter .4s var(--ease); }
+.carta-card:not(.focus) .cc-front { filter: brightness(.62); }
 @media (min-width: 900px) {
   .carta-section { height: calc(100dvh - 116px); overflow: hidden; }
   .carta-stage { flex: 1; height: auto; min-height: 0; }
 }
 .carta-card.focus { cursor: default; }
-.carta-card.focus { border-color: color-mix(in srgb, var(--type) 55%, transparent); box-shadow: 0 44px 84px -26px rgba(0,0,0,.85); cursor: default; }
+.carta-card.focus { box-shadow: 0 44px 84px -26px rgba(0,0,0,.85); cursor: default; }
+.carta-card.focus .cc-face { border-color: color-mix(in srgb, var(--type) 55%, transparent); }
 .cc-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center var(--ds-photo-y, 42%); display: block; }
 /* solo un velo arriba para que se lea el número; la foto queda visible */
-.carta-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,8,10,.5), transparent 24%); pointer-events: none; z-index: 1; }
+.cc-front::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,8,10,.5), transparent 24%); pointer-events: none; z-index: 1; }
+
+/* cara trasera de la card = formulario de edición (flip) */
+.ccb-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 8px; }
+.ccb-head b { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: #fff; }
+.ccb-close { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--muted); cursor: pointer; transition: transform .14s, color .2s, border-color .2s; }
+.ccb-close:hover { color: var(--ink); border-color: var(--line-strong); }
+.ccb-close:active { transform: scale(.9); }
+.ccb-close svg { width: 15px; height: 15px; }
+.ccb-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 18px 14px; }
+.ccb-body .ce-row { margin-bottom: 14px; }
+.ccb-body .cd-photos { grid-template-columns: repeat(5, 1fr); }
+.ccb-actions { flex: none; display: flex; gap: 10px; padding: 12px 18px 16px; border-top: 1px solid var(--line); }
+.ccb-actions .cd-btn { flex: 1; justify-content: center; }
 .cc-id { position: absolute; top: 19px; left: 64px; z-index: 4; font-family: var(--font-num); font-size: 13px; font-weight: 800; color: rgba(255,255,255,.6); letter-spacing: -.02em; }
 
 /* número grande arriba-derecha sobre la foto (estilo tarjeta bancaria $80.600) */

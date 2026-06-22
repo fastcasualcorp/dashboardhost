@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion, animate, useMotionValue, useTransform } from 'motion/react'
+import { motion, animate, useMotionValue, useTransform } from 'motion/react'
 import { SectionHeader, Badge } from '../components/ui'
 import { eur } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, type Producto } from '../lib/products'
@@ -34,11 +34,24 @@ const Pencil = () => (
 
 type Stats = { ventas: number; margen: number; rating: string }
 
+type Draft = { name: string; price: string; img: string }
+
+const Xmark = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+
 /* Una carta del coverflow. El z-index se deriva de la posición REAL (motion value),
-   no del índice — así nunca hay un salto de z a mitad de transición (era el solape feo). */
-function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit }: {
+   no del índice — así nunca hay un salto de z a mitad de transición (era el solape feo).
+   Al editar, la card enfocada GIRA en 3D (rotateY 180) y muestra el formulario por detrás.
+   Cada cara lleva su propio overflow:hidden — la card solo conserva preserve-3d (si el
+   overflow vive en la card, el 3D se aplana y el flip se rompe). */
+function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit, editing, draft, onDraft, onSave, onCancel, photos }: {
   p: Producto; off: number; focus: boolean; spread: number; num: string
   ti: TypeInfo; st: Stats; onSelect: () => void; onEdit: () => void
+  editing: boolean; draft: Draft; onDraft: (d: Draft) => void
+  onSave: () => void; onCancel: () => void; photos: Producto[]
 }) {
   const x = useMotionValue(off * spread)
   const zIndex = useTransform(x, (v) => 200 - Math.round(Math.abs(v) / 4))
@@ -47,48 +60,93 @@ function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit }: {
     return () => c.stop()
   }, [off, spread, x])
 
+  const flipped = editing && focus
+  const tilt = Math.max(-2, Math.min(2, off)) * -14
+
   return (
     <motion.div
-      className={'carta-card' + (focus ? ' focus' : '')}
+      className={'carta-card' + (focus ? ' focus' : '') + (flipped ? ' flipped' : '')}
       style={{ x, zIndex, ['--type' as string]: ti.color }}
       animate={{
         scale: focus ? 1 : 0.82,
-        rotateY: Math.max(-2, Math.min(2, off)) * -14,
+        rotateY: flipped ? 180 : tilt,
         opacity: focus ? 1 : 0.6,
-        filter: focus ? 'brightness(1)' : 'brightness(0.6)',
+        // OJO: nada de `filter` aquí. Un filter (aunque sea brightness(1)) APLANA el
+        // preserve-3d y rompe el backface-visibility → el flip mostraría el frente
+        // espejado en vez del dorso. El oscurecido de las no-enfocadas va por CSS
+        // (filter sobre .cc-front sólo cuando NO está enfocada; esa cara nunca gira).
       }}
-      transition={{ type: 'spring', stiffness: 300, damping: 34, mass: 0.7 }}
+      transition={{ type: 'spring', stiffness: flipped ? 240 : 300, damping: flipped ? 30 : 34, mass: 0.7 }}
       onClick={onSelect}
       role="button"
       aria-label={p.name}
     >
-      <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
+      {/* ── CARA FRONTAL ── */}
+      <div className="cc-face cc-front">
+        <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
 
+        {focus && (
+          <button className="cc-edit" onClick={(e) => { e.stopPropagation(); onEdit() }} aria-label="Editar carta">
+            <Pencil />
+          </button>
+        )}
+        <span className="cc-id tnum">#{num}</span>
+
+        {focus && (
+          <span className="cc-balance">
+            <b className="cc-bal-num tnum">{st.ventas}</b>
+            <small className="cc-bal-lab">Ventas / mes</small>
+          </span>
+        )}
+
+        <span className="cc-panel">
+          <span className="cc-tab">
+            <b className="cc-name">{p.name}</b>
+            <span className="cc-sub">{ti.emoji} {ti.label}{p.mods[0] ? ' · ' + p.mods[0] : ''}</span>
+            <span className="cc-notch" aria-hidden="true" />
+          </span>
+          <span className="cc-pfoot">
+            <span className="cc-pf"><b className="cc-price tnum">{eur(p.price)} €</b><i>Precio</i></span>
+            {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
+          </span>
+        </span>
+      </div>
+
+      {/* ── CARA TRASERA — edición (solo la card enfocada) ── */}
       {focus && (
-        <button className="cc-edit" onClick={(e) => { e.stopPropagation(); onEdit() }} aria-label="Editar carta">
-          <Pencil />
-        </button>
+        <div className="cc-face cc-back" onClick={(e) => e.stopPropagation()}>
+          <div className="ccb-head">
+            <b>Editar carta</b>
+            <button className="ccb-close" onClick={(e) => { e.stopPropagation(); onCancel() }} aria-label="Volver a la carta">
+              <Xmark />
+            </button>
+          </div>
+          <div className="ccb-body">
+            <div className="ce-row">
+              <label className="cd-field">
+                <span>Nombre</span>
+                <input value={draft.name} onChange={(e) => onDraft({ ...draft, name: e.target.value })} />
+              </label>
+              <label className="cd-field price">
+                <span>Precio €</span>
+                <input value={draft.price} inputMode="decimal" onChange={(e) => onDraft({ ...draft, price: e.target.value })} />
+              </label>
+            </div>
+            <div className="ce-lab">Foto</div>
+            <div className="cd-photos">
+              {photos.map((pp) => (
+                <button key={pp.id} className={'cd-ph' + (draft.img === pp.img ? ' on' : '')} onClick={() => onDraft({ ...draft, img: pp.img })}>
+                  <img src={pp.img} alt={pp.name} loading="lazy" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ccb-actions">
+            <button className="cd-btn ghost" onClick={onCancel}>Cancelar</button>
+            <button className="cd-btn primary" onClick={onSave}>Guardar</button>
+          </div>
+        </div>
       )}
-      <span className="cc-id tnum">#{num}</span>
-
-      {focus && (
-        <span className="cc-balance">
-          <b className="cc-bal-num tnum">{st.ventas}</b>
-          <small className="cc-bal-lab">Ventas / mes</small>
-        </span>
-      )}
-
-      <span className="cc-panel">
-        <span className="cc-tab">
-          <b className="cc-name">{p.name}</b>
-          <span className="cc-sub">{ti.emoji} {ti.label}{p.mods[0] ? ' · ' + p.mods[0] : ''}</span>
-          <span className="cc-notch" aria-hidden="true" />
-        </span>
-        <span className="cc-pfoot">
-          <span className="cc-pf"><b className="cc-price tnum">{eur(p.price)} €</b><i>Precio</i></span>
-          {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
-        </span>
-      </span>
     </motion.div>
   )
 }
@@ -119,6 +177,7 @@ export default function Platos() {
   const current = list[sel]
 
   function go(dir: number) {
+    if (editing) return
     setSel((s) => {
       const n = Math.max(0, Math.min(list.length - 1, s + dir))
       if (n !== s) play('tap', 0.55, 1.12) // tick de selector
@@ -126,9 +185,13 @@ export default function Platos() {
     })
   }
   function select(i: number) {
-    if (i === sel) return
+    if (editing || i === sel) return
     play('tap', 0.55, 1.12) // tick de selector
     setSel(i)
+  }
+  function cancelEdit() {
+    setEditing(false)
+    play('tap', 0.4)
   }
   function changeCat(c: string) {
     setCat(c)
@@ -192,6 +255,12 @@ export default function Platos() {
                 st={statsOf(p)}
                 onSelect={() => select(i)}
                 onEdit={openEdit}
+                editing={editing}
+                draft={draft}
+                onDraft={setDraft}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+                photos={PRODUCTOS}
               />
             )
           })}
@@ -207,52 +276,6 @@ export default function Platos() {
           <button key={p.id} className={'cdot' + (i === sel ? ' on' : '')} onClick={() => select(i)} aria-label={p.name} />
         ))}
       </div>
-
-      {/* Modal de edición */}
-      <AnimatePresence>
-        {editing && current && (
-          <motion.div className="carta-edit-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditing(false)}>
-            <motion.div
-              className="carta-edit"
-              style={{ ['--type' as string]: typeOf(current.cat).color }}
-              initial={{ opacity: 0, scale: 0.94, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 32, mass: 0.8 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="ce-head">
-                <b>Editar carta</b>
-                <button className="ce-close" onClick={() => setEditing(false)} aria-label="Cerrar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                </button>
-              </div>
-              <div className="ce-row">
-                <label className="cd-field">
-                  <span>Nombre</span>
-                  <input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
-                </label>
-                <label className="cd-field price">
-                  <span>Precio €</span>
-                  <input value={draft.price} inputMode="decimal" onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value }))} />
-                </label>
-              </div>
-              <div className="ce-lab">Foto</div>
-              <div className="cd-photos">
-                {PRODUCTOS.map((pp) => (
-                  <button key={pp.id} className={'cd-ph' + (draft.img === pp.img ? ' on' : '')} onClick={() => setDraft((d) => ({ ...d, img: pp.img }))}>
-                    <img src={pp.img} alt={pp.name} loading="lazy" />
-                  </button>
-                ))}
-              </div>
-              <div className="ce-actions">
-                <button className="cd-btn ghost" onClick={() => setEditing(false)}>Cancelar</button>
-                <button className="cd-btn primary" onClick={saveEdit}>Guardar</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
