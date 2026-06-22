@@ -1,9 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "dashboardhost",
+  "account_id": "9f60d87dfe1bc0e00132b702440c1577",
   "compatibility_date": "2024-12-01",
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+  "pages_build_output_dir": "dist"
 }
