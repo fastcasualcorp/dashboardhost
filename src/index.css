@@ -208,9 +208,9 @@ body {
 .hero.warn .gauge-fill { stroke: var(--warn); }
 .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0 13%; }
 .g-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); }
-.hero-gauge .odo { font-size: clamp(34px, 9vw, 50px); margin: 0; justify-content: center; align-items: baseline; }
+.hero-gauge .odo { font-size: clamp(32px, 8vw, 46px); margin: 0; justify-content: center; align-items: baseline; }
 .hero-gauge .odo .odonum { line-height: 1; }
-.hero-gauge .odo .cur { font-size: .44em; align-self: baseline; margin: 0 0 0 .12em; color: var(--gold); }
+.hero-gauge .odo .cur { font-size: .82em; align-self: baseline; margin: 0 0 0 .08em; color: var(--gold); }
 .hero-side { width: 100%; max-width: 420px; display: flex; flex-direction: column; }
 .hs-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 2px; }
 .hs-row + .hs-row, .hero-side .balance { border-top: 1px solid var(--line); }
@@ -261,7 +261,7 @@ body {
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 17px; will-change: transform; transform-style: preserve-3d; }
 .stat .k { color: var(--faint); font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
 .stat .v { font-family: var(--font-num); font-weight: var(--num-weight); font-size: 40px; line-height: 1; margin-top: 8px; letter-spacing: var(--num-spacing); color: var(--ink); white-space: nowrap; }
-.stat .v small { font-size: 18px; color: var(--gold); font-weight: 600; font-family: var(--font); margin-left: 4px; letter-spacing: 0; }
+.stat .v small { font-size: .8em; color: var(--gold); font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
 .kpi-body { display: flex; flex-direction: column; }
 .kpi-foot { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
 .kpi-foot svg { width: 13px; height: 13px; flex: none; }
@@ -348,7 +348,7 @@ body {
   .stats { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; height: 100%; gap: 14px; }
   .stat { display: flex; flex-direction: column; justify-content: space-between; padding: 22px 24px; }
   .stat .v { font-size: clamp(48px, 4.8vw, 64px); }
-  .stat .v small { font-size: 26px; }
+  .stat .v small { font-size: .8em; }
   .turnos { grid-template-columns: 1fr 1fr; }
   .hero { flex-direction: row; align-items: center; text-align: left; gap: 36px; padding: 30px 36px; }
   .hero-gauge { --gz: clamp(300px, 23vw, 366px); margin: 0; }
@@ -443,7 +443,7 @@ body {
 
 .kpi-tile .k { color: var(--faint); font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
 .kpi-tile .v { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(36px, 3.9vw, 52px); line-height: 1; margin-top: 12px; letter-spacing: var(--num-spacing); color: var(--ink); white-space: nowrap; }
-.kpi-tile .v small { font-size: .48em; color: var(--gold); font-weight: 600; font-family: var(--font); margin-left: 3px; letter-spacing: 0; }
+.kpi-tile .v small { font-size: .8em; color: var(--gold); font-weight: 600; font-family: var(--font-num); margin-left: 3px; letter-spacing: 0; }
 
 .p-grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
 @media (min-width: 560px) { .p-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -843,7 +843,7 @@ body {
 .carta-section { display: flex; flex-direction: column; }
 .carta-stage { position: relative; height: 524px; perspective: 2000px; margin-top: 8px; overflow: hidden; }
 .carta-track { position: absolute; inset: 0; display: grid; place-items: center; transform-style: preserve-3d; }
-.carta-card { grid-area: 1 / 1; width: clamp(280px, 30vw, 430px); height: clamp(420px, 60vh, 600px); border-radius: 26px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: #101014; cursor: pointer; padding: 0; transform-style: preserve-3d; box-shadow: 0 32px 64px -22px rgba(0,0,0,.78); -webkit-tap-highlight-color: transparent; will-change: transform, opacity; }
+.carta-card { grid-area: 1 / 1; width: clamp(320px, 40vw, 560px); height: clamp(440px, 62vh, 582px); border-radius: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: #101014; cursor: pointer; padding: 0; transform-style: preserve-3d; box-shadow: 0 32px 64px -22px rgba(0,0,0,.78); -webkit-tap-highlight-color: transparent; will-change: transform, opacity; }
 @media (min-width: 900px) {
   .carta-section { height: calc(100dvh - 116px); overflow: hidden; }
   .carta-stage { flex: 1; height: auto; min-height: 0; }
@@ -872,7 +872,7 @@ body {
 .cc-stats { position: absolute; left: 16px; right: 16px; bottom: 134px; z-index: 3; border-radius: 18px; overflow: hidden; background: rgba(8,8,10,.78); border: 1px solid color-mix(in srgb, var(--type) 30%, transparent); -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px); box-shadow: 0 14px 30px -12px rgba(0,0,0,.6); }
 .cs-grad { position: relative; padding: 15px 17px 22px; background: linear-gradient(135deg, color-mix(in srgb, var(--type) 96%, #000), var(--type) 56%, color-mix(in srgb, var(--type) 70%, #000)); border-radius: 18px 18px 50px 18px / 18px 18px 34px 18px; }
 .cs-grad::after { content: ''; position: absolute; inset: 0; background: linear-gradient(116deg, rgba(255,255,255,.5), rgba(255,255,255,0) 46%); pointer-events: none; }
-.cs-num { position: relative; z-index: 1; display: block; font-family: var(--font-num); font-weight: 700; font-size: 38px; line-height: 1; letter-spacing: -.02em; color: #fff; text-shadow: 0 1px 12px rgba(0,0,0,.28); }
+.cs-num { position: relative; z-index: 1; display: block; font-family: var(--font-num); font-weight: 700; font-size: 52px; line-height: 1; letter-spacing: -.02em; color: #fff; text-shadow: 0 1px 12px rgba(0,0,0,.28); }
 .cs-lab { position: relative; z-index: 1; display: block; font-size: 10px; font-weight: 700; letter-spacing: .09em; color: rgba(255,255,255,.88); margin-top: 6px; }
 .cs-meta { display: flex; gap: 22px; padding: 9px 17px 12px; }
 .cs-row { display: flex; align-items: center; gap: 7px; }
