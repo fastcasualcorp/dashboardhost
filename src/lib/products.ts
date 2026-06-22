@@ -27,6 +27,21 @@ export const PRODUCTOS: Producto[] = [
   { id: 'brownie', name: 'Brownie', price: 4.5, cat: 'Postres', img: '/img/products/brownie.jpg', iva: 10, mods: ['Con helado'] },
 ]
 
+/* ── Constructor de menú ────────────────────────────────────────────
+   Un "Menú" no es un producto plano: se compone eligiendo un producto de
+   cada slot. El precio es DINÁMICO (suma de lo elegido con descuento combo). */
+export type MenuSlot = { key: string; label: string; cat: string; required: boolean }
+export const MENU_SLOTS: MenuSlot[] = [
+  { key: 'burger', label: 'Hamburguesa', cat: 'Burgers', required: true },
+  { key: 'side', label: 'Acompañante', cat: 'Sides', required: true },
+  { key: 'drink', label: 'Bebida', cat: 'Bebidas', required: true },
+  { key: 'dessert', label: 'Postre', cat: 'Postres', required: false },
+]
+/* Descuento de combo: el menú sale más barato que sus partes sueltas. */
+export const MENU_DISCOUNT = 0.15
+/* Marca qué productos son "menús" (abren el constructor en vez de añadirse planos). */
+export const isMenu = (p: Producto) => p.cat === 'Menús'
+
 /* Mapa nombre → foto, para reutilizar las imágenes del catálogo como miniaturas
    en Pedidos, Resumen, etc. (una sola fuente de verdad). */
 const IMG_BY_NAME: Record<string, string> = Object.fromEntries(PRODUCTOS.map((p) => [p.name, p.img]))

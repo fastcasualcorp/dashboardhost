@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { SectionHeader, Badge } from '../components/ui'
 import { eur } from '../lib/data'
-import { PRODUCTOS, CAT_ORDER, type Producto } from '../lib/products'
+import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
 
-type Line = { id: string; name: string; price: number; qty: number }
+type Line = { id: string; name: string; price: number; qty: number; detail?: string }
+
+// redondeo a 0,05 € (precios "de carta")
+const round05 = (n: number) => Math.round(n * 20) / 20
 
 export default function Tpv() {
   const [cart, setCart] = useState<Line[]>([])
@@ -14,8 +17,56 @@ export default function Tpv() {
   const [pulse, setPulse] = useState(0)
   const [paid, setPaid] = useState(false)
   const [cat, setCat] = useState('Burgers')
+  const [building, setBuilding] = useState<Producto | null>(null)
+  const [picks, setPicks] = useState<Record<string, string>>({})
   const combo = useRef({ n: 0, t: 0 })
   const raf = useRef(0)
+  const menuSeq = useRef(0)
+
+  // ── Constructor de menú: elegir 1 producto por slot, precio dinámico ──
+  const chosen = MENU_SLOTS.map((s) => ({ slot: s, prod: PRODUCTOS.find((p) => p.id === picks[s.key]) })).filter((x) => x.prod) as { slot: typeof MENU_SLOTS[number]; prod: Producto }[]
+  const menuRaw = chosen.reduce((s, x) => s + x.prod.price, 0)
+  const menuPrice = round05(menuRaw * (1 - MENU_DISCOUNT))
+  const menuAhorro = round05(menuRaw - menuPrice)
+  const menuReady = MENU_SLOTS.filter((s) => s.required).every((s) => picks[s.key])
+
+  function openBuilder(p: Producto) {
+    // pre-selecciona el primero de cada slot obligatorio → precio visible al instante
+    const pre: Record<string, string> = {}
+    for (const s of MENU_SLOTS) {
+      if (s.required) {
+        const first = PRODUCTOS.find((x) => x.cat === s.cat)
+        if (first) pre[s.key] = first.id
+      }
+    }
+    setPicks(pre)
+    setBuilding(p)
+    play('pop', 0.5, 1.18)
+  }
+  function selectSlot(key: string, p: Producto) {
+    setPicks((prev) => ({ ...prev, [key]: p.id }))
+    play('tap', 0.5, 1.12)
+  }
+  function clearSlot(key: string) {
+    setPicks((prev) => {
+      const n = { ...prev }
+      delete n[key]
+      return n
+    })
+    play('tap', 0.42, 0.92)
+  }
+  function addMenu() {
+    if (!building || !menuReady) return
+    const detail = chosen.map((x) => x.prod.name).join(' · ')
+    const line: Line = { id: 'menu-' + ++menuSeq.current, name: building.name, price: menuPrice, qty: 1, detail }
+    setPaid(false)
+    setCart((c) => [...c, line])
+    play('pop', 0.55, 1.5)
+    setBuilding(null)
+    setPicks({})
+  }
+  // Router: un menú abre el constructor; el resto se añade plano.
+  const choose = (p: Producto) => (isMenu(p) ? openBuilder(p) : add(p))
 
   const add = (p: Producto) => {
     // Pop con "combo": añadir rápido y seguido sube el tono en escala mayor
@@ -80,7 +131,7 @@ export default function Tpv() {
       if (e.key === 'ArrowRight') { e.preventDefault(); setCat((c) => CAT_ORDER[(CAT_ORDER.indexOf(c) + 1) % CAT_ORDER.length]); return }
       if (e.key === 'ArrowLeft') { e.preventDefault(); setCat((c) => CAT_ORDER[(CAT_ORDER.indexOf(c) - 1 + CAT_ORDER.length) % CAT_ORDER.length]); return }
       const n = parseInt(e.key, 10)
-      if (n >= 1 && n <= 9 && prods[n - 1]) { e.preventDefault(); add(prods[n - 1]) }
+      if (n >= 1 && n <= 9 && prods[n - 1]) { e.preventDefault(); choose(prods[n - 1]) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -127,7 +178,7 @@ export default function Tpv() {
             {prods.map((p, i) => {
               const q = qtyOf(p.id)
               return (
-                <button key={p.id} className={'prod-card sm' + (q ? ' active' : '')} onClick={() => add(p)}>
+                <button key={p.id} className={'prod-card sm' + (q ? ' active' : '') + (isMenu(p) ? ' is-menu' : '')} onClick={() => choose(p)}>
                   {i < 9 && <span className="pc-key">{i + 1}</span>}
                   <img className="pc-img" src={p.img} alt={p.name} loading="lazy" />
                   <span className="pc-body">
@@ -192,7 +243,7 @@ export default function Tpv() {
                 <div className="tk-line" key={l.id}>
                   <div className="tk-info">
                     <b>{l.name}</b>
-                    <small>{eur(l.price)} € · ud</small>
+                    <small>{l.detail ? l.detail : eur(l.price) + ' € · ud'}</small>
                   </div>
                   <div className="tk-qty">
                     <button onClick={() => dec(l.id)} aria-label="Quitar uno">−</button>
@@ -227,6 +278,72 @@ export default function Tpv() {
           </div>
         </div>
       </div>
+
+      {/* ── Constructor de menú (precio dinámico) ── */}
+      <AnimatePresence>
+        {building && (
+          <motion.div className="mb-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setBuilding(null)}>
+            <motion.div
+              className="mb-panel"
+              initial={{ opacity: 0, scale: 0.94, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 30, mass: 0.8 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="mb-head">
+                <div className="mb-htxt">
+                  <b>Monta tu {building.name}</b>
+                  <small>Elige una opción de cada apartado</small>
+                </div>
+                <button className="mb-x" onClick={() => setBuilding(null)} aria-label="Cerrar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </header>
+
+              <div className="mb-slots">
+                {MENU_SLOTS.map((s) => {
+                  const opts = PRODUCTOS.filter((p) => p.cat === s.cat)
+                  return (
+                    <div className="mb-slot" key={s.key}>
+                      <div className="mb-slot-lab">
+                        {s.label}
+                        {!s.required && <em>opcional</em>}
+                      </div>
+                      <div className="mb-opts">
+                        {opts.map((p) => (
+                          <button key={p.id} className={'mb-opt' + (picks[s.key] === p.id ? ' on' : '')} onClick={() => selectSlot(s.key, p)}>
+                            <img src={p.img} alt={p.name} loading="lazy" />
+                            <span className="mb-opt-n">{p.name}</span>
+                            <span className="mb-opt-p tnum">+{eur(p.price)} €</span>
+                          </button>
+                        ))}
+                        {!s.required && (
+                          <button className={'mb-opt mb-none' + (!picks[s.key] ? ' on' : '')} onClick={() => clearSlot(s.key)}>
+                            <span className="mb-none-ic">∅</span>
+                            <span className="mb-opt-n">Sin {s.label.toLowerCase()}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <footer className="mb-foot">
+                <div className="mb-price">
+                  <span className="mb-price-k">Total del menú</span>
+                  <b className="tnum">{eur(menuPrice)} €</b>
+                  {menuAhorro > 0 && <span className="mb-save tnum">Ahorras {eur(menuAhorro)} €</span>}
+                </div>
+                <button className={'mb-add' + (menuReady ? '' : ' off')} onClick={addMenu} disabled={!menuReady}>
+                  Añadir al ticket
+                </button>
+              </footer>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
