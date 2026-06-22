@@ -31,9 +31,12 @@ const GROUPS: Group[] = [
   },
   {
     id: 'caja',
-    title: 'Caja · número del día',
-    hint: 'Ve a la sección Caja para ver este cambio',
-    tokens: [{ v: '--ds-hero-num', label: 'Número grande del día', min: 28, max: 72, step: 1, unit: 'px', def: 46 }],
+    title: 'Caja · medidor del día',
+    hint: 'Ve a la sección Caja para ver estos cambios',
+    tokens: [
+      { v: '--ds-hero-num', label: 'Número grande del día', min: 28, max: 72, step: 1, unit: 'px', def: 46 },
+      { v: '--ds-ring', label: 'Grosor del anillo', min: 4, max: 26, step: 1, unit: 'px', def: 12 },
+    ],
   },
 ]
 
