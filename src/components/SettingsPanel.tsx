@@ -136,6 +136,25 @@ export default function SettingsPanel({
           </button>
         ))}
       </div>
+
+      <div className="sp-section">
+        <button
+          className="sp-action"
+          onClick={() => {
+            try {
+              localStorage.removeItem('rebell-profile')
+            } catch {
+              /* sin localStorage */
+            }
+            location.reload()
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+          Cambiar de local
+        </button>
+      </div>
     </motion.div>
   )
 }

@@ -1112,3 +1112,46 @@ body {
 .prod-card.sm .pc-price { color: var(--type, var(--gold)); }
 .prod-card.sm:hover { border-color: color-mix(in srgb, var(--type, #ffbf10) 62%, transparent); transform: translateY(-3px); box-shadow: 0 16px 32px -14px rgba(0,0,0,.72); }
 .prod-card.sm.active { border-color: var(--type, var(--gold)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--type, #ffbf10) 45%, transparent), 0 14px 30px -14px rgba(0,0,0,.7); }
+
+/* ════════════════════════════════════════════════════════════════
+   LOGIN estilo Netflix — "¿Quién abre caja?" (selector de local)
+   ════════════════════════════════════════════════════════════════ */
+.login {
+  position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 30px; padding: 40px 24px; overflow: hidden; text-align: center;
+  background:
+    radial-gradient(130% 80% at 50% -15%, rgba(255,191,16,.08), transparent 52%),
+    radial-gradient(80% 60% at 90% 6%, rgba(74,163,255,.05), transparent 50%),
+    linear-gradient(180deg, var(--bg-2), var(--bg) 42%);
+  transition: opacity .5s var(--ease);
+}
+.login.leaving { opacity: 0; transition: opacity .5s var(--ease) .3s; pointer-events: none; }
+.login-top { display: flex; align-items: center; gap: 11px; }
+.lg-mark { width: 34px; height: 34px; }
+.lg-word { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: .4px; }
+.login-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 5vw, 40px); letter-spacing: -.01em; }
+.login-grid { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: clamp(20px, 4vw, 48px); max-width: 720px; }
+.pf {
+  display: flex; flex-direction: column; align-items: center; gap: 12px; background: none; border: 0; cursor: pointer; padding: 6px;
+  transition: opacity .4s var(--ease), transform .4s var(--ease);
+}
+.pf-av {
+  width: clamp(96px, 22vw, 132px); height: clamp(96px, 22vw, 132px); border-radius: 22px; display: grid; place-items: center;
+  background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--pc) 24%, #15151a), #101014);
+  border: 2.5px solid transparent; transition: transform .22s var(--ease-spring), border-color .22s, box-shadow .22s;
+}
+.pf-horns { width: 56%; height: 56%; }
+.pf-av .eye { transform-box: fill-box; transform-origin: center; }
+.pf-name { font-weight: 650; font-size: 15.5px; color: var(--muted); transition: color .22s; }
+.pf-sub { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-top: -7px; }
+.pf:hover { transform: translateY(-2px); }
+.pf:hover .pf-av { transform: scale(1.06); border-color: var(--pc); box-shadow: 0 18px 40px -14px rgba(0,0,0,.7); }
+.pf:hover .pf-name { color: var(--ink); }
+.pf:active .pf-av { transform: scale(.97); }
+.pf.dim { opacity: .25; transform: scale(.92); }
+.pf.sel .pf-av { transform: scale(1.14); border-color: var(--pc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 35%, transparent), 0 22px 50px -16px rgba(0,0,0,.8); }
+.pf.sel .pf-name { color: var(--ink); }
+.pf.sel .eye { animation: pf-wink .5s var(--ease) .12s; }
+@keyframes pf-wink { 0%, 100% { transform: scaleY(1); } 38%, 62% { transform: scaleY(.1); } }
+.login-hint { font-size: 13px; color: var(--faint); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .pf.sel .eye { animation: none; } }
