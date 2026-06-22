@@ -260,7 +260,7 @@ export default function Platos() {
                 onDraft={setDraft}
                 onSave={saveEdit}
                 onCancel={cancelEdit}
-                photos={PRODUCTOS}
+                photos={PRODUCTOS.filter((x) => x.cat === p.cat)}
               />
             )
           })}
