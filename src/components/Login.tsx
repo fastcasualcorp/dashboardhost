@@ -61,6 +61,9 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   return (
     <div className={'login' + (sel ? ' leaving' : '')} onMouseMove={bgParallax}>
       <div className="login-bg" />
+      <div className="login-bg blur" aria-hidden="true" />
+      <div className="login-chroma" aria-hidden="true" />
+      <div className="login-grain" aria-hidden="true" />
       <div className="login-veil" />
       <div className="login-flicker" aria-hidden="true" />
       <div className="login-content">
