@@ -1140,8 +1140,8 @@ body {
   background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--pc) 24%, #15151a), #101014);
   border: 2.5px solid transparent; transition: transform .22s var(--ease-spring), border-color .22s, box-shadow .22s;
 }
-.pf-horns { width: 56%; height: 56%; }
-.pf-av .eye { transform-box: fill-box; transform-origin: center; }
+.pf-av { overflow: hidden; }
+.pf-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 .pf-name { font-weight: 650; font-size: 15.5px; color: var(--muted); transition: color .22s; }
 .pf-sub { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-top: -7px; }
 .pf:hover { transform: translateY(-2px); }
@@ -1149,10 +1149,9 @@ body {
 .pf:hover .pf-name { color: var(--ink); }
 .pf:active .pf-av { transform: scale(.97); }
 .pf.dim { opacity: .25; transform: scale(.92); }
-.pf.sel .pf-av { transform: scale(1.14); border-color: var(--pc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 35%, transparent), 0 22px 50px -16px rgba(0,0,0,.8); }
+.pf.sel .pf-av { border-color: var(--pc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 35%, transparent), 0 22px 50px -16px rgba(0,0,0,.8); animation: pf-pop .55s var(--ease-spring) forwards; }
 .pf.sel .pf-name { color: var(--ink); }
-.pf.sel .eye { animation: pf-wink .5s var(--ease) .12s; }
-@keyframes pf-wink { 0%, 100% { transform: scaleY(1); } 38%, 62% { transform: scaleY(.1); } }
+@keyframes pf-pop { 0% { transform: scale(1); } 38% { transform: scale(1.22) rotate(-2deg); } 70% { transform: scale(1.08) rotate(1deg); } 100% { transform: scale(1.14) rotate(0); } }
 .login-hint { font-size: 13px; color: var(--faint); font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .pf.sel .eye { animation: none; } }
 
