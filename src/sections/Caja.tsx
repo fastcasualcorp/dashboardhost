@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import SalesChart from '../components/SalesChart'
@@ -83,6 +84,7 @@ export default function Caja() {
   const objRef = useRef<HTMLElement>(null)
 
   const [descuadre, setDescuadre] = useState(false)
+  const [flipped, setFlipped] = useState(false)
   const [cerrado, setCerrado] = useState(false)
   const [celebrate, setCelebrate] = useState(false)
   const [shine, setShine] = useState(false)
@@ -247,6 +249,10 @@ export default function Caja() {
     gsap.fromTo(isl, { xPercent: -50, y: -22, scale: 0.85, opacity: 0 }, { xPercent: -50, y: 0, scale: 1, opacity: 1, duration: 0.55, ease: 'back.out(1.7)' })
     if (!warn) gsap.to(isl, { xPercent: -50, y: -22, scale: 0.85, opacity: 0, duration: 0.4, delay: 1.7, ease: 'power2.in' })
   }
+  function toggleFlip() {
+    setFlipped((f) => !f)
+    play('tap', 0.5, 1.12)
+  }
   function toggleDescuadre() {
     const next = !descuadre
     setDescuadre(next)
@@ -355,55 +361,83 @@ export default function Caja() {
       </div>
 
       <div className="wrap">
-        <section className={'hero' + (descuadre ? ' warn' : '') + (celebrate ? ' celebrate' : '') + (beat ? ' beat' : '')} id="hero" ref={heroRef}>
-          <div className={'seal' + (descuadre ? ' warn' : '')} ref={sealRef}>
-            {descuadre ? warnIcon : okIcon}
-          </div>
+        <section className={'hero' + (descuadre ? ' warn' : '') + (celebrate ? ' celebrate' : '') + (beat ? ' beat' : '') + (flipped ? ' flipped' : '')} id="hero" ref={heroRef}>
+          <motion.div
+            className="hero-flip"
+            animate={{ rotateY: flipped ? 180 : 0 }}
+            transition={{ type: 'spring', stiffness: 240, damping: 30, mass: 0.7 }}
+          >
+            {/* ── CARA FRONTAL: medidor del día ── */}
+            <div className="hero-face hero-front">
+              <div className={'seal' + (descuadre ? ' warn' : '')} ref={sealRef}>
+                {descuadre ? warnIcon : okIcon}
+              </div>
 
-          <div className="hero-gauge">
-            <svg className="gauge" viewBox="0 0 240 240" aria-hidden="true">
-              <defs>
-                <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
-                  <stop offset="0" style={{ stopColor: 'var(--gold-deep)' }} />
-                  <stop offset="1" style={{ stopColor: 'var(--gold-soft)' }} />
-                </linearGradient>
-              </defs>
-              <circle className="gauge-track" cx="120" cy="120" r="106" />
-              <circle className="gauge-fill" ref={ringRef} cx="120" cy="120" r="106" />
-            </svg>
-            <div className="gauge-center">
-              <span className="g-label">Total del día</span>
-              <div className="odo">
-                <span className="odonum" ref={odoRef}>0,00</span>
-                <span className="cur">€</span>
+              <div className="hero-gauge">
+                <svg className="gauge" viewBox="0 0 240 240" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
+                      <stop offset="0" style={{ stopColor: 'var(--gold-deep)' }} />
+                      <stop offset="1" style={{ stopColor: 'var(--gold-soft)' }} />
+                    </linearGradient>
+                  </defs>
+                  <circle className="gauge-track" cx="120" cy="120" r="106" />
+                  <circle className="gauge-fill" ref={ringRef} cx="120" cy="120" r="106" />
+                </svg>
+                <div className="gauge-center">
+                  <span className="g-label">Total del día</span>
+                  <div className="odo">
+                    <span className="odonum" ref={odoRef}>0,00</span>
+                    <span className="cur">€</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hero-side">
+                <div className="hs-row">
+                  <span className="hs-k">Vs ayer</span>
+                  <span className="hs-v up">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                    9,0%
+                  </span>
+                </div>
+                <div className="hs-row">
+                  <span className="hs-k">Objetivo del día</span>
+                  <span className="hs-v"><b ref={objRef} className="tnum">0</b>%{beat ? ' ✓' : ''}</span>
+                </div>
+                <div className="hs-row">
+                  <span className="hs-k">Racha</span>
+                  <span className="hs-v">5 días</span>
+                </div>
+                <div className={'balance' + (descuadre ? ' warn' : '')} ref={balanceRef}>
+                  <span className="ic">{descuadre ? warnIcon : okIcon}</span>
+                  <span className="txt">
+                    {descuadre ? 'Descuadre de −12,40 €' : 'Caja cuadrada'}
+                    <small>{descuadre ? 'El efectivo declarado no coincide con los pedidos cobrados' : 'Efectivo declarado coincide con los pedidos cobrados'}</small>
+                  </span>
+                </div>
+                <button className="hero-flipbtn" onClick={toggleFlip} aria-label="Ver desglose del día">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18M3 15h18M8 5l-5 4 5 4M16 11l5 4-5 4" /></svg>
+                  Ver desglose
+                </button>
               </div>
             </div>
-          </div>
 
-          <div className="hero-side">
-            <div className="hs-row">
-              <span className="hs-k">Vs ayer</span>
-              <span className="hs-v up">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
-                9,0%
-              </span>
+            {/* ── CARA TRASERA: desglose (mañana/tarde) ── */}
+            <div className="hero-face hero-back">
+              <div className="hb-head">
+                <b>Desglose del día</b>
+                <button className="hb-back" onClick={toggleFlip} aria-label="Volver al total">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                  Volver
+                </button>
+              </div>
+              <div className="hb-turnos">
+                <Turno badge="☀" badgeClass="sol" name="Mañana" subtotal={subM} t={CAJA.manana} franjas={FRANJAS_M} />
+                <Turno badge="☾" badgeClass="luna" name="Tarde" subtotal={subT} t={CAJA.tarde} franjas={FRANJAS_T} />
+              </div>
             </div>
-            <div className="hs-row">
-              <span className="hs-k">Objetivo del día</span>
-              <span className="hs-v"><b ref={objRef} className="tnum">0</b>%{beat ? ' ✓' : ''}</span>
-            </div>
-            <div className="hs-row">
-              <span className="hs-k">Racha</span>
-              <span className="hs-v">5 días</span>
-            </div>
-            <div className={'balance' + (descuadre ? ' warn' : '')} ref={balanceRef}>
-              <span className="ic">{descuadre ? warnIcon : okIcon}</span>
-              <span className="txt">
-                {descuadre ? 'Descuadre de −12,40 €' : 'Caja cuadrada'}
-                <small>{descuadre ? 'El efectivo declarado no coincide con los pedidos cobrados' : 'Efectivo declarado coincide con los pedidos cobrados'}</small>
-              </span>
-            </div>
-          </div>
+          </motion.div>
         </section>
 
         <div className="stats">
@@ -437,11 +471,6 @@ export default function Caja() {
         </div>
 
         <SalesChart />
-
-        <div className="turnos">
-          <Turno badge="☀" badgeClass="sol" name="Mañana" subtotal={subM} t={CAJA.manana} franjas={FRANJAS_M} />
-          <Turno badge="☾" badgeClass="luna" name="Tarde" subtotal={subT} t={CAJA.tarde} franjas={FRANJAS_T} />
-        </div>
       </div>
 
       <div className="actionbar">
