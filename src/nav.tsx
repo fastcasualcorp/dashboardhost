@@ -28,6 +28,12 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    g: 'Inteligencia',
+    items: [
+      { id: 'mapa', t: 'Mapa de rivales', s: 'Competencia en tu zona', alert: 'gold', desc: 'Rastrea a tu competencia en un mapa: rivales por radio, sus reseñas, redes y noticias, con un Radar IA que te resume la semana.' },
+    ],
+  },
+  {
     g: 'Equipo',
     items: [
       { id: 'empleados', t: 'Empleados', s: 'Plantilla', desc: 'Tu plantilla con categoría, salario líquido y coste de empresa. La base del coste de personal.' },
@@ -67,6 +73,7 @@ const PATHS: Record<string, ReactNode> = {
   mensual: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></>,
   ventas: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /><circle cx="8" cy="14" r="1" /><circle cx="12" cy="14" r="1" /><circle cx="16" cy="14" r="1" /></>,
   ventastpv: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></>,
+  mapa: <><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" /></>,
   gastos: <><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20M17 15h.01" /></>,
   empleados: <><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 5M21 20a5 5 0 0 0-4-4.9" /></>,
   horarios: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,

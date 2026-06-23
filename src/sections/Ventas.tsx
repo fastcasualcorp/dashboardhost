@@ -73,6 +73,28 @@ export default function Ventas() {
   const [year, setYear] = useState(2026)
   const yearTotal = salesForYear(year)
 
+  // Exportar el año a Excel (CSV): una fila por día con desglose y total.
+  function exportarExcel() {
+    const head = ['Fecha', 'Efectivo', 'Tarjeta', 'Domicilio', 'Total']
+    const rows: string[][] = []
+    for (let m = 0; m < 12; m++) {
+      const dim = new Date(year, m + 1, 0).getDate()
+      for (let d = 1; d <= dim; d++) {
+        const s = salesForDay(year, m, d)
+        if (s) rows.push([`${d}/${m + 1}/${year}`, String(s.e), String(s.t), String(s.d), String(s.total)])
+      }
+    }
+    const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(';')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ventas-${year}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    play('success', 0.4, 1.1)
+  }
+
   return (
     <div className="section">
       <SectionHeader
@@ -88,6 +110,12 @@ export default function Ventas() {
               ›
             </button>
             <Badge tone="gold">{eur0(yearTotal)} €</Badge>
+            <button className="salon-btn primary ventas-xls" onClick={exportarExcel}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+              </svg>
+              Excel
+            </button>
           </div>
         }
       />
