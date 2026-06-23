@@ -187,8 +187,6 @@ export default function Shell() {
     play('tap')
   }
 
-  const cur = itemById(active)
-
   return (
     <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent}>
       <div className="bg-aura" />
@@ -243,10 +241,6 @@ export default function Shell() {
               <path d="M3 6h18M3 12h18M3 18h18" />
             </svg>
           </button>
-          <div className="pt-title">
-            <b>{cur?.t}</b>
-            <small>{cur?.s}</small>
-          </div>
           <div className="top-actions">
             <button className="iconbtn theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a tema día' : 'Cambiar a tema noche'} aria-pressed={theme === 'light'}>
               <span className="tt-track">
