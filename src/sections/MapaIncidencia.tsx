@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
 import mapboxgl from 'mapbox-gl'
@@ -29,13 +29,6 @@ const RIVALES: Rival[] = [
 const CATEGORIAS = ['Smash burger premium', 'Pizzería', 'Kebab', 'Sushi / Poke', 'Tacos / Mexicano', 'Pollo frito', 'Healthy / Bowls', 'Heladería artesana']
 const ALIAS: Record<string, string> = { Hamburguesería: 'Smash burger premium', 'Fast food': 'Smash burger premium' }
 
-const RADIOS = [
-  { k: 500, t: '500 m' },
-  { k: 1000, t: '1 km' },
-  { k: 2000, t: '2 km' },
-  { k: 5000, t: '5 km' },
-]
-
 const SIG_LABEL: Record<Signal['k'], string> = { reseña: 'Reseña', promo: 'Promo', noticia: 'Noticia', social: 'Redes' }
 
 // Token público de Mapbox (pk...). Es seguro en el cliente; conviene restringirlo por URL.
@@ -64,7 +57,8 @@ function circlePolygon(lat: number, lng: number, radiusM: number, points = 84) {
   }
   return { type: 'Feature' as const, geometry: { type: 'Polygon' as const, coordinates: [coords] }, properties: {} }
 }
-const zoomFor = (m: number) => (m <= 500 ? 16.2 : m <= 1000 ? 15.6 : m <= 2000 ? 15.0 : 13.7)
+// zoom continuo según el radio (slider): a más radio, más alejado.
+const zoomFor = (m: number) => 16.4 - Math.log2(Math.max(300, m) / 500) * 0.92
 
 export default function MapaIncidencia() {
   const elRef = useRef<HTMLDivElement>(null)
@@ -206,7 +200,8 @@ export default function MapaIncidencia() {
     if (!map || !loadedRef.current) return
     const src = map.getSource('rebell-radio') as mapboxgl.GeoJSONSource | undefined
     src?.setData(circlePolygon(LOCAL.lat, LOCAL.lng, radio) as never)
-    map.flyTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(radio), pitch: 60, duration: 1300, essential: true })
+    // easeTo corto → el zoom sigue al slider con suavidad (sin tirones de flyTo largo)
+    map.easeTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(radio), pitch: 60, duration: 420, essential: true })
   }, [radio])
 
   const enRango = RIVALES.map((r) => ({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) }))
@@ -218,7 +213,7 @@ export default function MapaIncidencia() {
   // Tu hueco en la zona: categorías sin ningún rival en el radio = oportunidades.
   const presentes = new Set(enRango.map((r) => ALIAS[r.tipo] || r.tipo))
   const huecos = CATEGORIAS.filter((c) => !presentes.has(c)).slice(0, 3)
-  const radioT = RADIOS.find((r) => r.k === radio)?.t
+  const radioT = fmtDist(radio)
 
   return (
     <div className="section mapa-sec">
@@ -226,13 +221,19 @@ export default function MapaIncidencia() {
         title="Mapa de Incidencia"
         subtitle="Rastrea a tu competencia en la zona"
         right={
-          <div className="mapa-radios">
+          <div className="mapa-radio-slider">
             <span className="mr-k">Radio</span>
-            {RADIOS.map((r) => (
-              <button key={r.k} className={'mr-opt' + (radio === r.k ? ' on' : '')} onClick={() => { setRadio(r.k); play('tap') }}>
-                {r.t}
-              </button>
-            ))}
+            <input
+              type="range"
+              className="mr-range"
+              min={300}
+              max={5000}
+              step={100}
+              value={radio}
+              onChange={(e) => setRadio(+e.target.value)}
+              style={{ ['--p' as string]: ((radio - 300) / 4700) * 100 + '%' } as CSSProperties}
+            />
+            <b className="mr-val">{fmtDist(radio)}</b>
           </div>
         }
       />
@@ -288,7 +289,7 @@ export default function MapaIncidencia() {
               <Badge tone="gold">Semana</Badge>
             </div>
             <p>
-              Esta semana en tu radio de {RADIOS.find((r) => r.k === radio)?.t}: <b>Burger Brothers</b> sube a 4,2★ con buenas reseñas de sus patatas; <b>La Casa de las Burgers</b> ataca en precio con un menú a 8,90 €; <b>Kebab Estrella</b> se ha hecho viral en TikTok.{' '}
+              Esta semana en tu radio de {fmtDist(radio)}: <b>Burger Brothers</b> sube a 4,2★ con buenas reseñas de sus patatas; <b>La Casa de las Burgers</b> ataca en precio con un menú a 8,90 €; <b>Kebab Estrella</b> se ha hecho viral en TikTok.{' '}
               <span className="mp-op">Oportunidad: Pizzería Nápoles acumula 2 reseñas negativas → buen momento para captar a sus clientes.</span>
             </p>
             <small className="mp-demo">Datos de demostración · con la conexión a Google + IA serán reales y en vivo</small>
