@@ -1829,6 +1829,15 @@ body {
 .m3-rt { font-weight: 800; font-size: 13px; color: #ffd45e; }
 .m3-pr { font-weight: 600; font-size: 10.5px; color: rgba(255,255,255,.62); }
 .m3-stem { position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #101014; }
+/* nombre del rival al pasar el ratón (etiqueta flotante estilo HUD) */
+.m3-name { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(4px); white-space: nowrap; font-family: var(--font); font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #fff; background: rgba(10,10,14,.92); border: 1px solid rgba(255,191,16,.32); padding: 4px 10px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity .18s var(--ease), transform .18s var(--ease); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.m3-card:hover .m3-name { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ping de radar desde tu local (un pulso cada 6 s, sutil) */
+.m3-ping { position: absolute; bottom: 2px; left: 50%; width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,191,16,.55); transform: translate(-50%, 0) scale(.4); animation: m3ping 6s ease-out infinite; pointer-events: none; }
+@keyframes m3ping { 0% { transform: translate(-50%,0) scale(.4); opacity: .85; } 26% { opacity: .35; } 42%, 100% { transform: translate(-50%,0) scale(6.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .m3-ping { animation: none; } }
+/* timecode mono del HUD */
+.mht-clock { font-variant-numeric: tabular-nums; font-size: 15px !important; color: #fff; letter-spacing: .02em; }
 
 /* controles del mapa en oscuro + sin marcas de agua (logo/atribución) */
 .maplibregl-ctrl-group, .mapboxgl-ctrl-group { background: #15151a !important; box-shadow: 0 4px 14px -4px rgba(0,0,0,.7) !important; border: 1px solid rgba(255,255,255,.12) !important; }
@@ -1907,3 +1916,9 @@ body {
 .cmp-3d .cmp-rows { gap: 6px; }
 .cmp-3d .cmp-track { height: 9px; }
 .cmp-3d .cmp-foot { padding: 11px 20px 13px; }
+
+/* Carta ANCLADA al rival en el mapa 3D (marcador Mapbox + portal), con tallo al punto */
+.cmp-anchor { position: relative; perspective: 1300px; z-index: 10; }
+.cmp-anchor::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); width: 2px; height: 17px; background: linear-gradient(180deg, rgba(255,191,16,.8), rgba(255,191,16,0)); }
+.cmp-anchor::before { content: ''; position: absolute; top: calc(100% + 14px); left: 50%; transform: translateX(-50%); width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px 1px rgba(255,191,16,.7); z-index: 1; }
+.cmp-card.cmp-anchored { width: min(360px, 80vw); max-height: none; transform-origin: center bottom; box-shadow: 0 40px 72px -24px rgba(0,0,0,.95), 0 0 0 1px rgba(255,191,16,.16), 0 0 70px -28px rgba(255,191,16,.22); }

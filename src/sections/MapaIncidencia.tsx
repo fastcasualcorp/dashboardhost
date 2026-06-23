@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
 import mapboxgl from 'mapbox-gl'
@@ -66,19 +67,48 @@ export default function MapaIncidencia() {
   const loadedRef = useRef(false)
   const [radio, setRadio] = useState(1000)
   const [comparar, setComparar] = useState<(Rival & { d: number }) | null>(null)
+  const [cardEl, setCardEl] = useState<HTMLElement | null>(null) // contenedor (marcador) donde se ancla la carta 3D
+  const [clock, setClock] = useState('') // timecode en vivo del HUD
+
+  useEffect(() => {
+    const tick = () => setClock(new Date().toLocaleTimeString('es-ES'))
+    tick()
+    const iv = window.setInterval(tick, 1000)
+    return () => clearInterval(iv)
+  }, [])
 
   const abrirComparador = (r: Rival & { d: number }) => {
     setComparar(r)
     play('pop', 0.5, 1.18)
     // vuela hasta el rival para que la carta 3D se despliegue "sobre" él en el mapa
     const map = mapRef.current
-    if (map && loadedRef.current) map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 15.6), pitch: 62, duration: 900, offset: [0, 72], essential: true })
+    if (map && loadedRef.current) map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 15.6), pitch: 62, duration: 900, offset: [0, 152], essential: true })
   }
   // Ajusta el zoom al SOLTAR el slider (durante el arrastre solo crece el círculo → fluido).
   const flyZoom = (m: number) => {
     const map = mapRef.current
     if (map && loadedRef.current) map.easeTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(m), pitch: 60, duration: 650, essential: true })
   }
+
+  // Ancla la carta del Comparador a las coordenadas del rival (marcador Mapbox) → vive
+  // EN el mapa 3D y se mueve con él, en vez de ser un pop-up centrado. La carta React se
+  // pinta dentro con un portal. Click en el mapa = cerrar.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!comparar || !map || !loadedRef.current) return
+    const el = document.createElement('div')
+    el.className = 'cmp-anchor'
+    el.addEventListener('click', (e) => e.stopPropagation())
+    const mk = new mapboxgl.Marker({ element: el, anchor: 'bottom', offset: [0, -16] }).setLngLat([comparar.lng, comparar.lat]).addTo(map)
+    setCardEl(el)
+    const close = () => setComparar(null)
+    map.on('click', close)
+    return () => {
+      map.off('click', close)
+      mk.remove()
+      setCardEl(null)
+    }
+  }, [comparar])
   // Puente para abrir el comparador desde los marcadores imperativos del mapa.
   const openRef = useRef<((r: Rival) => void) | null>(null)
   openRef.current = (r) => abrirComparador({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) })
@@ -103,6 +133,7 @@ export default function MapaIncidencia() {
     // El contenedor puede crecer tras el primer paint → el canvas se quedaría pequeño/negro.
     const ro = new ResizeObserver(() => map.resize())
     if (elRef.current) ro.observe(elRef.current)
+    let flowIv = 0
 
     map.on('load', () => {
       loadedRef.current = true
@@ -159,24 +190,35 @@ export default function MapaIncidencia() {
       // Líneas de conexión táctico-HUD (estilo Watch Dogs): tu local → cada rival.
       const links = {
         type: 'FeatureCollection',
-        features: RIVALES.map((r) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[LOCAL.lng, LOCAL.lat], [r.lng, r.lat]] }, properties: {} })),
+        features: RIVALES.map((r) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[LOCAL.lng, LOCAL.lat], [r.lng, r.lat]] }, properties: { danger: r.rating < 4 || r.signal.k === 'promo' } })),
       }
       map.addSource('rebell-links', { type: 'geojson', data: links as never })
-      map.addLayer({ id: 'rebell-links-glow', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffbf10', 'line-width': 5, 'line-opacity': 0.22, 'line-blur': 4 } })
-      map.addLayer({ id: 'rebell-links-core', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffd45e', 'line-width': 1.3, 'line-opacity': 0.6, 'line-dasharray': [2, 2] } })
+      // color por peligro: rojo hacia rivales que bajan/atacan, oro hacia el resto
+      map.addLayer({ id: 'rebell-links-glow', type: 'line', source: 'rebell-links', paint: { 'line-color': ['case', ['get', 'danger'], '#ff5c5c', '#ffbf10'], 'line-width': 5, 'line-opacity': 0.22, 'line-blur': 4 } })
+      map.addLayer({ id: 'rebell-links-core', type: 'line', source: 'rebell-links', paint: { 'line-color': ['case', ['get', 'danger'], '#ff7a7a', '#ffd45e'], 'line-width': 1.5, 'line-opacity': 0.7, 'line-dasharray': [0, 4] } })
+      // flujo "data-stream": el dash viaja hacia los rivales (se limpia al desmontar)
+      let off = 0
+      flowIv = window.setInterval(() => {
+        off = (off + 0.45) % 6
+        try {
+          if (map.getLayer('rebell-links-core')) map.setPaintProperty('rebell-links-core', 'line-dasharray', [off, 1.4, 6 - off, 0.0001])
+        } catch {
+          /* capa aún no lista */
+        }
+      }, 110)
 
-      // Marcador héroe (tu local) con aura.
+      // Marcador héroe (tu local) con aura + ping de radar.
       const heroEl = document.createElement('div')
       heroEl.className = 'm3-hero'
-      heroEl.innerHTML = `<span class="m3-aura"></span><span class="m3-core"><b>${LOCAL.rating.toFixed(1)}</b><i>TÚ</i></span>`
+      heroEl.innerHTML = `<span class="m3-ping"></span><span class="m3-aura"></span><span class="m3-core"><b>${LOCAL.rating.toFixed(1)}</b><i>TÚ</i></span>`
       new mapboxgl.Marker({ element: heroEl, anchor: 'bottom' }).setLngLat([LOCAL.lng, LOCAL.lat]).addTo(map)
 
-      // Marcadores-carta de cada rival.
+      // Marcadores-carta de cada rival (nombre flotante al pasar el ratón, estilo HUD).
       RIVALES.forEach((r) => {
         const el = document.createElement('button')
         el.className = 'm3-card'
         el.type = 'button'
-        el.innerHTML = `<span class="m3-rt">${r.rating.toFixed(1)}★</span><span class="m3-pr">${r.precio.toFixed(0)}€</span><span class="m3-stem"></span>`
+        el.innerHTML = `<span class="m3-name">${r.name}</span><span class="m3-rt">${r.rating.toFixed(1)}★</span><span class="m3-pr">${r.precio.toFixed(0)}€</span><span class="m3-stem"></span>`
         el.addEventListener('click', (e) => {
           e.stopPropagation()
           openRef.current?.(r)
@@ -191,6 +233,7 @@ export default function MapaIncidencia() {
     })
 
     return () => {
+      clearInterval(flowIv)
       ro.disconnect()
       map.remove()
       mapRef.current = null
@@ -249,6 +292,10 @@ export default function MapaIncidencia() {
                 <span>Tu rating</span>
                 <b className="g">{LOCAL.rating.toFixed(1)}★</b>
               </div>
+              <div className="mht-stat">
+                <span>Hora</span>
+                <b className="mht-clock">{clock}</b>
+              </div>
             </div>
           </div>
 
@@ -270,7 +317,6 @@ export default function MapaIncidencia() {
             <b className="mhr-val">{fmtDist(radio)}</b>
           </div>
 
-          <AnimatePresence>{comparar && <Comparador rival={comparar} onClose={() => setComparar(null)} />}</AnimatePresence>
         </div>
 
         <aside className="mapa-panel">
@@ -367,6 +413,9 @@ export default function MapaIncidencia() {
           </div>
         </aside>
       </div>
+
+      {/* La carta vive anclada al rival, dentro del marcador (portal) → es parte del mapa 3D */}
+      {cardEl && comparar && createPortal(<Comparador rival={comparar} onClose={() => setComparar(null)} />, cardEl)}
     </div>
   )
 }
@@ -414,16 +463,14 @@ function Comparador({ rival, onClose }: { rival: Rival & { d: number }; onClose:
   }, [rival])
 
   return (
-    <motion.div className="cmp-stage" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div
-        className="cmp-card cmp-3d"
-        ref={root}
-        initial={{ opacity: 0, rotateX: -82, y: 50, scale: 0.92 }}
-        animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
-        exit={{ opacity: 0, rotateX: -55, y: 30, scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 240, damping: 24 }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <motion.div
+      className="cmp-card cmp-3d cmp-anchored"
+      ref={root}
+      initial={{ opacity: 0, rotateX: -84, y: 22, scale: 0.9 }}
+      animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+      onClick={(e) => e.stopPropagation()}
+    >
         <div className="cmp-head">
           <div className="cmp-head-dots" aria-hidden="true" />
           <span className="cmp-kicker">Enfrentamiento · {fmtDist(rival.d)}</span>
@@ -474,6 +521,5 @@ function Comparador({ rival, onClose }: { rival: Rival & { d: number }; onClose:
           </button>
         </div>
       </motion.div>
-    </motion.div>
   )
 }
