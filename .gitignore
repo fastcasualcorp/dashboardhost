@@ -34,3 +34,4 @@ dist-ssr
 
 # avatares fuente (working dir local)
 .avatar-test/
+.sb-service-role
