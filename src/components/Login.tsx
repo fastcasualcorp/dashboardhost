@@ -1,6 +1,6 @@
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { motion } from 'motion/react'
-import { play } from '../lib/sound'
+import { play, preloadSfx } from '../lib/sound'
 import { beastById } from '../lib/beasts'
 
 /* Login estilo Netflix "¿Quién está viendo?" → aquí "¿Quién abre caja?".
@@ -19,7 +19,13 @@ export const PROFILES: Profile[] = [
 export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   const [sel, setSel] = useState<string | null>(null)
 
-  // Avatar vivo: la cabeza sigue al cursor (tilt 3D + parallax de la imagen).
+  // Precargar el sonido YA en el login (antes el motor se preparaba en Shell, que
+  // monta DESPUÉS → el primer clic disparaba la carga y sonaba con ~1s de retraso).
+  useEffect(() => {
+    preloadSfx()
+  }, [])
+
+  // Avatar vivo: la cabeza sigue al cursor (tilt 3D + parallax SUTIL de la imagen).
   function tilt(e: MouseEvent<HTMLButtonElement>) {
     if (sel) return
     const btn = e.currentTarget
@@ -29,8 +35,8 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     const r = btn.getBoundingClientRect()
     const px = (e.clientX - r.left) / r.width - 0.5
     const py = (e.clientY - r.top) / r.height - 0.5
-    av.style.transform = `perspective(620px) rotateX(${(-py * 13).toFixed(2)}deg) rotateY(${(px * 15).toFixed(2)}deg) scale(1.07)`
-    if (img) img.style.transform = `scale(1.16) translate(${(px * -11).toFixed(1)}px, ${(py * -11).toFixed(1)}px)`
+    av.style.transform = `perspective(700px) rotateX(${(-py * 7).toFixed(2)}deg) rotateY(${(px * 9).toFixed(2)}deg) scale(1.035)`
+    if (img) img.style.transform = `scale(1.05) translate(${(px * -4).toFixed(1)}px, ${(py * -4).toFixed(1)}px)`
   }
   function untilt(e: MouseEvent<HTMLButtonElement>) {
     const btn = e.currentTarget
@@ -43,9 +49,10 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   function pick(p: Profile) {
     if (sel) return
     setSel(p.id)
-    play('toggle', 0.5, 1.1)
-    // guiño + zoom, luego entramos
-    window.setTimeout(() => play('success', 0.5, 1.04), 360)
+    // click limpio e inmediato (los buffers ya están precargados → sin retraso)
+    play('tap', 0.5, 1.22)
+    // confirmación suave al entrar
+    window.setTimeout(() => play('success', 0.4, 1.12), 300)
     window.setTimeout(() => onEnter(p), 780)
   }
 
