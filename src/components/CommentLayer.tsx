@@ -2,6 +2,21 @@ import { useEffect, useRef, useState, type CSSProperties, type ClipboardEvent } 
 import { AnimatePresence, motion } from 'motion/react'
 import { play } from '../lib/sound'
 import { selectorFor, describe, pickAt, stableAnchor } from '../lib/anchor'
+import { supabase, hasSupabase } from '../lib/supabase'
+
+// id de navegador para agrupar una tanda de notas (que Claude lea SOLO las tuyas)
+function clientId(): string {
+  try {
+    let c = localStorage.getItem('rebell-cmt-client')
+    if (!c) {
+      c = (localStorage.getItem('rebell-profile') || 'cli') + '-' + (crypto.randomUUID?.() || Math.round(performance.now()).toString(36))
+      localStorage.setItem('rebell-cmt-client', c)
+    }
+    return c
+  } catch {
+    return 'cli'
+  }
+}
 
 /* ════════════════════════════════════════════════════════════════
    MODO COMENTARIOS — Juan deja notas ancladas por toda la página y yo
@@ -76,6 +91,7 @@ export default function CommentLayer({ on, setOn, active }: { on: boolean; setOn
   const [list, setList] = useState<Cmt[]>(load)
   const [openId, setOpenId] = useState<string | null>(null)
   const [, forceTick] = useState(0)
+  const [sent, setSent] = useState<'idle' | 'ok' | 'file'>('idle')
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
   // persistencia
@@ -185,6 +201,35 @@ export default function CommentLayer({ on, setOn, active }: { on: boolean; setOn
   function onPickFile(id: string, files: FileList | null) {
     const f = files?.[0]
     if (f && f.type.startsWith('image/')) compress(f).then((d) => update(id, { img: d })).catch(() => {})
+  }
+
+  // Envío a la nube: si hay Supabase, las notas viajan a `design_comments` y
+  // Claude las lee directamente (sin export manual). Si no, cae al JSON descargable.
+  async function enviar() {
+    if (!hasSupabase || !supabase) {
+      exportar()
+      return
+    }
+    try {
+      const cid = clientId()
+      await supabase.from('design_comments').delete().eq('client_id', cid)
+      const rows = list.map((c) => ({
+        local: c.section, section: c.section, label: c.label, selector: c.sel, instance: c.idx,
+        nx: c.nx, ny: c.ny, body: c.text, image: c.img ?? null, done: c.done, client_id: cid,
+      }))
+      if (rows.length) {
+        const { error } = await supabase.from('design_comments').insert(rows)
+        if (error) throw error
+      }
+      setSent('ok')
+      play('success')
+      window.setTimeout(() => setSent('idle'), 2400)
+    } catch {
+      // tabla aún no creada o sin red → caemos al archivo para no perder nada
+      exportar()
+      setSent('file')
+      window.setTimeout(() => setSent('idle'), 2400)
+    }
   }
 
   function exportar() {
@@ -344,8 +389,8 @@ export default function CommentLayer({ on, setOn, active }: { on: boolean; setOn
             <button className="cm-bar-btn ghost" onClick={() => setOn(false)}>
               Salir
             </button>
-            <button className="cm-bar-fix" onClick={exportar} disabled={!list.length}>
-              Exportar para Claude
+            <button className="cm-bar-fix" onClick={enviar} disabled={!list.length}>
+              {sent === 'ok' ? '✓ Enviado a Claude' : sent === 'file' ? '✓ Descargado' : hasSupabase ? 'Enviar a Claude' : 'Exportar para Claude'}
             </button>
           </div>
         </div>

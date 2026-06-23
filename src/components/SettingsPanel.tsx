@@ -35,6 +35,8 @@ export default function SettingsPanel({
   onAccent,
   beast,
   onBeast,
+  density,
+  onDensity,
   comments,
   onComments,
 }: {
@@ -44,9 +46,16 @@ export default function SettingsPanel({
   onAccent: (a: AccentKey) => void
   beast: string
   onBeast: (id: string) => void
+  density: number
+  onDensity: (d: number) => void
   comments: boolean
   onComments: () => void
 }) {
+  const DENSITIES: { v: number; name: string }[] = [
+    { v: 0.9, name: 'Compacto' },
+    { v: 1, name: 'Normal' },
+    { v: 1.15, name: 'Cómodo' },
+  ]
   const [pwOpen, setPwOpen] = useState(false)
 
   return (
@@ -159,6 +168,23 @@ export default function SettingsPanel({
               style={{ ['--bc' as string]: b.color }}
             >
               <img src={b.img} alt={b.name} loading="lazy" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="sp-section">
+        <div className="lab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+          Densidad
+          <span className="lab-hint">se recuerda en esta pantalla</span>
+        </div>
+        <div className="sp-density">
+          {DENSITIES.map((d) => (
+            <button key={d.v} className={'den-opt' + (Math.abs(density - d.v) < 0.02 ? ' on' : '')} onClick={() => onDensity(d.v)}>
+              {d.name}
             </button>
           ))}
         </div>

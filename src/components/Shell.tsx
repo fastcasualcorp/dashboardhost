@@ -48,6 +48,21 @@ export default function Shell() {
       return 'lion'
     }
   })
+  // Densidad ajustable (compacto/normal/cómodo) → multiplica los tamaños fluidos.
+  // localStorage es por-dispositivo, así que se recuerda en cada pantalla (pedido de Juan).
+  const [density, setDensity] = useState<number>(() => {
+    const v = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('rebell-density') || '') : NaN
+    return v >= 0.8 && v <= 1.3 ? v : 1
+  })
+  function changeDensity(d: number) {
+    setDensity(d)
+    try {
+      localStorage.setItem('rebell-density', String(d))
+    } catch {
+      /* sin localStorage */
+    }
+    play('tap')
+  }
   const localName = (() => {
     try {
       return localStorage.getItem('rebell-profile-name') || 'Bertamiráns'
@@ -188,7 +203,7 @@ export default function Shell() {
   }
 
   return (
-    <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent}>
+    <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent} style={{ ['--den' as string]: density }}>
       <div className="bg-aura" />
       <div className="grain" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg">
@@ -282,6 +297,8 @@ export default function Shell() {
               onAccent={changeAccent}
               beast={beast}
               onBeast={changeBeast}
+              density={density}
+              onDensity={changeDensity}
               comments={commentsOn}
               onComments={() => {
                 setCommentsOn((c) => !c)
