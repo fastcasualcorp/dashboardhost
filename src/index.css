@@ -1754,3 +1754,9 @@ body {
 .la-demo { font-size: 11px; color: rgba(255,255,255,.3); }
 .login-auth.err .la-field input { border-color: #ff7a7a; animation: laShake .36s; }
 @keyframes laShake { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-7px) } 40% { transform: translateX(6px) } 60% { transform: translateX(-4px) } 80% { transform: translateX(3px) } }
+
+/* ── Iconos del menú VIVOS (hover spring + flourish al seleccionar) ── */
+.ni-ic svg { transition: transform .34s cubic-bezier(.34,1.56,.64,1); will-change: transform; }
+.nav-item:hover .ni-ic svg { transform: scale(1.16) rotate(-6deg); }
+.nav-item:active .ni-ic svg { transform: scale(.9); }
+@media (prefers-reduced-motion: reduce) { .ni-ic svg { transition: none; } .nav-item:hover .ni-ic svg { transform: none; } }

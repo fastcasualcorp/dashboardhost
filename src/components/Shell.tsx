@@ -139,6 +139,19 @@ export default function Shell() {
     }
   }, [active])
 
+  // Iconos VIVOS: el icono de la sección activa hace un flourish al seleccionarla
+  // (pop elástico + destello). One-shot, clearProps deja el DOM intacto (el hover CSS sigue).
+  useEffect(() => {
+    if (reduceMotion()) return
+    const ic = document.querySelector('.nav-item.on .ni-ic svg')
+    if (!ic) return
+    const ctx = gsap.context(() => {
+      gsap.fromTo(ic, { scale: 0.55, rotate: -18 }, { scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(3)', clearProps: 'transform' })
+      gsap.fromTo(ic, { filter: 'brightness(2.3)' }, { filter: 'brightness(1)', duration: 0.5, ease: 'power2.out', clearProps: 'filter' })
+    })
+    return () => ctx.revert()
+  }, [active])
+
   // Borde dorado spotlight que sigue el cursor en TODAS las tarjetas (.panel-card),
   // no solo en la Caja. Un único listener delegado para las actuales y las futuras.
   useEffect(() => {
