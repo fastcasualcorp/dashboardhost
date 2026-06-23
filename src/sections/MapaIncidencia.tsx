@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { SectionHeader, Badge } from '../components/ui'
 import { play, playBeast } from '../lib/sound'
 
-/* Mapa de Incidencia — rastrea la competencia de tu zona en un mapa real (oscuro),
-   con un radio configurable, fichas de cada rival y un "Radar IA" con el resumen de
-   la semana. v1 con datos de DEMO + mapa Leaflet/CARTO (sin API key de pago); con la
-   key de Google Places + una Edge Function con Claude pasarán a ser reales y en vivo.
-   Diseño REBELL, no el del panel del socio. */
+/* Mapa de Incidencia — rastrea la competencia de tu zona en un mapa 3D estilo
+   videojuego (MapLibre GL: edificios extruidos, vista inclinada, vuelo cinematográfico),
+   con radio configurable, marcadores-carta por rival y un "Radar IA" del semana. v1 con
+   datos de DEMO; con Google Places + Edge Function (Claude) pasarán a ser reales y en vivo.
+   Motor sin token (CARTO dark vector, gratis). Con el token de Mapbox se sube a su estilo
+   premium. Diseño REBELL (oro sobre casi-negro), no el del panel del socio. */
 
 const LOCAL = { name: 'REBELL · Homeburger', lat: 42.8378, lng: -8.611, rating: 4.6, reviews: 312, precio: 13.5 }
 
@@ -38,6 +39,13 @@ const RADIOS = [
 
 const SIG_LABEL: Record<Signal['k'], string> = { reseña: 'Reseña', promo: 'Promo', noticia: 'Noticia', social: 'Redes' }
 
+// Estilo vectorial oscuro gratis (sin token). Si hay token de Mapbox en el entorno
+// (VITE_MAPBOX_TOKEN), usa su estilo premium dark-v11 (lo que eligió Juan).
+const MAPBOX_TOKEN = (import.meta.env as Record<string, string | undefined>).VITE_MAPBOX_TOKEN
+const MAP_STYLE = MAPBOX_TOKEN
+  ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11?access_token=${MAPBOX_TOKEN}`
+  : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+
 function distM(aLat: number, aLng: number, bLat: number, bLng: number) {
   const R = 6371000
   const toR = (d: number) => (d * Math.PI) / 180
@@ -48,51 +56,144 @@ function distM(aLat: number, aLng: number, bLat: number, bLng: number) {
 }
 const fmtDist = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`)
 
-function pinIcon(kind: 'local' | 'rival', rating: number) {
-  return L.divIcon({
-    className: '',
-    html: `<div class="map-pin ${kind}"><b>${rating.toFixed(1)}</b></div>`,
-    iconSize: [38, 38],
-    iconAnchor: [19, 19],
-  })
+// Polígono de círculo (en grados) para pintar el radio como capa GeoJSON.
+function circlePolygon(lat: number, lng: number, radiusM: number, points = 84) {
+  const dLat = radiusM / 111320
+  const dLng = radiusM / (111320 * Math.cos((lat * Math.PI) / 180))
+  const coords: [number, number][] = []
+  for (let i = 0; i <= points; i++) {
+    const a = (i / points) * 2 * Math.PI
+    coords.push([lng + dLng * Math.cos(a), lat + dLat * Math.sin(a)])
+  }
+  return { type: 'Feature' as const, geometry: { type: 'Polygon' as const, coordinates: [coords] }, properties: {} }
 }
+const zoomFor = (m: number) => (m <= 500 ? 16.2 : m <= 1000 ? 15.4 : m <= 2000 ? 14.7 : 13.4)
 
 export default function MapaIncidencia() {
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
-  const circleRef = useRef<L.Circle | null>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const loadedRef = useRef(false)
   const [radio, setRadio] = useState(2000)
   const [comparar, setComparar] = useState<(Rival & { d: number }) | null>(null)
 
-  // Inicializa el mapa una vez.
+  const abrirComparador = (r: Rival & { d: number }) => {
+    setComparar(r)
+    play('pop', 0.5, 1.18)
+  }
+  // Puente para abrir el comparador desde los marcadores imperativos del mapa.
+  const openRef = useRef<((r: Rival) => void) | null>(null)
+  openRef.current = (r) => abrirComparador({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) })
+
+  // Inicializa el mapa 3D una vez.
   useEffect(() => {
     if (!elRef.current || mapRef.current) return
-    const map = L.map(elRef.current, { zoomControl: true, attributionControl: true, scrollWheelZoom: true }).setView([LOCAL.lat, LOCAL.lng], 14)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 20,
-      attribution: '© OpenStreetMap · © CARTO',
-    }).addTo(map)
-    L.marker([LOCAL.lat, LOCAL.lng], { icon: pinIcon('local', LOCAL.rating), zIndexOffset: 1000 }).addTo(map).bindTooltip(LOCAL.name, { direction: 'top' })
-    RIVALES.forEach((r) => {
-      L.marker([r.lat, r.lng], { icon: pinIcon('rival', r.rating) }).addTo(map).bindTooltip(`${r.name} · ${r.rating}★`, { direction: 'top' })
+    const map = new maplibregl.Map({
+      container: elRef.current,
+      style: MAP_STYLE,
+      center: [LOCAL.lng, LOCAL.lat],
+      zoom: 12.4,
+      pitch: 60,
+      bearing: -17,
+      attributionControl: false,
+      maxPitch: 70,
     })
     mapRef.current = map
-    window.setTimeout(() => map.invalidateSize(), 250)
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right')
+
+    // El contenedor puede crecer tras el primer paint (layout/fuentes) → el canvas se
+    // quedaría pequeño y en negro. Un ResizeObserver fuerza el resize al tamaño real.
+    const ro = new ResizeObserver(() => map.resize())
+    if (elRef.current) ro.observe(elRef.current)
+
+    map.on('load', () => {
+      loadedRef.current = true
+
+      // Edificios 3D extruidos (la fuente vectorial CARTO trae la capa 'building').
+      try {
+        const layers = map.getStyle().layers || []
+        const labelLayer = layers.find((l) => l.type === 'symbol')?.id
+        map.addLayer(
+          {
+            id: 'rebell-3d-buildings',
+            type: 'fill-extrusion',
+            source: 'carto',
+            'source-layer': 'building',
+            minzoom: 12,
+            paint: {
+              // tinte cálido (oro) en los edificios altos = look videojuego
+              'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#181820', 24, '#262630', 70, '#3a3326', 140, '#4a3d22'],
+              // altura EXAGERADA (×2.6) para dar relieve aunque el pueblo sea bajo
+              'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 12.5, 0, 14.5, ['*', ['coalesce', ['get', 'render_height'], 8], 2.6], 17, ['*', ['coalesce', ['get', 'render_height'], 8], 3]],
+              'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+              'fill-extrusion-opacity': 0.95,
+            },
+          },
+          labelLayer,
+        )
+      } catch {
+        /* si la fuente/capa no existe en el estilo, el mapa base sigue funcionando */
+      }
+
+      // Cielo/atmósfera para el horizonte 3D (si lo soporta el estilo).
+      try {
+        ;(map as unknown as { setSky?: (s: unknown) => void }).setSky?.({
+          'sky-color': '#0a0a12',
+          'horizon-color': '#1a160b',
+          'fog-color': '#0b0b0e',
+          'fog-ground-blend': 0.5,
+          'sky-horizon-blend': 0.6,
+        })
+      } catch {
+        /* sin sky en este estilo */
+      }
+
+      // Radio: capa de relleno + anillo con glow (GeoJSON que se actualiza al cambiar).
+      map.addSource('rebell-radio', { type: 'geojson', data: circlePolygon(LOCAL.lat, LOCAL.lng, radio) })
+      map.addLayer({ id: 'rebell-radio-fill', type: 'fill', source: 'rebell-radio', paint: { 'fill-color': '#ffbf10', 'fill-opacity': 0.05 } })
+      map.addLayer({ id: 'rebell-radio-line', type: 'line', source: 'rebell-radio', paint: { 'line-color': '#ffbf10', 'line-width': 1.6, 'line-opacity': 0.65, 'line-blur': 1.2 } })
+
+      // Marcador héroe (tu local) con aura.
+      const heroEl = document.createElement('div')
+      heroEl.className = 'm3-hero'
+      heroEl.innerHTML = `<span class="m3-aura"></span><span class="m3-core"><b>${LOCAL.rating.toFixed(1)}</b><i>TÚ</i></span>`
+      new maplibregl.Marker({ element: heroEl, anchor: 'bottom' }).setLngLat([LOCAL.lng, LOCAL.lat]).addTo(map)
+
+      // Marcadores-carta de cada rival.
+      RIVALES.forEach((r) => {
+        const el = document.createElement('button')
+        el.className = 'm3-card'
+        el.type = 'button'
+        el.innerHTML = `<span class="m3-rt">${r.rating.toFixed(1)}★</span><span class="m3-pr">${r.precio.toFixed(0)}€</span><span class="m3-stem"></span>`
+        el.addEventListener('click', (e) => {
+          e.stopPropagation()
+          openRef.current?.(r)
+        })
+        new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([r.lng, r.lat]).addTo(map)
+      })
+
+      // Asegura el tamaño correcto antes de volar (evita el canvas en negro).
+      map.resize()
+      window.setTimeout(() => map.resize(), 300)
+      // Entrada cinematográfica: vuela hasta el encuadre del radio.
+      map.flyTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(radio), pitch: 60, bearing: -17, duration: 2400, essential: true })
+    })
+
     return () => {
+      ro.disconnect()
       map.remove()
       mapRef.current = null
+      loadedRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Círculo del radio + encuadre.
+  // Al cambiar el radio: actualiza el círculo y vuela al nuevo encuadre.
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
-    if (circleRef.current) circleRef.current.remove()
-    const c = L.circle([LOCAL.lat, LOCAL.lng], { radius: radio, color: '#ffbf10', weight: 1.5, fillColor: '#ffbf10', fillOpacity: 0.06 }).addTo(map)
-    circleRef.current = c
-    map.fitBounds(c.getBounds(), { padding: [36, 36] })
+    if (!map || !loadedRef.current) return
+    const src = map.getSource('rebell-radio') as maplibregl.GeoJSONSource | undefined
+    src?.setData(circlePolygon(LOCAL.lat, LOCAL.lng, radio) as never)
+    map.flyTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(radio), pitch: 60, duration: 1300, essential: true })
   }, [radio])
 
   const enRango = RIVALES.map((r) => ({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) }))
@@ -105,11 +206,6 @@ export default function MapaIncidencia() {
   const presentes = new Set(enRango.map((r) => ALIAS[r.tipo] || r.tipo))
   const huecos = CATEGORIAS.filter((c) => !presentes.has(c)).slice(0, 3)
   const radioT = RADIOS.find((r) => r.k === radio)?.t
-
-  const abrirComparador = (r: Rival & { d: number }) => {
-    setComparar(r)
-    play('pop', 0.5, 1.18)
-  }
 
   return (
     <div className="section mapa-sec">
@@ -129,7 +225,11 @@ export default function MapaIncidencia() {
       />
 
       <div className="mapa-wrap">
-        <div className="mapa-map" ref={elRef} />
+        <div className="mapa-map mapa-3d">
+          <div className="mapa-canvas" ref={elRef} />
+          <div className="mapa-hud" aria-hidden="true" />
+          <div className="mapa-scan" aria-hidden="true" />
+        </div>
 
         <aside className="mapa-panel">
           <AnimatePresence>
