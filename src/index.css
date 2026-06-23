@@ -1835,3 +1835,17 @@ body {
 .maplibregl-ctrl-group button + button { border-top: 1px solid rgba(255,255,255,.1) !important; }
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(.82); }
 .maplibregl-ctrl-attrib { display: none !important; }
+
+/* Comparador desplegado SOBRE el mapa como tarjeta 3D (no modal a pantalla completa) */
+.cmp-stage { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; perspective: 1500px; background: radial-gradient(125% 120% at 50% 45%, rgba(8,8,10,.32), rgba(8,8,10,.6)); -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px); }
+.cmp-card.cmp-3d { width: min(418px, 96%); max-width: none; max-height: 96%; overflow: hidden; transform-origin: center bottom; transform-style: preserve-3d; will-change: transform; box-shadow: 0 50px 90px -28px rgba(0,0,0,.95), 0 0 0 1px rgba(255,191,16,.14), 0 0 80px -30px rgba(255,191,16,.18); }
+/* compacto para que la carta entera (incl. veredicto + Cerrar) quepa en el lienzo del mapa */
+.cmp-3d .cmp-head { padding: 12px 20px 15px; }
+.cmp-3d .cmp-names { gap: 8px; }
+.cmp-3d .cmp-n { font-size: 15px; line-height: 1.04; }
+.cmp-3d .cmp-vs { width: 34px; height: 34px; font-size: 12px; }
+.cmp-3d .cmp-body { padding: 12px 20px 2px; gap: 9px; }
+.cmp-3d .cmp-m-label { margin-bottom: 4px; }
+.cmp-3d .cmp-rows { gap: 6px; }
+.cmp-3d .cmp-track { height: 9px; }
+.cmp-3d .cmp-foot { padding: 11px 20px 13px; }

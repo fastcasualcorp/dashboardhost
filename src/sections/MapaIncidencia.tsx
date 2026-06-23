@@ -79,6 +79,9 @@ export default function MapaIncidencia() {
   const abrirComparador = (r: Rival & { d: number }) => {
     setComparar(r)
     play('pop', 0.5, 1.18)
+    // vuela hasta el rival para que la carta 3D se despliegue "sobre" él en el mapa
+    const map = mapRef.current
+    if (map && loadedRef.current) map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 15.6), pitch: 62, duration: 900, offset: [0, 72], essential: true })
   }
   // Puente para abrir el comparador desde los marcadores imperativos del mapa.
   const openRef = useRef<((r: Rival) => void) | null>(null)
@@ -227,8 +230,9 @@ export default function MapaIncidencia() {
       <div className="mapa-wrap">
         <div className="mapa-map mapa-3d">
           <div className="mapa-canvas" ref={elRef} />
-          <div className="mapa-hud" aria-hidden="true" />
           <div className="mapa-scan" aria-hidden="true" />
+          <div className="mapa-hud" aria-hidden="true" />
+          <AnimatePresence>{comparar && <Comparador rival={comparar} onClose={() => setComparar(null)} />}</AnimatePresence>
         </div>
 
         <aside className="mapa-panel">
@@ -326,7 +330,6 @@ export default function MapaIncidencia() {
         </aside>
       </div>
 
-      <AnimatePresence>{comparar && <Comparador rival={comparar} onClose={() => setComparar(null)} />}</AnimatePresence>
     </div>
   )
 }
@@ -374,14 +377,14 @@ function Comparador({ rival, onClose }: { rival: Rival & { d: number }; onClose:
   }, [rival])
 
   return (
-    <motion.div className="cmp-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+    <motion.div className="cmp-stage" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div
-        className="cmp-card"
+        className="cmp-card cmp-3d"
         ref={root}
-        initial={{ opacity: 0, scale: 0.86, y: 24 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 16 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+        initial={{ opacity: 0, rotateX: -82, y: 50, scale: 0.92 }}
+        animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
+        exit={{ opacity: 0, rotateX: -55, y: 30, scale: 0.95 }}
+        transition={{ type: 'spring', stiffness: 240, damping: 24 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="cmp-head">
