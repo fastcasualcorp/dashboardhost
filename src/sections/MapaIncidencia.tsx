@@ -74,6 +74,11 @@ export default function MapaIncidencia() {
     const map = mapRef.current
     if (map && loadedRef.current) map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 15.6), pitch: 62, duration: 900, offset: [0, 72], essential: true })
   }
+  // Ajusta el zoom al SOLTAR el slider (durante el arrastre solo crece el círculo → fluido).
+  const flyZoom = (m: number) => {
+    const map = mapRef.current
+    if (map && loadedRef.current) map.easeTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(m), pitch: 60, duration: 650, essential: true })
+  }
   // Puente para abrir el comparador desde los marcadores imperativos del mapa.
   const openRef = useRef<((r: Rival) => void) | null>(null)
   openRef.current = (r) => abrirComparador({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) })
@@ -157,8 +162,8 @@ export default function MapaIncidencia() {
         features: RIVALES.map((r) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[LOCAL.lng, LOCAL.lat], [r.lng, r.lat]] }, properties: {} })),
       }
       map.addSource('rebell-links', { type: 'geojson', data: links as never })
-      map.addLayer({ id: 'rebell-links-glow', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffbf10', 'line-width': 3, 'line-opacity': 0.16, 'line-blur': 3 } })
-      map.addLayer({ id: 'rebell-links-core', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffd45e', 'line-width': 1.1, 'line-opacity': 0.5, 'line-dasharray': [2, 2] } })
+      map.addLayer({ id: 'rebell-links-glow', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffbf10', 'line-width': 5, 'line-opacity': 0.22, 'line-blur': 4 } })
+      map.addLayer({ id: 'rebell-links-core', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffd45e', 'line-width': 1.3, 'line-opacity': 0.6, 'line-dasharray': [2, 2] } })
 
       // Marcador héroe (tu local) con aura.
       const heroEl = document.createElement('div')
@@ -199,9 +204,9 @@ export default function MapaIncidencia() {
     const map = mapRef.current
     if (!map || !loadedRef.current) return
     const src = map.getSource('rebell-radio') as mapboxgl.GeoJSONSource | undefined
+    // Durante el arrastre solo crece el círculo (instantáneo, fluido); el zoom se ajusta
+    // al soltar (flyZoom) para que el mapa no dé tirones en cada paso del slider.
     src?.setData(circlePolygon(LOCAL.lat, LOCAL.lng, radio) as never)
-    // easeTo corto → el zoom sigue al slider con suavidad (sin tirones de flyTo largo)
-    map.easeTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(radio), pitch: 60, duration: 420, essential: true })
   }, [radio])
 
   const enRango = RIVALES.map((r) => ({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) }))
@@ -217,32 +222,54 @@ export default function MapaIncidencia() {
 
   return (
     <div className="section mapa-sec">
-      <SectionHeader
-        title="Mapa de Incidencia"
-        subtitle="Rastrea a tu competencia en la zona"
-        right={
-          <div className="mapa-radio-slider">
-            <span className="mr-k">Radio</span>
-            <input
-              type="range"
-              className="mr-range"
-              min={300}
-              max={5000}
-              step={100}
-              value={radio}
-              onChange={(e) => setRadio(+e.target.value)}
-              style={{ ['--p' as string]: ((radio - 300) / 4700) * 100 + '%' } as CSSProperties}
-            />
-            <b className="mr-val">{fmtDist(radio)}</b>
-          </div>
-        }
-      />
+      <SectionHeader title="Mapa de Incidencia" subtitle="Rastrea a tu competencia en la zona" />
 
       <div className="mapa-wrap">
         <div className="mapa-map mapa-3d">
           <div className="mapa-canvas" ref={elRef} />
           <div className="mapa-scan" aria-hidden="true" />
           <div className="mapa-hud" aria-hidden="true" />
+
+          {/* HUD superior estilo F1: zona + datos en vivo */}
+          <div className="map-hud-top">
+            <div className="mht-title">
+              <span className="mht-kick">◢ Área de influencia</span>
+              <b>Bertamiráns</b>
+            </div>
+            <div className="mht-stats">
+              <div className="mht-stat">
+                <span>Rivales</span>
+                <b>{enRango.length}</b>
+              </div>
+              <div className="mht-stat">
+                <span>Radio</span>
+                <b>{fmtDist(radio)}</b>
+              </div>
+              <div className="mht-stat">
+                <span>Tu rating</span>
+                <b className="g">{LOCAL.rating.toFixed(1)}★</b>
+              </div>
+            </div>
+          </div>
+
+          {/* Slider de radio integrado en el HUD del mapa (abajo) */}
+          <div className="map-hud-radio">
+            <span className="mhr-k">Radio</span>
+            <input
+              type="range"
+              className="mhr-range"
+              min={300}
+              max={5000}
+              step={50}
+              value={radio}
+              onChange={(e) => setRadio(+e.target.value)}
+              onPointerUp={(e) => flyZoom(+(e.currentTarget as HTMLInputElement).value)}
+              onKeyUp={(e) => flyZoom(+(e.currentTarget as HTMLInputElement).value)}
+              style={{ ['--p' as string]: ((radio - 300) / 4700) * 100 + '%' } as CSSProperties}
+            />
+            <b className="mhr-val">{fmtDist(radio)}</b>
+          </div>
+
           <AnimatePresence>{comparar && <Comparador rival={comparar} onClose={() => setComparar(null)} />}</AnimatePresence>
         </div>
 

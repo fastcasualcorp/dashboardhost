@@ -1847,6 +1847,24 @@ body {
 .mr-range::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px -1px rgba(0,0,0,.6); cursor: pointer; }
 .mr-val { font-family: var(--font-num); font-weight: 700; font-size: clamp(13px, 1vw, 15px); color: var(--gold); min-width: 52px; text-align: right; }
 
+/* HUD del mapa estilo F1: panel de datos (arriba-izq, esquina cortada) + slider integrado (abajo) */
+.map-hud-top { position: absolute; top: 14px; left: 14px; z-index: 5; pointer-events: none; display: flex; flex-direction: column; gap: 13px; padding: 13px 18px 14px; background: linear-gradient(135deg, rgba(10,10,14,.86), rgba(10,10,14,.5)); border: 1px solid rgba(255,191,16,.2); border-radius: 5px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); box-shadow: 0 14px 36px -16px rgba(0,0,0,.7); }
+.mht-title { display: flex; flex-direction: column; gap: 4px; }
+.mht-kick { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.mht-title b { font-family: var(--font-display); font-weight: 600; font-size: 19px; color: #fff; letter-spacing: -.01em; line-height: 1; }
+.mht-stats { display: flex; gap: 20px; }
+.mht-stat { display: flex; flex-direction: column; gap: 4px; }
+.mht-stat span { font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+.mht-stat b { font-family: var(--font-num); font-weight: 700; font-size: 21px; color: #fff; line-height: 1; }
+.mht-stat b.g { color: var(--gold); }
+.map-hud-radio { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 5; width: min(62%, 470px); display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: linear-gradient(135deg, rgba(10,10,14,.88), rgba(10,10,14,.62)); border: 1px solid rgba(255,191,16,.22); border-radius: 5px; clip-path: polygon(13px 0, 100% 0, 100% 100%, 0 100%, 0 13px); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); box-shadow: 0 14px 36px -16px rgba(0,0,0,.7); }
+.mhr-k { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 700; flex: none; }
+.mhr-range { flex: 1; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 100px; background: linear-gradient(90deg, var(--gold-deep), var(--gold) var(--p, 50%), rgba(255,255,255,.14) var(--p, 50%)); cursor: pointer; }
+.mhr-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 9px -1px rgba(0,0,0,.7), 0 0 0 5px rgba(255,191,16,.18); cursor: pointer; transition: transform .12s var(--ease-spring); }
+.mhr-range::-webkit-slider-thumb:active { transform: scale(1.2); }
+.mhr-range::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 9px -1px rgba(0,0,0,.7); cursor: pointer; }
+.mhr-val { font-family: var(--font-num); font-weight: 700; font-size: 15px; color: var(--gold); min-width: 56px; text-align: right; flex: none; }
+
 /* ════════════ Gastos · tarta de categorías + lista de conceptos ════════════ */
 .br-fill.c-violeta { background: linear-gradient(90deg, #8b6df0, #b58bf0); }
 .gp-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
