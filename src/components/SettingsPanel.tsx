@@ -3,7 +3,7 @@ import { motion } from 'motion/react'
 import { BEASTS } from '../lib/beasts'
 
 export type FontKey = 'clash' | 'inter' | 'roundo'
-export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora'
+export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
 
 const FONTS: { key: FontKey; name: string; meta: string; stack: string }[] = [
   { key: 'clash', name: 'Clash Grotesk', meta: 'grotesca · principal', stack: "'Clash Grotesk', sans-serif" },
@@ -19,6 +19,7 @@ const ACCENTS: { key: AccentKey; name: string; css: string; premium?: boolean }[
   { key: 'violeta', name: 'Violeta', css: 'linear-gradient(135deg,#c4b5fd,#8b6df0)' },
   { key: 'atardecer', name: 'Atardecer', css: 'linear-gradient(135deg,#ff9a3d,#ff5c8a)', premium: true },
   { key: 'aurora', name: 'Aurora', css: 'linear-gradient(135deg,#22d3ee,#a78bfa)', premium: true },
+  { key: 'mono', name: 'Mono · blanco y negro', css: 'linear-gradient(135deg,#e8e8ee,#15151a)' },
 ]
 
 const Check = () => (

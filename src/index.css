@@ -813,11 +813,31 @@ body {
 .app[data-accent='violeta']   { --gold:#a78bfa; --gold-soft:#c4b5fd; --gold-deep:#8b6df0; --accent-ink:#fff; }
 .app[data-accent='atardecer'] { --gold:#ff7a5c; --gold-soft:#ffa06b; --gold-deep:#f0506e; --accent-grad:linear-gradient(135deg,#ff9a3d,#ff5c8a); --accent-ink:#fff; }
 .app[data-accent='aurora']    { --gold:#5ec8e0; --gold-soft:#8fdcec; --gold-deep:#7c6df0; --accent-grad:linear-gradient(135deg,#22d3ee,#a78bfa); --accent-ink:#06223a; }
+/* Mono (blanco y negro): para quien no quiere color. Acento neutro — en oscuro
+   un gris plata legible, en claro un negro. Empareja con la bestia Panda. */
+.app[data-accent='mono']      { --gold:#c8c8d0; --gold-soft:#e8e8ee; --gold-deep:#9a9aa4; --accent-grad:linear-gradient(180deg,#e8e8ee,#9a9aa4); --accent-ink:#15151a; }
 /* en modo claro oscurecemos un punto el acento para que contraste sobre blanco */
 [data-theme='light'] .app[data-accent='azul']    { --gold:#1f7ae0; --gold-deep:#1660b8; }
 [data-theme='light'] .app[data-accent='verde']   { --gold:#0fa06f; --gold-deep:#0a7a52; }
 [data-theme='light'] .app[data-accent='rosa']    { --gold:#e0457a; --gold-deep:#c23566; }
 [data-theme='light'] .app[data-accent='violeta'] { --gold:#7c5cf0; --gold-deep:#6a45e0; }
+[data-theme='light'] .app[data-accent='mono']    { --gold:#1b1b1f; --gold-soft:#3a3a42; --gold-deep:#0a0a0d; --accent-grad:linear-gradient(180deg,#3a3a42,#0a0a0d); --accent-ink:#fff; }
+/* Mono: neutralizar los tintes dorados LITERALES del chrome (esos rgba(255,191,16)
+   no siguen la variable de acento) → que sea de verdad blanco y negro. */
+.app[data-accent='mono'] .nav-item.on,
+.app[data-accent='mono'] .nav-item.on .ni-ic,
+.app[data-accent='mono'] .ni-tag,
+.app[data-accent='mono'] .carta-tab.on,
+.app[data-accent='mono'] .tpv-tab.on,
+.app[data-accent='mono'] .badge.sol,
+.app[data-accent='mono'] .badge-pill.t-gold,
+.app[data-accent='mono'] .sp-ic,
+.app[data-accent='mono'] .sp-tag { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.16); }
+[data-theme='light'] .app[data-accent='mono'] .nav-item.on,
+[data-theme='light'] .app[data-accent='mono'] .nav-item.on .ni-ic,
+[data-theme='light'] .app[data-accent='mono'] .ni-tag,
+[data-theme='light'] .app[data-accent='mono'] .carta-tab.on,
+[data-theme='light'] .app[data-accent='mono'] .tpv-tab.on { background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.12); }
 
 /* swatches del selector de acento en el panel de cuenta */
 .sp-accents { display: flex; gap: 12px; flex-wrap: wrap; padding: 4px 2px 2px; }

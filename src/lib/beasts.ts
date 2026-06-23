@@ -6,7 +6,7 @@ export type Beast = { id: string; name: string; img: string; color: string; acce
 
 export const BEASTS: Beast[] = [
   { id: 'lion', name: 'León', img: '/img/avatars/lion.png', color: '#ffbf10', accent: 'gold' },
-  { id: 'wolf', name: 'Lobo', img: '/img/avatars/wolf.png', color: '#3a86ff', accent: 'azul' },
+  { id: 'panda', name: 'Panda', img: '/img/avatars/panda.png', color: '#c8c8d0', accent: 'mono' },
   { id: 'fox', name: 'Zorro', img: '/img/avatars/fox.png', color: '#e0457a', accent: 'rosa' },
   { id: 'panther', name: 'Pantera', img: '/img/avatars/panther.png', color: '#8b6df0', accent: 'violeta' },
   { id: 'tiger', name: 'Tigre', img: '/img/avatars/tiger.png', color: '#ff7a3d', accent: 'atardecer' },

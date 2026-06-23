@@ -11,7 +11,7 @@ export type Profile = { id: string; name: string; sub: string; beast: string }
 
 export const PROFILES: Profile[] = [
   { id: 'bertamirans', name: 'Bertamiráns', sub: 'REBELL', beast: 'lion' },
-  { id: 'madrid', name: 'Madrid Centro', sub: 'REBELL', beast: 'wolf' },
+  { id: 'madrid', name: 'Madrid Centro', sub: 'REBELL', beast: 'panda' },
   { id: 'barcelona', name: 'Barcelona', sub: 'REBELL', beast: 'fox' },
   { id: 'central', name: 'Administración', sub: 'Central', beast: 'panther' },
 ]
