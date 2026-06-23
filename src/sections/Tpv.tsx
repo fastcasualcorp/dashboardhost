@@ -4,6 +4,7 @@ import { SectionHeader, Badge } from '../components/ui'
 import { eur } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
+import { loadSalon, type Mesa } from '../lib/salon'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
 
@@ -19,6 +20,11 @@ export default function Tpv() {
   const [cat, setCat] = useState('Burgers')
   const [building, setBuilding] = useState<Producto | null>(null)
   const [picks, setPicks] = useState<Record<string, string>>({})
+  // Mesa de la comanda (del plano del Salón) + envío a cocina (Comanda).
+  const [mesa, setMesa] = useState<Mesa | null>(null)
+  const [pickOpen, setPickOpen] = useState(false)
+  const [mesas, setMesas] = useState<Mesa[]>(() => loadSalon())
+  const [sent, setSent] = useState(false)
   const combo = useRef({ n: 0, t: 0 })
   const raf = useRef(0)
   const menuSeq = useRef(0)
@@ -95,6 +101,28 @@ export default function Tpv() {
   const items = cart.reduce((s, l) => s + l.qty, 0)
   const qtyOf = (id: string) => cart.find((l) => l.id === id)?.qty ?? 0
 
+  // ── Mesa (del plano del Salón) ──
+  function openPicker() {
+    setMesas(loadSalon()) // recarga por si se editó el salón
+    setPickOpen(true)
+    play('tap', 0.5, 1.1)
+  }
+  function chooseMesa(m: Mesa | null) {
+    setMesa(m)
+    setPickOpen(false)
+    play('pop', 0.5, m ? 1.2 : 0.9)
+  }
+
+  // Comanda → enviar a cocina (KDS). En frontend marca "enviada"; con Supabase
+  // hará insert en `comandas` con items + mesa.
+  function comanda() {
+    if (!cart.length) return
+    play('success', 0.4, 1.28)
+    setSent(true)
+    window.setTimeout(() => setSent(false), 1700)
+    // TODO Supabase: insert into comandas { local_id, numero, items, mesa, estado:'nueva' }
+  }
+
   const cobrar = () => {
     if (!cart.length) return
     const from = ventasHoy
@@ -117,11 +145,19 @@ export default function Tpv() {
     setPulse((p) => p + 1)
     setPaid(true)
     setCart([])
+    setMesa(null) // la mesa queda libre tras cobrar
+    // TODO Supabase: insert into ventas { local_id, total, metodo, mesa }
   }
 
   useEffect(() => () => cancelAnimationFrame(raf.current), [])
 
   const prods = PRODUCTOS.filter((p) => p.cat === cat)
+
+  // Mini-plano del salón para el selector de mesa: escala para que quepa.
+  const planoBounds = mesas.reduce((b, m) => ({ w: Math.max(b.w, m.x + m.w), h: Math.max(b.h, m.y + m.h) }), { w: 1, h: 1 })
+  const PLANO_W = 520
+  const PLANO_H = 320
+  const planoScale = Math.min(PLANO_W / planoBounds.w, PLANO_H / planoBounds.h, 1)
 
   // ── Atajos de teclado (POS rápido) ──────────────────────────────
   useEffect(() => {
@@ -217,7 +253,17 @@ export default function Tpv() {
 
         <div className="panel-card tpv-ticket-col">
           <div className="card-head tk-head">
-            <h3>Ticket</h3>
+            <div className="tk-head-l">
+              <h3>Ticket</h3>
+              <button className={'tk-mesa' + (mesa ? ' on' : '')} onClick={openPicker}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.6" />
+                  <circle cx="15.5" cy="15.5" r="1.6" />
+                </svg>
+                {mesa ? `Mesa ${mesa.nombre}` : 'Para llevar'}
+              </button>
+            </div>
             {items > 0 && <Badge tone="gold">{items} art.</Badge>}
           </div>
 
@@ -273,12 +319,75 @@ export default function Tpv() {
               <span>Total</span>
               <b className="tnum">{eur(total)} €</b>
             </div>
-            <button className={'tpv-pay' + (cart.length ? '' : ' off')} onClick={cobrar} disabled={!cart.length}>
-              Cobrar {eur(total)} €
-            </button>
+            <div className="tk-actions">
+              <button className={'tk-comanda' + (sent ? ' ok' : '')} onClick={comanda} disabled={!cart.length}>
+                {sent ? (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                    Enviada
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v4H4zM6 8v12h12V8M9 12h6" /></svg>
+                    Comanda
+                  </>
+                )}
+              </button>
+              <button className={'tpv-pay' + (cart.length ? '' : ' off')} onClick={cobrar} disabled={!cart.length}>
+                Cobrar {eur(total)} €
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── Selector de mesa (mini-plano del Salón) ── */}
+      <AnimatePresence>
+        {pickOpen && (
+          <motion.div className="tpv-mesa-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPickOpen(false)}>
+            <motion.div
+              className="tpv-mesa-panel"
+              initial={{ opacity: 0, scale: 0.94, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 30, mass: 0.8 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="mb-head">
+                <div className="mb-htxt">
+                  <b>¿A qué mesa va?</b>
+                  <small>Pulsa una mesa del plano o elige “Para llevar”</small>
+                </div>
+                <button className="mb-x" onClick={() => setPickOpen(false)} aria-label="Cerrar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </header>
+
+              <div className="tpv-mesa-plano">
+                <div className="tmp-canvas" style={{ width: planoBounds.w * planoScale, height: planoBounds.h * planoScale }}>
+                  {mesas.map((m) => (
+                    <button
+                      key={m.id}
+                      className={'tmp-mesa' + (mesa?.id === m.id ? ' on' : '')}
+                      style={{ left: m.x * planoScale, top: m.y * planoScale, width: m.w * planoScale, height: m.h * planoScale, borderRadius: m.forma === 'redonda' ? '50%' : 10 }}
+                      onClick={() => chooseMesa(m)}
+                    >
+                      <span>{m.nombre}</span>
+                    </button>
+                  ))}
+                  {!mesas.length && <div className="salon-empty">Aún no hay salón · créalo en “Salón”</div>}
+                </div>
+              </div>
+
+              <footer className="tpv-mesa-foot">
+                <button className={'tmp-llevar' + (!mesa ? ' on' : '')} onClick={() => chooseMesa(null)}>
+                  Para llevar
+                </button>
+              </footer>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Constructor de menú (precio dinámico) ── */}
       <AnimatePresence>

@@ -4,6 +4,7 @@ import Caja from './Caja'
 import Resumen from './Resumen'
 import Pedidos from './Pedidos'
 import Tpv from './Tpv'
+import Salon from './Salon'
 import Kds from './Kds'
 import Cuadro from './Cuadro'
 import Estadisticas from './Estadisticas'
@@ -23,6 +24,7 @@ const MAP: Record<string, ComponentType> = {
   resumen: Resumen,
   pedidos: Pedidos,
   tpv: Tpv,
+  salon: Salon,
   kds: Kds,
   cuadro: Cuadro,
   estad: Estadisticas,

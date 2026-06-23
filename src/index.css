@@ -1473,3 +1473,93 @@ body {
 }
 .offline-pill.show { transform: translate(-50%, 0); opacity: 1; }
 .offline-pill svg { width: 17px; height: 17px; color: #ff9a3d; flex: none; }
+
+/* ── Editor de Salón (plano de sala) ── */
+.salon-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.salon-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 11px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--ink); font-family: var(--font); font-weight: 600; font-size: 13.5px; cursor: pointer; transition: background .18s, border-color .18s, transform .12s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)); }
+.salon-btn svg { width: 16px; height: 16px; }
+.salon-btn:hover { background: color-mix(in srgb, var(--surface) 92%, transparent); border-color: var(--gold); }
+.salon-btn:active { transform: scale(.96); }
+.salon-btn.primary { background: var(--gold); border-color: transparent; color: var(--accent-ink, #1a1404); }
+.salon-btn.primary:hover { filter: brightness(1.05); }
+.salon-btn.primary.ok { background: var(--home, #34d399); color: #04130c; }
+
+.salon-canvas { position: relative; width: 100%; min-height: 64vh; border-radius: 22px; border: 1px solid var(--line); overflow: hidden; touch-action: none; user-select: none;
+  background-color: color-mix(in srgb, var(--surface) 42%, transparent);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 9%, transparent) 1.1px, transparent 1.1px);
+  background-size: 26px 26px; background-position: -1px -1px; }
+.salon-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); font-size: 14px; pointer-events: none; }
+
+.salon-mesa { position: absolute; cursor: grab; touch-action: none; }
+.salon-mesa:active { cursor: grabbing; }
+.sm-surface { position: absolute; inset: 0; display: grid; place-items: center;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--surface) 96%, #fff 6%), color-mix(in srgb, var(--surface) 90%, #000 4%));
+  border: 1px solid var(--line-strong); box-shadow: 0 9px 22px -12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.05);
+  transition: border-color .2s, box-shadow .2s; }
+.salon-mesa:hover .sm-surface { box-shadow: 0 13px 28px -12px rgba(0,0,0,.78), inset 0 1px 0 rgba(255,255,255,.06); }
+.salon-mesa.on .sm-surface { border-color: color-mix(in srgb, var(--gold) 55%, var(--line-strong)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 72%, transparent), 0 14px 30px -12px rgba(0,0,0,.8); }
+.sm-num { font-family: var(--font-display); font-weight: 600; font-size: clamp(20px, 2.4vw, 30px); color: var(--ink); letter-spacing: -.02em; }
+.sm-chair { position: absolute; width: 13px; height: 13px; border-radius: 5px; transform: translate(-50%, -50%); background: color-mix(in srgb, var(--ink) 24%, transparent); border: 1px solid var(--line-strong); transition: background .2s, border-color .2s; }
+.salon-mesa.on .sm-chair { background: color-mix(in srgb, var(--gold) 60%, transparent); border-color: color-mix(in srgb, var(--gold) 70%, transparent); }
+
+/* Inspector flotante de la mesa seleccionada */
+.salon-inspector { position: fixed; right: 28px; bottom: 26px; z-index: 70; width: 290px; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px; border-radius: 18px; border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--surface) 94%, #000); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 24px 60px -18px rgba(0,0,0,.8); }
+.si-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.si-k { font-size: 12.5px; font-weight: 600; color: var(--muted); flex: none; }
+.si-name { width: 130px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink); font-family: var(--font); font-weight: 600; font-size: 13.5px; text-align: right; }
+.si-name:focus { outline: none; border-color: var(--gold); }
+.si-seg { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.si-opt { padding: 6px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-family: var(--font); font-weight: 600; font-size: 11.5px; cursor: pointer; transition: background .16s, color .16s; }
+.si-opt:hover { color: var(--ink); }
+.si-opt.on { background: var(--gold); color: var(--accent-ink, #1a1404); }
+.si-step { display: flex; align-items: center; gap: 4px; }
+.si-step button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink); font-size: 18px; line-height: 1; cursor: pointer; transition: background .15s, transform .1s; }
+.si-step button:hover { background: color-mix(in srgb, var(--gold) 18%, var(--surface-2)); }
+.si-step button:active { transform: scale(.9); }
+.si-step b { min-width: 44px; text-align: center; font-family: var(--font-num, var(--font-display)); font-weight: 600; color: var(--ink); }
+.si-step b.si-dim { min-width: 56px; font-size: 13px; }
+.si-foot { display: flex; gap: 8px; margin-top: 2px; }
+.si-del { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--bad, #ff5c5c) 40%, var(--line-strong)); background: color-mix(in srgb, var(--bad, #ff5c5c) 12%, transparent); color: var(--bad, #ff6b6b); font-family: var(--font); font-weight: 600; font-size: 13px; cursor: pointer; transition: background .16s; }
+.si-del svg { width: 15px; height: 15px; }
+.si-del:hover { background: color-mix(in srgb, var(--bad, #ff5c5c) 22%, transparent); }
+.si-done { flex: 1; padding: 9px; border-radius: 10px; border: 0; background: var(--gold); color: var(--accent-ink, #1a1404); font-family: var(--font); font-weight: 700; font-size: 13px; cursor: pointer; transition: filter .16s, transform .1s; }
+.si-done:hover { filter: brightness(1.05); }
+.si-done:active { transform: scale(.97); }
+
+/* ── TPV · mesa de la comanda + acciones Comanda/Ticket ── */
+.tk-head-l { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tk-mesa { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 9px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 60%, transparent); color: var(--muted); font-family: var(--font); font-weight: 600; font-size: 12.5px; cursor: pointer; transition: background .16s, border-color .16s, color .16s; }
+.tk-mesa svg { width: 14px; height: 14px; }
+.tk-mesa:hover { color: var(--ink); border-color: var(--gold); }
+.tk-mesa.on { background: color-mix(in srgb, var(--gold) 16%, transparent); border-color: color-mix(in srgb, var(--gold) 55%, var(--line-strong)); color: var(--gold); }
+
+.tk-actions { display: flex; gap: 8px; }
+.tk-actions .tpv-pay { flex: 1; }
+.tk-comanda { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 15px; border-radius: 12px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--ink); font-family: var(--font); font-weight: 600; font-size: 14px; cursor: pointer; transition: background .16s, border-color .16s, transform .1s; }
+.tk-comanda svg { width: 16px; height: 16px; }
+.tk-comanda:hover:not(:disabled) { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); }
+.tk-comanda:active:not(:disabled) { transform: scale(.96); }
+.tk-comanda:disabled { opacity: .4; cursor: default; }
+.tk-comanda.ok { background: color-mix(in srgb, var(--home, #34d399) 18%, transparent); border-color: color-mix(in srgb, var(--home, #34d399) 55%, transparent); color: var(--home, #34d399); }
+
+/* Modal selector de mesa (reusa cabecera .mb-head/.mb-x del constructor de menú) */
+.tpv-mesa-scrim { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.tpv-mesa-panel { width: min(620px, 96vw); display: flex; flex-direction: column; gap: 0; background: color-mix(in srgb, var(--surface) 96%, #000); border: 1px solid var(--line-strong); border-radius: 22px; overflow: hidden; box-shadow: 0 32px 80px -24px rgba(0,0,0,.85); }
+.tpv-mesa-plano { padding: 18px; display: grid; place-items: center; min-height: 300px;
+  background-color: color-mix(in srgb, var(--surface) 40%, transparent);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 9%, transparent) 1.1px, transparent 1.1px);
+  background-size: 24px 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tmp-canvas { position: relative; }
+.tmp-mesa { position: absolute; display: grid; place-items: center; border: 1px solid var(--line-strong); cursor: pointer; padding: 0;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--surface) 96%, #fff 6%), color-mix(in srgb, var(--surface) 90%, #000 4%));
+  color: var(--ink); font-family: var(--font-display); font-weight: 600; box-shadow: 0 6px 16px -8px rgba(0,0,0,.7); transition: border-color .16s, box-shadow .16s, transform .1s; }
+.tmp-mesa span { font-size: clamp(13px, 2vw, 19px); }
+.tmp-mesa:hover { border-color: color-mix(in srgb, var(--gold) 55%, var(--line-strong)); transform: translateY(-1px); }
+.tmp-mesa.on { border-color: var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 72%, transparent), 0 10px 22px -10px rgba(0,0,0,.75); color: var(--gold); }
+.tpv-mesa-foot { padding: 14px 18px; display: flex; justify-content: center; }
+.tmp-llevar { padding: 10px 22px; border-radius: 12px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--ink); font-family: var(--font); font-weight: 600; font-size: 14px; cursor: pointer; transition: background .16s, border-color .16s; }
+.tmp-llevar:hover { border-color: var(--gold); }
+.tmp-llevar.on { background: var(--gold); border-color: transparent; color: var(--accent-ink, #1a1404); }
