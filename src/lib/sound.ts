@@ -106,6 +106,110 @@ export function preloadSfx() {
 
 // rate: variación de tono opcional. Para disparos rápidos (TPV pop), pasar
 // p.ej. rate:[0.94,1.06] hace que cada toque suene un pelín distinto y no canse.
+// ── Voz de cada bestia (síntesis procedural, SIN assets) ──
+// No es el sonido literal del animal (difícil de sintetizar bien) sino una FIRMA
+// sonora premium que evoca su carácter: el león grave y regio, el zorro brillante
+// y travieso, el búho con su "hoo-hoo"… Se construye al vuelo con osciladores,
+// filtro y un poco de ruido; entra por el masterGain (respeta volumen y mute).
+type ToneSpec = {
+  freq: number
+  type: OscillatorType
+  delay?: number // s desde el inicio (para secuencias tipo búho)
+  dur: number
+  glide?: number // multiplicador de freq al final (envolvente de tono)
+  cutoff?: number // lowpass; sin valor = sin filtro
+  q?: number
+  vol?: number
+  tremolo?: number // Hz de AM → growl/purr; 0/sin valor = nada
+}
+type BeastVoice = { tones: ToneSpec[]; noise?: number }
+
+const VOICES: Record<string, BeastVoice> = {
+  // grave, potente, regio; un punto de "growl" (tremolo) + ráfaga de ruido al atacar
+  lion: { tones: [{ freq: 96, type: 'sawtooth', dur: 0.5, glide: 1.16, cutoff: 900, q: 2, tremolo: 26, vol: 0.95 }], noise: 0.5 },
+  // suave, redondo, amable; un "boop" cálido que sube un poco
+  panda: { tones: [{ freq: 232, type: 'triangle', dur: 0.32, glide: 1.22, cutoff: 1700, vol: 0.72 }] },
+  // brillante, listo, travieso; chirrido corto que sube rápido
+  fox: { tones: [{ freq: 520, type: 'triangle', dur: 0.22, glide: 1.5, cutoff: 3200, vol: 0.55 }], noise: 0.12 },
+  // sedoso, oscuro, felino; tono aterciopelado que baja, con purr (tremolo lento)
+  panther: { tones: [{ freq: 150, type: 'sawtooth', dur: 0.5, glide: 0.9, cutoff: 700, q: 3, tremolo: 18, vol: 0.82 }] },
+  // fiero, enérgico; rugido que cae de tono + grit de ruido
+  tiger: { tones: [{ freq: 142, type: 'sawtooth', dur: 0.42, glide: 0.7, cutoff: 1150, q: 1.5, tremolo: 32, vol: 0.88 }], noise: 0.45 },
+  // sabio, etéreo; doble nota hueca "hoo-hoo" con un soplo de aire
+  owl: {
+    tones: [
+      { freq: 360, type: 'sine', dur: 0.17, glide: 0.9, cutoff: 1200, q: 6, vol: 0.5 },
+      { freq: 342, type: 'sine', delay: 0.25, dur: 0.26, glide: 0.85, cutoff: 1100, q: 6, vol: 0.56 },
+    ],
+    noise: 0.06,
+  },
+}
+
+export function playBeast(beast: string, vol = 0.7) {
+  if (!enabled) return
+  const c = getCtx()
+  if (!c) return
+  if (c.state === 'suspended') c.resume().catch(() => {})
+  const v = VOICES[beast] || VOICES.lion
+  const out = masterGain ?? c.destination
+  const t0 = c.currentTime
+  try {
+    for (const tn of v.tones) {
+      const start = t0 + (tn.delay || 0)
+      const osc = c.createOscillator()
+      osc.type = tn.type
+      osc.frequency.setValueAtTime(tn.freq, start)
+      if (tn.glide) osc.frequency.exponentialRampToValueAtTime(Math.max(20, tn.freq * tn.glide), start + tn.dur)
+      let node: AudioNode = osc
+      if (tn.cutoff) {
+        const f = c.createBiquadFilter()
+        f.type = 'lowpass'
+        f.frequency.value = tn.cutoff
+        f.Q.value = tn.q ?? 0.7
+        osc.connect(f)
+        node = f
+      }
+      const g = c.createGain()
+      const peak = (tn.vol ?? 0.7) * vol
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(peak, start + 0.022)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + tn.dur)
+      node.connect(g).connect(out)
+      if (tn.tremolo) {
+        // growl/purr: un LFO modula la ganancia alrededor de la envolvente
+        const lfo = c.createOscillator()
+        lfo.frequency.value = tn.tremolo
+        const lg = c.createGain()
+        lg.gain.value = peak * 0.4
+        lfo.connect(lg).connect(g.gain)
+        lfo.start(start)
+        lfo.stop(start + tn.dur)
+      }
+      osc.start(start)
+      osc.stop(start + tn.dur + 0.03)
+    }
+    if (v.noise) {
+      // ráfaga de ruido decreciente en el ataque (rugido/grit/soplo)
+      const dur = 0.12
+      const buf = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate)
+      const data = buf.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+      const src = c.createBufferSource()
+      src.buffer = buf
+      const nf = c.createBiquadFilter()
+      nf.type = 'bandpass'
+      nf.frequency.value = 700
+      nf.Q.value = 0.8
+      const ng = c.createGain()
+      ng.gain.value = v.noise * vol * 0.5
+      src.connect(nf).connect(ng).connect(out)
+      src.start(t0)
+    }
+  } catch {
+    /* ignora errores puntuales de reproducción */
+  }
+}
+
 export function play(name: SfxName, vol = 0.55, rate?: number | [number, number]) {
   if (!enabled) return
   // Autocura: si el contexto o los buffers no están (p.ej. tras un hot-reload de

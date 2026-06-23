@@ -394,9 +394,12 @@ body {
 .side-brand { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px; margin-bottom: 8px; border: 1px solid transparent; border-radius: 12px; background: transparent; cursor: pointer; text-align: left; transition: background .2s, border-color .2s; }
 .side-brand:hover { background: rgba(255,255,255,.05); }
 .side-brand.open { background: rgba(255,191,16,.08); border-color: rgba(255,191,16,.22); }
-.side-beast { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; flex: none; border: 1px solid var(--line); transition: transform .28s var(--ease-out, cubic-bezier(.23,1,.32,1)), box-shadow .28s; transform-style: preserve-3d; }
-.side-brand:hover .side-beast { box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--gold) 50%, transparent); border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
-.side-brand:active .side-beast { transform: scale(.95) !important; }
+.side-av { position: relative; width: 32px; height: 32px; border-radius: 9px; overflow: hidden; flex: none; border: 1px solid var(--line); transition: transform .28s var(--ease-out, cubic-bezier(.23,1,.32,1)), box-shadow .28s, border-color .28s; transform-style: preserve-3d; }
+.side-beast { width: 100%; height: 100%; object-fit: cover; display: block; }
+.side-beast-vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .3s var(--ease-out, cubic-bezier(.23,1,.32,1)); pointer-events: none; }
+.side-brand:hover .side-beast-vid { opacity: 1; }
+.side-brand:hover .side-av { box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--gold) 55%, transparent); border-color: color-mix(in srgb, var(--gold) 50%, var(--line)); }
+.side-brand:active .side-av { transform: scale(.95) !important; }
 .sb-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .sb-txt b { font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; color: var(--ink); }
 .sb-txt span { font-size: 11px; color: var(--faint); font-weight: 500; }
@@ -527,14 +530,9 @@ body {
 .donut-cap b { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink); }
 .donut-cap span { display: block; font-size: 11px; color: var(--faint); margin-top: 2px; }
 
-/* microanimación: las secciones entran con stagger al navegar */
-.section > * { animation: secRise .5s var(--ease) backwards; }
-.section > *:nth-child(1) { animation-delay: .02s; }
-.section > *:nth-child(2) { animation-delay: .08s; }
-.section > *:nth-child(3) { animation-delay: .14s; }
-.section > *:nth-child(4) { animation-delay: .2s; }
-.section > *:nth-child(n+5) { animation-delay: .25s; }
-@keyframes secRise { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
+/* La entrada en cascada de los bloques la maneja ahora GSAP ScrollTrigger (Shell):
+   se revelan a medida que entran en pantalla al hacer scroll, no todos de golpe.
+   (Se quitó la animación CSS secRise para que no duplicara/peleara con GSAP.) */
 
 /* sección en preparación */
 .section-preview { min-height: 56vh; display: grid; place-items: center; }
@@ -1152,17 +1150,30 @@ body {
   transition: opacity .5s var(--ease);
 }
 .login.leaving { opacity: 0; transition: opacity .5s var(--ease) .3s; pointer-events: none; }
-/* fondo cocina (2.5D) + capa oscura + parpadeo de neón — pantalla de carga estilo videojuego */
-.login-bg {
-  position: absolute; inset: -4%; z-index: 0;
-  background: url(/img/login-bg.jpg) center/cover no-repeat;
-  transform: scale(1.12) translate(var(--bgx, 0), var(--bgy, 0));
+/* fondo cocina (2.5D) que ROTA con crossfade — pantalla de carga estilo videojuego.
+   El parallax va en el wrapper; cada capa hace su propio Ken Burns lento al entrar. */
+.login-bgs {
+  position: absolute; inset: -5%; z-index: 0;
+  transform: translate(var(--bgx, 0), var(--bgy, 0));
   transition: transform .25s ease-out; will-change: transform;
+}
+.login-layer {
+  position: absolute; inset: 0;
+  background-position: center; background-size: cover; background-repeat: no-repeat;
   filter: brightness(.8) contrast(1.16) saturate(1.06);
+  opacity: 0; transform: scale(1.06);
+  transition: opacity 1.3s var(--ease, cubic-bezier(.23,1,.32,1));
+  will-change: opacity, transform;
+}
+.login-layer.on {
+  opacity: 1; transform: scale(1.12);
+  transition: opacity 1.3s var(--ease, cubic-bezier(.23,1,.32,1)), transform 8s linear;
 }
 /* tilt-shift: copia desenfocada que solo asoma en los bordes superior/inferior */
-.login-bg.blur {
-  filter: blur(7px) brightness(.74) contrast(1.12) saturate(1.05);
+.login-layer-blur {
+  position: absolute; inset: 0;
+  background-position: center; background-size: cover; background-repeat: no-repeat;
+  filter: blur(7px) brightness(.92) contrast(1.12) saturate(1.05);
   -webkit-mask: linear-gradient(180deg, #000 0%, transparent 20%, transparent 80%, #000 100%);
   mask: linear-gradient(180deg, #000 0%, transparent 20%, transparent 80%, #000 100%);
 }
@@ -1220,7 +1231,7 @@ body {
 .pf.sel .pf-name { color: var(--ink); }
 @keyframes pf-pop { 0% { transform: scale(1); } 38% { transform: scale(1.22) rotate(-2deg); } 70% { transform: scale(1.08) rotate(1deg); } 100% { transform: scale(1.14) rotate(0); } }
 .login-hint { font-size: 13px; color: var(--faint); font-weight: 500; }
-@media (prefers-reduced-motion: reduce) { .pf.sel .pf-av { animation: none; } .pf-img { transition: none; } .login-flicker { animation: none; } .login-bg { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pf.sel .pf-av { animation: none; } .pf-img { transition: none; } .login-flicker { animation: none; } .login-layer { transition: none; } }
 
 /* selector de bestia (en Ajustes) */
 .sp-beasts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
@@ -1433,3 +1444,32 @@ body {
 .den-opt { flex: 1; padding: 9px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-family: var(--font); font-weight: 600; font-size: 12.5px; cursor: pointer; transition: background .18s, color .18s; }
 .den-opt:hover { color: var(--ink); }
 .den-opt.on { background: var(--gold); color: var(--accent-ink, #1a1404); }
+
+/* ── Intro de cocina viva (boot-up cinemático, one-shot por sesión) ── */
+.boot { position: fixed; inset: 0; z-index: 1000; background: #0b0b0d; overflow: hidden; display: grid; place-items: center; cursor: pointer; }
+.boot-bg { position: absolute; inset: -5%; background-position: center; background-size: cover; background-repeat: no-repeat; will-change: transform, filter, opacity; transform-origin: 50% 45%; }
+.boot-grad { position: absolute; inset: 0; background: radial-gradient(125% 95% at 50% 42%, transparent 28%, rgba(6,6,9,.72) 100%), linear-gradient(180deg, rgba(8,8,11,.5), rgba(8,8,11,.86)); }
+.boot-embers { position: absolute; inset: 0; pointer-events: none; }
+.ember { position: absolute; bottom: -12px; border-radius: 50%; background: radial-gradient(circle, #ffe49a, #ff9224 58%, transparent 72%); opacity: 0; filter: blur(.4px); animation: emberRise 2.5s ease-out forwards; }
+@keyframes emberRise { 0% { transform: translateY(0) scale(.55); opacity: 0; } 12% { opacity: .92; } 100% { transform: translateY(-80vh) scale(1.15); opacity: 0; } }
+.boot-logoWrap { position: relative; z-index: 2; overflow: hidden; padding: 2px 6px; }
+.boot-logo { display: flex; gap: .015em; font-family: var(--font-display); font-weight: 600; letter-spacing: .045em; line-height: 1; }
+.boot-logo span { display: inline-block; font-size: clamp(56px, 13.5vw, 138px); color: #fff; text-shadow: 0 2px 30px rgba(255,191,16,.32), 0 0 1px rgba(255,255,255,.4); will-change: transform, opacity; }
+.boot-flare { position: absolute; top: -10%; bottom: -10%; left: 0; width: 38%; background: linear-gradient(100deg, transparent, rgba(255,228,150,.6), rgba(255,255,255,.5), transparent); mix-blend-mode: screen; pointer-events: none; }
+.boot-tag { position: absolute; z-index: 2; bottom: 21%; text-transform: uppercase; letter-spacing: .44em; font-size: 11.5px; font-weight: 600; color: color-mix(in srgb, var(--gold) 80%, #fff); padding-left: .44em; }
+@media (prefers-reduced-motion: reduce) { .boot { display: none; } }
+
+/* ── Aviso de modo offline ── */
+.offline-pill {
+  position: fixed; left: 50%; top: 14px; z-index: 130;
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 16px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 86%, #000); border: 1px solid var(--line);
+  backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  color: var(--ink); font-size: 13px; font-weight: 600; letter-spacing: -.01em;
+  box-shadow: 0 12px 34px -12px rgba(0,0,0,.6);
+  transform: translate(-50%, -160%); opacity: 0; pointer-events: none;
+  transition: transform .42s var(--ease-out, cubic-bezier(.23,1,.32,1)), opacity .42s;
+}
+.offline-pill.show { transform: translate(-50%, 0); opacity: 1; }
+.offline-pill svg { width: 17px; height: 17px; color: #ff9a3d; flex: none; }

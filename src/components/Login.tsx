@@ -1,7 +1,12 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { motion } from 'motion/react'
-import { play, preloadSfx } from '../lib/sound'
+import { play, playBeast, preloadSfx } from '../lib/sound'
 import { beastById } from '../lib/beasts'
+import { reduceMotion } from '../lib/data'
+
+// Fondos de cocina que rotan en bucle (pantalla de carga estilo videojuego),
+// con crossfade suave. El primero es el de siempre; el resto se generaron aparte.
+const BGS = ['/img/login-bg.jpg', '/img/login-bg-2.jpg', '/img/login-bg-3.jpg', '/img/login-bg-4.jpg']
 
 /* Login estilo Netflix "¿Quién está viendo?" → aquí "¿Quién abre caja?".
    Cada perfil es un LOCAL (multi-tenant) con su BESTIA (avatar). Al elegir, el
@@ -18,12 +23,36 @@ export const PROFILES: Profile[] = [
 
 export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   const [sel, setSel] = useState<string | null>(null)
+  const [bgIdx, setBgIdx] = useState(0)
 
   // Precargar el sonido YA en el login (antes el motor se preparaba en Shell, que
   // monta DESPUÉS → el primer clic disparaba la carga y sonaba con ~1s de retraso).
   useEffect(() => {
     preloadSfx()
   }, [])
+
+  // Rotación de fondos en bucle, suave. Se para al salir (sel) y con reduce-motion.
+  useEffect(() => {
+    if (sel || reduceMotion() || BGS.length < 2) return
+    const t = window.setInterval(() => setBgIdx((i) => (i + 1) % BGS.length), 7500)
+    return () => window.clearInterval(t)
+  }, [sel])
+
+  // Al entrar el cursor: la bestia cobra vida (idle + guiño) Y suena su FIRMA sonora,
+  // una sola vez (mouseenter, no en cada mousemove → no se solapa ni cansa).
+  function enter(p: Profile, e: MouseEvent<HTMLButtonElement>) {
+    if (sel) return
+    const vid = e.currentTarget.querySelector('.pf-vid') as HTMLVideoElement | null
+    if (vid) {
+      if (vid.paused) {
+        vid.play().catch(() => {})
+        playBeast(p.beast, 0.5)
+      }
+    } else {
+      // sin vídeo aún (bestias pendientes): el sonido marca igualmente el carácter
+      playBeast(p.beast, 0.5)
+    }
+  }
 
   // Avatar vivo: la cabeza sigue al cursor (tilt 3D + parallax SUTIL de la imagen).
   function tilt(e: MouseEvent<HTMLButtonElement>) {
@@ -58,9 +87,11 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     setSel(p.id)
     // click limpio e inmediato (los buffers ya están precargados → sin retraso)
     play('tap', 0.5, 1.22)
+    // la BESTIA del local se anuncia al entrar (su firma sonora, fuerte)
+    playBeast(p.beast, 0.85)
     // confirmación suave al entrar
-    window.setTimeout(() => play('success', 0.4, 1.12), 300)
-    window.setTimeout(() => onEnter(p), 780)
+    window.setTimeout(() => play('success', 0.4, 1.12), 320)
+    window.setTimeout(() => onEnter(p), 820)
   }
 
   // Parallax 2.5D del fondo: la cocina se desplaza un poco con el cursor.
@@ -74,8 +105,13 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
 
   return (
     <div className={'login' + (sel ? ' leaving' : '')} onMouseMove={bgParallax}>
-      <div className="login-bg" />
-      <div className="login-bg blur" aria-hidden="true" />
+      <div className="login-bgs" aria-hidden="true">
+        {BGS.map((src, i) => (
+          <div key={src} className={'login-layer' + (i === bgIdx ? ' on' : '')} style={{ backgroundImage: `url(${src})` }}>
+            <div className="login-layer-blur" style={{ backgroundImage: `url(${src})` }} />
+          </div>
+        ))}
+      </div>
       <div className="login-chroma" aria-hidden="true" />
       <div className="login-grain" aria-hidden="true" />
       <div className="login-veil" />
@@ -102,6 +138,7 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
               key={p.id}
               className={'pf' + (sel === p.id ? ' sel' : '') + (sel && sel !== p.id ? ' dim' : '')}
               onClick={() => pick(p)}
+              onMouseEnter={(e) => enter(p, e)}
               onMouseMove={tilt}
               onMouseLeave={untilt}
               initial={{ opacity: 0, y: 18, scale: 0.9 }}

@@ -1,9 +1,12 @@
 import { useEffect, useState, type PointerEvent as RPointerEvent } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
 import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
 import { reduceMotion } from '../lib/data'
-import { play, preloadSfx, setAudio } from '../lib/sound'
+import { play, playBeast, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import EditLayer from './EditLayer'
 import CommentLayer from './CommentLayer'
@@ -33,6 +36,8 @@ export default function Shell() {
     }
   })
   const [drawer, setDrawer] = useState(false)
+  // Modo offline: avisamos cuando se cae la red (la app sigue con datos guardados).
+  const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-theme') === 'light') return 'light'
     return 'dark'
@@ -75,6 +80,18 @@ export default function Shell() {
     preloadSfx()
   }, [])
 
+  // Escuchar caídas/recuperación de red para el aviso de modo offline.
+  useEffect(() => {
+    const up = () => setOnline(true)
+    const down = () => setOnline(false)
+    window.addEventListener('online', up)
+    window.addEventListener('offline', down)
+    return () => {
+      window.removeEventListener('online', up)
+      window.removeEventListener('offline', down)
+    }
+  }, [])
+
   // Recordar la sección activa entre recargas (no volver siempre a Caja).
   useEffect(() => {
     try {
@@ -93,23 +110,33 @@ export default function Shell() {
     }
   }, [commentsOn])
 
-  // ARRANQUE cinemático: al montar una sección, sus bloques entran en cascada
-  // (sube + aparece, escalonado). Energía "sazabi" con piel premium. Solo
-  // transform/opacity; clearProps deja el DOM intacto (no rompe coverflow ni sticky).
+  // SCROLL cinemático: los bloques no aparecen todos de golpe — se revelan en
+  // cascada A MEDIDA que entran en pantalla al hacer scroll (energía "sazabi" con
+  // piel premium). Los que ya están a la vista al cargar se revelan al instante.
+  // Solo transform/opacity; clearProps deja el DOM intacto (no rompe sticky/coverflow).
   useEffect(() => {
     if (reduceMotion()) return
     const root = document.querySelector('.panel-content')
     if (!root) return
-    const blocks = root.querySelectorAll(':scope > .section > *, :scope > .caja > .wrap > *, :scope > .wrap > *')
+    const blocks = Array.from(root.querySelectorAll(':scope > .section > *, :scope > .caja > .wrap > *, :scope > .wrap > *')) as HTMLElement[]
     if (!blocks.length) return
+    const reveal = (els: Element[] | HTMLElement[]) =>
+      gsap.to(els, { y: 0, opacity: 1, duration: 0.62, stagger: 0.07, ease: 'power3.out', overwrite: true, clearProps: 'transform,opacity' })
+    let guard = 0
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        blocks,
-        { y: 22, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.52, stagger: 0.055, ease: 'power3.out', clearProps: 'transform,opacity' },
-      )
+      gsap.set(blocks, { y: 28, opacity: 0 })
+      ScrollTrigger.batch(blocks, { start: 'top 86%', once: true, onEnter: reveal })
+      ScrollTrigger.refresh()
+      // Red de seguridad: si por lo que sea un bloque se quedara oculto, lo mostramos.
+      guard = window.setTimeout(() => {
+        const stuck = blocks.filter((b) => parseFloat(getComputedStyle(b).opacity) < 0.05)
+        if (stuck.length) reveal(stuck)
+      }, 1400)
     })
-    return () => ctx.revert()
+    return () => {
+      window.clearTimeout(guard)
+      ctx.revert()
+    }
   }, [active])
 
   // Borde dorado spotlight que sigue el cursor en TODAS las tarjetas (.panel-card),
@@ -157,21 +184,36 @@ export default function Shell() {
     }
     // la bestia trae su color → cambiamos también el acento (changeAccent ya suena)
     changeAccent(beastById(id).accent as AccentKey)
+    // y se anuncia con su firma sonora propia
+    playBeast(id, 0.7)
   }
 
-  // La bestia de la barra cobra vida: la cabeza sigue al cursor (tilt 3D + parallax),
-  // como el avatar del login. One-shot (sin loops infinitos → no calienta el móvil).
+  // La bestia de la barra cobra vida: al entrar el cursor arranca su guiño (vídeo)
+  // y suena su firma, sutil. Al moverse, la cabeza sigue al cursor (tilt 3D). One-shot
+  // (el vídeo se pausa y rebobina al salir → sin loops infinitos que calientan el móvil).
+  function enterBeast(e: RPointerEvent<HTMLButtonElement>) {
+    const vid = e.currentTarget.querySelector('.side-beast-vid') as HTMLVideoElement | null
+    if (vid && vid.paused) {
+      vid.play().catch(() => {})
+      playBeast(beast, 0.4)
+    }
+  }
   function tiltBeast(e: RPointerEvent<HTMLButtonElement>) {
-    const img = e.currentTarget.querySelector('.side-beast') as HTMLElement | null
-    if (!img) return
+    const wrap = e.currentTarget.querySelector('.side-av') as HTMLElement | null
+    if (!wrap) return
     const r = e.currentTarget.getBoundingClientRect()
     const px = (e.clientX - r.left) / r.width - 0.5
     const py = (e.clientY - r.top) / r.height - 0.5
-    img.style.transform = `perspective(320px) rotateX(${(-py * 16).toFixed(1)}deg) rotateY(${(px * 20).toFixed(1)}deg) scale(1.09)`
+    wrap.style.transform = `perspective(320px) rotateX(${(-py * 16).toFixed(1)}deg) rotateY(${(px * 20).toFixed(1)}deg) scale(1.09)`
   }
   function untiltBeast(e: RPointerEvent<HTMLButtonElement>) {
-    const img = e.currentTarget.querySelector('.side-beast') as HTMLElement | null
-    if (img) img.style.transform = ''
+    const wrap = e.currentTarget.querySelector('.side-av') as HTMLElement | null
+    if (wrap) wrap.style.transform = ''
+    const vid = e.currentTarget.querySelector('.side-beast-vid') as HTMLVideoElement | null
+    if (vid) {
+      vid.pause()
+      vid.currentTime = 0
+    }
   }
 
   function selectSection(id: string) {
@@ -216,8 +258,20 @@ export default function Shell() {
       </div>
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
-        <button className={'side-brand' + (settingsOpen ? ' open' : '')} onClick={openSettings} onPointerMove={tiltBeast} onPointerLeave={untiltBeast} aria-label="Perfil y ajustes del negocio">
-          <img className="side-beast" src={beastById(beast).img} alt="" draggable={false} />
+        <button
+          className={'side-brand' + (settingsOpen ? ' open' : '')}
+          onClick={openSettings}
+          onPointerEnter={enterBeast}
+          onPointerMove={tiltBeast}
+          onPointerLeave={untiltBeast}
+          aria-label="Perfil y ajustes del negocio"
+        >
+          <span className="side-av">
+            <img className="side-beast" src={beastById(beast).img} alt="" draggable={false} />
+            {beastById(beast).video && (
+              <video className="side-beast-vid" src={beastById(beast).video} muted loop playsInline preload="none" poster={beastById(beast).img} />
+            )}
+          </span>
           <div className="sb-txt">
             <b>REBELL</b>
             <span>{localName}</span>
@@ -309,6 +363,13 @@ export default function Shell() {
           </>
         )}
       </AnimatePresence>
+
+      <div className={'offline-pill' + (online ? '' : ' show')} role="status" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1 1l22 22M16.7 11.1a6 6 0 0 1 3.6 1.8M5 12.6A10 10 0 0 1 9 10.3m-6 -.7a14 14 0 0 1 4-2.4M8.5 16.1a6 6 0 0 1 6.9 0M12 20h.01" />
+        </svg>
+        Sin conexión · viendo datos guardados
+      </div>
 
       <EditLayer />
       <CommentLayer on={commentsOn} setOn={setCommentsOn} active={active} />
