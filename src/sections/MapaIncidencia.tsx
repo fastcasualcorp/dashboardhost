@@ -267,7 +267,7 @@ function Comparador({ rival, onClose }: { rival: Rival & { d: number }; onClose:
       gsap.fromTo(
         root.current?.querySelectorAll('.cmp-fill') || [],
         { width: '0%' },
-        { width: (i, el: Element) => (el as HTMLElement).dataset.w || '0%', duration: 0.9, delay: 0.2, ease: 'power3.out', stagger: 0.06 },
+        { width: (_i: number, el: Element) => (el as HTMLElement).dataset.w || '0%', duration: 0.9, delay: 0.2, ease: 'power3.out', stagger: 0.06 },
       )
     }, root)
     return () => ctx.revert()
