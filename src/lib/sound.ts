@@ -210,6 +210,50 @@ export function playBeast(beast: string, vol = 0.7) {
   }
 }
 
+/* Recompensa "crispy/crunchy" tipo Candy Crush (SIN assets): arpegio brillante
+   ascendente con una chispa de alta frecuencia por nota → satisfactorio y adictivo,
+   nada del "pedo" de antes. Se usa al cerrar caja cuadrada. Respeta volumen/mute. */
+export function playReward(vol = 0.8) {
+  if (!enabled) return
+  const c = getCtx()
+  if (!c) return
+  if (c.state === 'suspended') c.resume().catch(() => {})
+  const out = masterGain ?? c.destination
+  const t0 = c.currentTime
+  const notes = [880, 1108.7, 1318.5, 1760] // A5 · C#6 · E6 · A6 — acorde mayor brillante
+  try {
+    notes.forEach((f, i) => {
+      const start = t0 + i * 0.058
+      // cuerpo: triangle con micro-bend (pluck dulce)
+      const osc = c.createOscillator()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(f, start)
+      osc.frequency.exponentialRampToValueAtTime(f * 1.012, start + 0.08)
+      const g = c.createGain()
+      const peak = 0.5 * vol
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(peak, start + 0.006) // ataque instantáneo = crispy
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.14)
+      osc.connect(g).connect(out)
+      osc.start(start)
+      osc.stop(start + 0.17)
+      // chispa: armónico agudo cortísimo = el "crunch" cristalino
+      const sp = c.createOscillator()
+      sp.type = 'square'
+      sp.frequency.value = f * 3
+      const sg = c.createGain()
+      sg.gain.setValueAtTime(0.0001, start)
+      sg.gain.exponentialRampToValueAtTime(peak * 0.13, start + 0.004)
+      sg.gain.exponentialRampToValueAtTime(0.0001, start + 0.045)
+      sp.connect(sg).connect(out)
+      sp.start(start)
+      sp.stop(start + 0.05)
+    })
+  } catch {
+    /* ignora errores puntuales de reproducción */
+  }
+}
+
 export function play(name: SfxName, vol = 0.55, rate?: number | [number, number]) {
   if (!enabled) return
   // Autocura: si el contexto o los buffers no están (p.ej. tras un hot-reload de

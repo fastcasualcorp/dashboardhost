@@ -47,10 +47,11 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   // Al entrar el cursor: la bestia cobra vida (idle + guiño) Y suena su FIRMA sonora,
   // una sola vez (mouseenter, no en cada mousemove → no se solapa ni cansa).
   function enter(p: Profile, e: MouseEvent<HTMLButtonElement>) {
-    if (sel) return
+    if (sel === p.id) return // el ya elegido no se re-anima; los demás sí (invita a cambiar)
     const vid = e.currentTarget.querySelector('.pf-vid') as HTMLVideoElement | null
     if (vid) {
       if (vid.paused) {
+        vid.currentTime = 0.5 // recorta el arranque lento → la bestia ya entra en movimiento
         vid.play().catch(() => {})
         playBeast(p.beast, 0.5)
       }
@@ -67,7 +68,10 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     const av = btn.querySelector('.pf-av') as HTMLElement | null
     const img = btn.querySelector('.pf-img') as HTMLElement | null
     const vid = btn.querySelector('.pf-vid') as HTMLVideoElement | null
-    if (vid && vid.paused) vid.play().catch(() => {}) // la bestia cobra vida (idle + guiño)
+    if (vid && vid.paused) {
+      vid.currentTime = 0.5 // recorta el arranque lento del vídeo
+      vid.play().catch(() => {})
+    } // la bestia cobra vida (idle + guiño)
     if (!av) return
     const r = btn.getBoundingClientRect()
     const px = (e.clientX - r.left) / r.width - 0.5
@@ -88,9 +92,10 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     if (img) img.style.transform = ''
   }
 
-  // Elegir local → se resalta y pide la contraseña (no entra todavía).
+  // Elegir local → se resalta y pide la contraseña (no entra todavía). Se puede
+  // cambiar de local pinchando OTRO avatar directamente (sin botón "cambiar de local").
   function pick(p: Profile) {
-    if (sel) return
+    if (p.id === sel) return
     setSel(p.id)
     setErr(false)
     play('tap', 0.5, 1.22)
@@ -122,12 +127,6 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     setLeaving(true)
     window.setTimeout(() => onEnter(p), 700)
   }
-  function cancelar() {
-    setSel(null)
-    setErr(false)
-    play('tap', 0.4, 0.85)
-  }
-
   // Parallax 2.5D del fondo: la cocina se desplaza un poco con el cursor.
   function bgParallax(e: MouseEvent<HTMLDivElement>) {
     const el = e.currentTarget
@@ -182,7 +181,21 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
             >
               <span className="pf-av">
                 <img className="pf-img" src={beast.img} alt={p.name} draggable={false} />
-                {beast.video && <video className="pf-vid" src={beast.video} muted loop playsInline preload="none" poster={beast.img} />}
+                {beast.video && (
+                  <video
+                    className="pf-vid"
+                    src={beast.video}
+                    muted
+                    loop
+                    playsInline
+                    preload="none"
+                    poster={beast.img}
+                    onTimeUpdate={(e) => {
+                      const v = e.currentTarget
+                      if (v.currentTime < 0.45) v.currentTime = 0.5 // bucle sin el arranque muerto
+                    }}
+                  />
+                )}
               </span>
               <span className="pf-name">{p.name}</span>
               <span className="pf-sub">{p.sub}</span>
@@ -220,9 +233,6 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
           </div>
           {err && <div className="la-err">Contraseña incorrecta</div>}
           <div className="la-bottom">
-            <button type="button" className="la-cancel" onClick={cancelar}>
-              ‹ Cambiar de local
-            </button>
             <span className="la-demo">Demo: Rebell2026!</span>
           </div>
         </motion.form>

@@ -272,7 +272,17 @@ export default function Salon() {
               <label className="si-k">Forma</label>
               <div className="si-seg">
                 {FORMAS.map((f) => (
-                  <button key={f.k} className={'si-opt' + (selMesa.forma === f.k ? ' on' : '')} onClick={() => patch(selMesa.id, { forma: f.k })}>
+                  <button
+                    key={f.k}
+                    className={'si-opt' + (selMesa.forma === f.k ? ' on' : '')}
+                    onClick={() => {
+                      // Cambiar de forma ajusta las dimensiones (antes solo cambiaba la etiqueta
+                      // y "Alargada" no se notaba): rect = ancha; cuadrada/redonda = lados iguales.
+                      const s = Math.max(selMesa.w, selMesa.h)
+                      const dims = f.k === 'rect' ? { w: Math.round(s * 1.5), h: Math.round(s * 0.82) } : { w: s, h: s }
+                      patch(selMesa.id, { forma: f.k, ...dims })
+                    }}
+                  >
                     {f.t}
                   </button>
                 ))}

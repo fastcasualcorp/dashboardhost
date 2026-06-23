@@ -1261,7 +1261,8 @@ body {
 .pf:hover .pf-av { box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--pc) 78%, transparent), 0 0 60px -2px color-mix(in srgb, var(--pc) 85%, transparent), 0 0 26px -6px color-mix(in srgb, var(--pc) 70%, transparent), 0 20px 46px -14px rgba(0,0,0,.72); }
 .pf:hover .pf-name { color: var(--ink); }
 .pf:active .pf-av { transform: scale(.97); }
-.pf.dim { opacity: .25; transform: scale(.92); }
+.pf.dim { opacity: .5; transform: scale(.92); transition: opacity .25s var(--ease), transform .25s var(--ease); cursor: pointer; }
+.pf.dim:hover { opacity: .9; transform: scale(.97); } /* pinchar otro avatar = cambiar de local */
 .pf.sel .pf-av { box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 55%, transparent), 0 0 64px -2px color-mix(in srgb, var(--pc) 75%, transparent), 0 22px 50px -16px rgba(0,0,0,.8); animation: pf-pop .55s var(--ease-spring) forwards; }
 .pf.sel .pf-name { color: var(--ink); }
 @keyframes pf-pop { 0% { transform: scale(1); } 38% { transform: scale(1.22) rotate(-2deg); } 70% { transform: scale(1.08) rotate(1deg); } 100% { transform: scale(1.14) rotate(0); } }

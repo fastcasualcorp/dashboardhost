@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import SalesChart from '../components/SalesChart'
-import { play } from '../lib/sound'
+import { play, playReward } from '../lib/sound'
 import {
   CAJA, subM, subT, totalDia, avgT, OBJ, META_DIA,
   FRANJAS_M, FRANJAS_T, eur, reduceMotion,
@@ -77,7 +77,6 @@ export default function Caja() {
   const islandRef = useRef<HTMLDivElement>(null)
   const islandTxt = useRef<HTMLSpanElement>(null)
   const balanceRef = useRef<HTMLDivElement>(null)
-  const confettiRef = useRef<HTMLCanvasElement>(null)
   const cerradoRef = useRef(false)
   const ringRef = useRef<SVGCircleElement>(null)
   const objRef = useRef<HTMLElement>(null)
@@ -263,60 +262,13 @@ export default function Caja() {
       gsap.to(eyes, { scaleY: 0.1, transformOrigin: 'center', duration: 0.1, yoyo: true, repeat: 1 })
     }
   }
-  function confetti() {
-    const cv = confettiRef.current
-    if (!cv) return
-    const ctx = cv.getContext('2d')
-    if (!ctx) return
-    const dpr = Math.min(devicePixelRatio || 1, 2)
-    cv.width = innerWidth * dpr
-    cv.height = innerHeight * dpr
-    ctx.scale(dpr, dpr)
-    const cols = ['#ffbf10', '#ffd45e', '#f5f5f7', '#34d399']
-    const cx = innerWidth * 0.5,
-      cy = innerHeight * 0.38,
-      N = Math.min(100, Math.round(innerWidth / 6))
-    type P = { x: number; y: number; vx: number; vy: number; g: number; s: number; rot: number; vr: number; c: string; life: number; max: number }
-    const P: P[] = Array.from({ length: N }, () => {
-      const sp = 6 + Math.random() * 9
-      return { x: cx + (Math.random() - 0.5) * 90, y: cy, vx: (Math.random() - 0.5) * sp * 1.7, vy: -(8 + Math.random() * 10), g: 0.32 + Math.random() * 0.12, s: 5 + Math.random() * 5, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.4, c: cols[(Math.random() * cols.length) | 0], life: 0, max: 90 + Math.random() * 40 }
-    })
-    let raf = 0
-    ;(function loop() {
-      ctx.clearRect(0, 0, cv.width, cv.height)
-      let alive = false
-      for (const p of P) {
-        p.life++
-        if (p.life > p.max) continue
-        alive = true
-        p.vy += p.g
-        p.x += p.vx
-        p.y += p.vy
-        p.vx *= 0.99
-        p.rot += p.vr
-        const o = Math.max(0, 1 - p.life / p.max)
-        ctx.save()
-        ctx.translate(p.x, p.y)
-        ctx.rotate(p.rot)
-        ctx.globalAlpha = o
-        ctx.fillStyle = p.c
-        ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.62)
-        ctx.restore()
-      }
-      if (alive) raf = requestAnimationFrame(loop)
-      else {
-        cancelAnimationFrame(raf)
-        ctx.clearRect(0, 0, cv.width, cv.height)
-      }
-    })()
-  }
   function cerrar() {
     if (cerrado) return
     const desc = descuadre
     cerradoRef.current = true
     setCerrado(true)
     play('tap')
-    window.setTimeout(() => play(desc ? 'error' : 'success', 0.6), desc ? 160 : 340)
+    window.setTimeout(() => (desc ? play('error', 0.6) : playReward(0.85)), desc ? 160 : 340)
     const seal = sealRef.current
     const hero = heroRef.current
     if (hero && seal) {
@@ -329,7 +281,6 @@ export default function Caja() {
     if (!desc) {
       setCelebrate(true)
       window.setTimeout(() => setCelebrate(false), 1300)
-      if (!reduceMotion()) confetti()
     }
     if (navigator.vibrate) navigator.vibrate(reduceMotion() ? 0 : desc ? [20, 60, 20] : [8, 40, 14])
   }
@@ -348,7 +299,6 @@ export default function Caja() {
 
   return (
     <div className={'caja' + (shine ? ' shine' : '')} ref={root}>
-      <canvas id="confetti" ref={confettiRef} aria-hidden="true" />
       <div className="island" ref={islandRef}>
         <span className="idot" />
         <span ref={islandTxt} />
