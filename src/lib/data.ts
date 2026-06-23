@@ -56,6 +56,53 @@ export const SALES: SalesPoint[] = [
 ]
 export const salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
 
+/* ── Ventas diarias para el calendario (mock determinista) ──
+   "Hoy" del mundo demo = 21 jun 2026 (coincide con la barra superior y SALES).
+   Cada día devuelve su desglose efectivo/tarjeta/domicilio, o null si es futuro
+   (sin datos → gris). Determinista (sin Math.random) para no parpadear al re-render. */
+export const HOY = new Date(2026, 5, 21)
+export type DiaVenta = { e: number; t: number; d: number; total: number }
+
+const frac = (seed: number) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+export function salesForDay(y: number, m: number, day: number): DiaVenta | null {
+  if (y !== 2026) return null
+  const date = new Date(y, m, day)
+  if (date > HOY) return null
+  const wd = date.getDay() // 0 dom … 6 sáb
+  const boost = wd === 5 || wd === 6 ? 1.5 : wd === 0 ? 1.2 : wd === 1 ? 0.82 : 1
+  const seed = (m + 1) * 100 + day
+  const total = Math.round((780 + frac(seed) * 1480) * boost)
+  const e = Math.round(total * (0.2 + frac(seed + 7) * 0.12))
+  const d = Math.round(total * (0.16 + frac(seed + 13) * 0.16))
+  return { e, t: total - e - d, d, total }
+}
+
+export function salesForMonth(y: number, m: number): DiaVenta & { dias: number } {
+  const days = new Date(y, m + 1, 0).getDate()
+  let e = 0, t = 0, d = 0, total = 0, dias = 0
+  for (let day = 1; day <= days; day++) {
+    const s = salesForDay(y, m, day)
+    if (s) {
+      e += s.e
+      t += s.t
+      d += s.d
+      total += s.total
+      dias++
+    }
+  }
+  return { e, t, d, total, dias }
+}
+
+export function salesForYear(y: number): number {
+  let total = 0
+  for (let m = 0; m < 12; m++) total += salesForMonth(y, m).total
+  return total
+}
+
 /* ── formato ── */
 export const eur = (n: number) =>
   n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
