@@ -4,6 +4,7 @@ import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
 import { play, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import EditLayer from './EditLayer'
+import CommentLayer from './CommentLayer'
 import { beastById } from '../lib/beasts'
 import { renderSection } from '../sections/registry'
 
@@ -22,6 +23,13 @@ export default function Shell() {
   const [font, setFont] = useState<FontKey>('clash')
   const [audioOn, setAudioOn] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [commentsOn, setCommentsOn] = useState(() => {
+    try {
+      return localStorage.getItem('rebell-comments-on') === '1'
+    } catch {
+      return false
+    }
+  })
   const [drawer, setDrawer] = useState(false)
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-theme') === 'light') return 'light'
@@ -58,6 +66,15 @@ export default function Shell() {
       /* sin localStorage */
     }
   }, [active])
+
+  // Recordar si el modo comentarios estaba activo (las notas siguen visibles al volver).
+  useEffect(() => {
+    try {
+      localStorage.setItem('rebell-comments-on', commentsOn ? '1' : '0')
+    } catch {
+      /* sin localStorage */
+    }
+  }, [commentsOn])
 
   // Borde dorado spotlight que sigue el cursor en TODAS las tarjetas (.panel-card),
   // no solo en la Caja. Un único listener delegado para las actuales y las futuras.
@@ -228,12 +245,26 @@ export default function Shell() {
         {settingsOpen && (
           <>
             <div className="sp-scrim" onClick={() => setSettingsOpen(false)} />
-            <SettingsPanel font={font} onFont={changeFont} accent={accent} onAccent={changeAccent} beast={beast} onBeast={changeBeast} />
+            <SettingsPanel
+              font={font}
+              onFont={changeFont}
+              accent={accent}
+              onAccent={changeAccent}
+              beast={beast}
+              onBeast={changeBeast}
+              comments={commentsOn}
+              onComments={() => {
+                setCommentsOn((c) => !c)
+                setSettingsOpen(false)
+                play('toggle')
+              }}
+            />
           </>
         )}
       </AnimatePresence>
 
       <EditLayer />
+      <CommentLayer on={commentsOn} setOn={setCommentsOn} active={active} />
     </div>
   )
 }

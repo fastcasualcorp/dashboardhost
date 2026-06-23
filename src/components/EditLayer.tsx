@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { play } from '../lib/sound'
-import { zoneById } from '../lib/dsRegistry'
+import { selectorFor, describe, hasText, liveNode, isDecor, cn, SKIP_CLS, pickAt } from '../lib/anchor'
 
 /* ════════════════════════════════════════════════════════════════
    MODO DISEÑO v3 — editor UNIVERSAL (toca CUALQUIER cosa y edítala)
@@ -56,82 +56,6 @@ const COLORS = [
   { name: 'Rojo', value: '#ff5d5d' },
 ]
 
-/* ── utilidades de selección/etiquetado de cualquier nodo ── */
-const STATE_CLS = new Set(['on', 'open', 'active', 'focus', 'focused', 'sel', 'hover', 'show', 'shown', 'visible', 'dragging', 'loading', 'disabled', 'pulse', 'dim', 'focus-mode'])
-const DECOR_CLS = new Set(['app', 'bg-aura', 'grain', 'el-layer'])
-const SKIP_CLS = /^el-/
-const esc = (s: string) => {
-  try {
-    return CSS.escape(s)
-  } catch {
-    return s
-  }
-}
-const cn = (el: Element) => (typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''))
-const isDecor = (el: HTMLElement) => el.tagName === 'HTML' || el.tagName === 'BODY' || Array.from(el.classList).some((c) => DECOR_CLS.has(c))
-
-function classChain(el: HTMLElement): string {
-  const cls = Array.from(el.classList).filter((c) => c && !SKIP_CLS.test(c) && !STATE_CLS.has(c))
-  return cls.length ? '.' + cls.map(esc).join('.') : ''
-}
-
-function structuralPath(el: HTMLElement): string {
-  const parts: string[] = []
-  let cur: HTMLElement | null = el
-  while (cur && cur.tagName !== 'BODY' && parts.length < 8) {
-    if (cur.id) {
-      parts.unshift('#' + esc(cur.id))
-      return parts.join(' > ')
-    }
-    const tag = cur.tagName.toLowerCase()
-    const parent: HTMLElement | null = cur.parentElement
-    if (!parent) {
-      parts.unshift(tag)
-      break
-    }
-    const node = cur
-    const same = Array.from(parent.children).filter((c) => c.tagName === node.tagName)
-    const idx = same.indexOf(node) + 1
-    parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${idx})` : tag)
-    cur = parent
-  }
-  return parts.join(' > ')
-}
-
-function selectorFor(el: HTMLElement): string {
-  const ds = el.getAttribute('data-ds')
-  if (ds && zoneById(ds)) return zoneById(ds)!.selector // zonas curadas → selector bonito
-  if (el.id) return '#' + esc(el.id)
-  const ch = classChain(el)
-  if (ch) return ch
-  return structuralPath(el)
-}
-
-function hasText(el: HTMLElement): boolean {
-  return Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent || '').trim().length > 0)
-}
-
-function describe(el: HTMLElement): { label: string; sec: string } {
-  const ds = el.getAttribute('data-ds')
-  const z = ds ? zoneById(ds) : undefined
-  if (z) return { label: z.label, sec: z.seccion }
-  const tag = el.tagName
-  const klass = cn(el)
-  let label = tag.toLowerCase()
-  if (tag === 'BUTTON' || el.getAttribute('role') === 'button') label = 'Botón'
-  else if (tag === 'A') label = 'Enlace'
-  else if (tag === 'IMG' || tag === 'svg' || tag === 'SVG') label = 'Imagen'
-  else if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') label = 'Control'
-  else if (/^H[1-6]$/.test(tag)) label = 'Título'
-  else if (hasText(el)) {
-    const fs = parseFloat(getComputedStyle(el).fontSize) || 0
-    label = fs >= 22 ? 'Título' : 'Texto'
-  } else if (/card|panel|tile|cromo|hero/i.test(klass)) label = 'Tarjeta'
-  else if (/list|grid|row|col|stack|wrap|group|nav/i.test(klass)) label = 'Contenedor'
-  const firstCls = klass.trim().split(/\s+/).filter((c) => c && !SKIP_CLS.test(c))[0] || ''
-  return { label, sec: (firstCls ? '.' + firstCls : tag.toLowerCase()).slice(0, 22) }
-}
-
 function propsFor(el: HTMLElement): string[] {
   const cs = getComputedStyle(el)
   const out: string[] = []
@@ -140,14 +64,6 @@ function propsFor(el: HTMLElement): string[] {
   if (cs.display.includes('flex') || cs.display.includes('grid')) out.push('gap')
   out.push('border-radius', 'border-width', 'border-color', 'background-color', 'opacity')
   return out
-}
-
-const liveNode = (sel: string): HTMLElement | null => {
-  try {
-    return document.querySelector(sel) as HTMLElement | null
-  } catch {
-    return null
-  }
 }
 
 function load(): { r: Rules; l: Labels } {
@@ -256,12 +172,6 @@ export default function EditLayer() {
       return
     }
     const insideUI = (t: EventTarget | null) => !!(t as HTMLElement)?.closest?.('.el-ui, .el-fab')
-    const pickAt = (x: number, y: number): HTMLElement | null => {
-      let el = document.elementFromPoint(x, y) as HTMLElement | null
-      if (!el || el.closest('.el-ui, .el-fab, .el-layer')) return null
-      while (el && isDecor(el)) el = el.parentElement
-      return el && el.tagName !== 'BODY' && el.tagName !== 'HTML' ? el : null
-    }
     const onMove = (e: PointerEvent) => {
       if (draggingRef.current) return
       if (insideUI(e.target)) return
