@@ -1596,3 +1596,22 @@ body {
 .vm-row.tot { margin-top: 3px; padding-top: 6px; border-top: 1px dashed var(--line); }
 .vm-row.tot span { color: var(--ink); font-weight: 600; }
 .vm-row.tot b { color: var(--gold); font-size: 13.5px; }
+
+/* ── Ventas TPV · libro de ventas ── */
+.vtpv-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vtpv-period { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line); }
+.vtpv-pk { padding: 7px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-family: var(--font); font-weight: 600; font-size: 12.5px; cursor: pointer; transition: background .16s, color .16s; }
+.vtpv-pk:hover { color: var(--ink); }
+.vtpv-pk.on { background: var(--gold); color: var(--accent-ink, #1a1404); }
+.vtpv-id { display: inline-flex; align-items: center; gap: 8px; }
+.vtpv-id b { font-weight: 600; }
+.vtpv-date { color: var(--muted); }
+.vtpv-del { width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 8px; border: 1px solid var(--line-strong); background: transparent; color: var(--faint); cursor: pointer; transition: color .16s, border-color .16s, background .16s; }
+.vtpv-del svg { width: 15px; height: 15px; }
+.vtpv-del:hover { color: var(--bad, #ff6b6b); border-color: color-mix(in srgb, var(--bad, #ff5c5c) 45%, var(--line-strong)); background: color-mix(in srgb, var(--bad, #ff5c5c) 10%, transparent); }
+.vtpv-total { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 6px; padding: 14px 14px 4px; border-top: 1.5px solid var(--line-strong); }
+.vtpv-total > span { font-weight: 600; color: var(--ink); font-size: 13.5px; }
+.vtpv-tot-nums { display: flex; align-items: baseline; gap: clamp(18px, 4vw, 56px); }
+.vtpv-tot-nums b { font-weight: 600; color: var(--muted); min-width: 70px; text-align: right; }
+.vtpv-tot-nums b.gold { color: var(--gold); font-size: 16px; }
+.vtpv-empty { padding: 40px; text-align: center; color: var(--faint); font-size: 14px; }

@@ -8,6 +8,7 @@ import Salon from './Salon'
 import Kds from './Kds'
 import Cuadro from './Cuadro'
 import Ventas from './Ventas'
+import VentasTpv from './VentasTpv'
 import Estadisticas from './Estadisticas'
 import Mensual from './Mensual'
 import Gastos from './Gastos'
@@ -29,6 +30,7 @@ const MAP: Record<string, ComponentType> = {
   kds: Kds,
   cuadro: Cuadro,
   ventas: Ventas,
+  ventastpv: VentasTpv,
   estad: Estadisticas,
   mensual: Mensual,
   gastos: Gastos,
