@@ -9,28 +9,32 @@ export const NAV: NavGroup[] = [
     g: 'Operación',
     items: [
       { id: 'caja', t: 'Caja diaria', s: 'Cierre del día', desc: 'El laboratorio de cierre del día: total, turnos, cuadre y la secuencia de recompensa al cerrar.' },
-      { id: 'resumen', t: 'Resumen', s: 'KPIs del negocio', desc: 'La foto del negocio de un vistazo: ventas, margen, pedidos y tendencias clave en tiempo real.' },
-      { id: 'pedidos', t: 'Pedidos', s: 'Delivery · últimos', tag: '12', alert: 'gold', desc: 'Todos los pedidos de delivery (Glovo, Uber Eats, Just Eat) en una cola viva con su estado.' },
-      { id: 'kds', t: 'Comandas', s: 'Cocina en vivo', alert: 'gold', desc: 'El tablero de cocina (KDS): comandas entrando en vivo, con su tiempo y estado, listas para preparar y servir.' },
       { id: 'tpv', t: 'TPV', s: 'Punto de venta', desc: 'El punto de venta para sala y barra: catálogo, ticket en curso y cobro rápido.' },
       { id: 'salon', t: 'Salón', s: 'Plano de sala', desc: 'Diseña tu sala: coloca las mesas, ajusta su tamaño y plazas. Luego en el TPV eliges a qué mesa va cada comanda.' },
-    ],
-  },
-  {
-    g: 'Finanzas',
-    items: [
-      { id: 'cuadro', t: 'Cuadro de mando', s: 'Cuenta de resultados', desc: 'Tu cuenta de resultados en tiempo real: facturación − coste de personal − food cost − gastos fijos = resultado neto.' },
-      { id: 'ventas', t: 'Ventas', s: 'Calendario por día', desc: 'El año entero de un vistazo: 12 meses en calendario, cada día con su venta y el total de efectivo, tarjeta y mes.' },
-      { id: 'ventastpv', t: 'Ventas TPV', s: 'Libro de ventas', desc: 'El libro de cada venta del TPV (ticket o factura): base, IVA, total, con buscador, filtro por periodo y exportación a Excel.' },
-      { id: 'estad', t: 'Estadísticas', s: 'Ventas vs compras', desc: 'Ventas frente a compras con la granularidad que quieras (día, semana, mes). Detecta desvíos de un vistazo.' },
-      { id: 'mensual', t: 'Resumen mensual', s: 'Histórico por meses', desc: 'El histórico de cada mes en una tabla viva: ventas, compras, gastos, coste de personal y margen bruto.' },
-      { id: 'gastos', t: 'Gastos fijos', s: 'Costes recurrentes', desc: 'Alquiler, luz, seguros… todos tus gastos fijos con IVA, prorrateados al día para un cuadro de mando exacto.' },
+      { id: 'pedidos', t: 'Pedidos', s: 'Delivery · últimos', tag: '12', alert: 'gold', desc: 'Todos los pedidos de delivery (Glovo, Uber Eats, Just Eat) en una cola viva con su estado.' },
+      { id: 'kds', t: 'Comandas', s: 'Cocina en vivo', alert: 'gold', desc: 'El tablero de cocina (KDS): comandas entrando en vivo, con su tiempo y estado, listas para preparar y servir.' },
     ],
   },
   {
     g: 'Inteligencia',
     items: [
       { id: 'mapa', t: 'Mapa de rivales', s: 'Competencia en tu zona', alert: 'gold', desc: 'Rastrea a tu competencia en un mapa: rivales por radio, sus reseñas, redes y noticias, con un Radar IA que te resume la semana.' },
+    ],
+  },
+  {
+    g: 'Análisis',
+    items: [
+      { id: 'resumen', t: 'Resumen', s: 'KPIs del negocio', desc: 'La foto del negocio de un vistazo: ventas, margen, pedidos y tendencias clave en tiempo real.' },
+    ],
+  },
+  {
+    g: 'Finanzas',
+    items: [
+      { id: 'cuadro', t: 'Cuadro de mando', s: 'Cuenta de resultados', desc: 'Tu cuenta de resultados en tiempo real: facturación − coste de personal − food cost − gastos fijos = resultado neto.' },
+      { id: 'mensual', t: 'Resumen mensual', s: 'Histórico por meses', desc: 'El histórico de cada mes: ventas, compras, gastos, coste de personal y margen bruto, con la comparativa mes a mes (absorbe la antigua Estadísticas).' },
+      { id: 'gastos', t: 'Gastos fijos', s: 'Costes recurrentes', desc: 'Alquiler, luz, seguros… todos tus gastos fijos con IVA, prorrateados al día para un cuadro de mando exacto.' },
+      { id: 'ventas', t: 'Ventas', s: 'Calendario por día', desc: 'El año entero de un vistazo: 12 meses en calendario, cada día con su venta y el total de efectivo, tarjeta y mes.' },
+      { id: 'ventastpv', t: 'Ventas TPV', s: 'Libro de ventas', desc: 'El libro de cada venta del TPV (ticket o factura): base, IVA, total, con buscador, filtro por periodo y exportación a Excel.' },
     ],
   },
   {
