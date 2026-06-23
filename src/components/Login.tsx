@@ -68,8 +68,8 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     const el = e.currentTarget
     const px = e.clientX / window.innerWidth - 0.5
     const py = e.clientY / window.innerHeight - 0.5
-    el.style.setProperty('--bgx', (px * -22).toFixed(1) + 'px')
-    el.style.setProperty('--bgy', (py * -16).toFixed(1) + 'px')
+    el.style.setProperty('--bgx', (px * -10).toFixed(1) + 'px')
+    el.style.setProperty('--bgy', (py * -8).toFixed(1) + 'px')
   }
 
   return (
