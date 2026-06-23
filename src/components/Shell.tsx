@@ -1,6 +1,8 @@
 import { useEffect, useState, type PointerEvent as RPointerEvent } from 'react'
 import { AnimatePresence } from 'motion/react'
+import { gsap } from 'gsap'
 import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
+import { reduceMotion } from '../lib/data'
 import { play, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import EditLayer from './EditLayer'
@@ -75,6 +77,25 @@ export default function Shell() {
       /* sin localStorage */
     }
   }, [commentsOn])
+
+  // ARRANQUE cinemático: al montar una sección, sus bloques entran en cascada
+  // (sube + aparece, escalonado). Energía "sazabi" con piel premium. Solo
+  // transform/opacity; clearProps deja el DOM intacto (no rompe coverflow ni sticky).
+  useEffect(() => {
+    if (reduceMotion()) return
+    const root = document.querySelector('.panel-content')
+    if (!root) return
+    const blocks = root.querySelectorAll(':scope > .section > *, :scope > .caja > .wrap > *, :scope > .wrap > *')
+    if (!blocks.length) return
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        blocks,
+        { y: 22, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.52, stagger: 0.055, ease: 'power3.out', clearProps: 'transform,opacity' },
+      )
+    })
+    return () => ctx.revert()
+  }, [active])
 
   // Borde dorado spotlight que sigue el cursor en TODAS las tarjetas (.panel-card),
   // no solo en la Caja. Un único listener delegado para las actuales y las futuras.

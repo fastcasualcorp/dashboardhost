@@ -405,13 +405,18 @@ body {
 .side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .nav-group { margin-top: 13px; }
 .ng-label { font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--gold); padding: 10px 12px 8px; }
-.nav-item { display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: transparent; color: var(--muted); padding: 8px 11px; border-radius: 12px; cursor: pointer; text-align: left; transition: background .2s, color .2s; }
+.nav-item { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: transparent; color: var(--muted); padding: 8px 11px; border-radius: 12px; cursor: pointer; text-align: left; transition: background .2s, color .2s; }
 .nav-item:hover { background: rgba(255,255,255,.045); color: var(--ink); }
 .nav-item:active { transform: scale(.99); }
-.nav-item.on { background: rgba(255,191,16,.1); color: var(--gold); }
+.nav-item:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 42%, transparent); }
+/* Seleccionado: fondo neutro sutil + BARRA de acento a la izquierda (estilo Linear),
+   icono encendido y texto en acento. Menos "caja marcada", más premium. */
+.nav-item.on { background: rgba(255,255,255,.05); color: var(--ink); }
+.nav-item.on::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 19px; border-radius: 0 4px 4px 0; background: var(--gold); box-shadow: 0 0 10px -1px color-mix(in srgb, var(--gold) 70%, transparent); }
+.nav-item.on .ni-txt { color: var(--gold); font-weight: 600; }
 .ni-ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none; background: rgba(255,255,255,.045); color: var(--muted); transition: .2s; }
 .nav-item:hover .ni-ic { color: var(--ink); }
-.nav-item.on .ni-ic { background: rgba(255,191,16,.16); color: var(--gold); }
+.nav-item.on .ni-ic { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
 .ni-txt { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.2; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ni-tag { margin-left: auto; font-size: 10.5px; font-weight: 700; background: rgba(255,191,16,.16); color: var(--gold); padding: 2px 7px; border-radius: 100px; }
 .ni-tag.pulse { animation: tagPulse 2s ease-in-out infinite; }
@@ -793,7 +798,8 @@ body {
 [data-theme='light'] .side-brand:hover { background: rgba(15,20,35,.05); }
 [data-theme='light'] .nav-item:hover { background: rgba(15,20,35,.05); }
 [data-theme='light'] .ni-ic { background: rgba(15,20,35,.06); }
-[data-theme='light'] .nav-item.on { background: rgba(255,191,16,.18); }
+[data-theme='light'] .nav-item.on { background: rgba(15,20,35,.05); }
+[data-theme='light'] .nav-item.on .ni-txt { color: var(--gold-deep); }
 [data-theme='light'] .nav-item.on .ni-ic { background: rgba(255,191,16,.22); }
 [data-theme='light'] .nav-item.on, [data-theme='light'] .nav-item.on .ni-ic { color: var(--gold-deep); }
 [data-theme='light'] .panel-top { background: linear-gradient(180deg, var(--bg) 55%, rgba(238,240,244,.55)); }
