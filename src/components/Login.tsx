@@ -31,6 +31,8 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     const btn = e.currentTarget
     const av = btn.querySelector('.pf-av') as HTMLElement | null
     const img = btn.querySelector('.pf-img') as HTMLElement | null
+    const vid = btn.querySelector('.pf-vid') as HTMLVideoElement | null
+    if (vid && vid.paused) vid.play().catch(() => {}) // la bestia cobra vida (idle + guiño)
     if (!av) return
     const r = btn.getBoundingClientRect()
     const px = (e.clientX - r.left) / r.width - 0.5
@@ -42,6 +44,11 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     const btn = e.currentTarget
     const av = btn.querySelector('.pf-av') as HTMLElement | null
     const img = btn.querySelector('.pf-img') as HTMLElement | null
+    const vid = btn.querySelector('.pf-vid') as HTMLVideoElement | null
+    if (vid) {
+      vid.pause()
+      vid.currentTime = 0
+    }
     if (av) av.style.transform = ''
     if (img) img.style.transform = ''
   }
@@ -104,6 +111,7 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
             >
               <span className="pf-av">
                 <img className="pf-img" src={beast.img} alt={p.name} draggable={false} />
+                {beast.video && <video className="pf-vid" src={beast.video} muted loop playsInline preload="none" poster={beast.img} />}
               </span>
               <span className="pf-name">{p.name}</span>
               <span className="pf-sub">{p.sub}</span>

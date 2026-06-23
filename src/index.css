@@ -1201,8 +1201,11 @@ body {
   background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--pc) 24%, #15151a), #101014);
   border: 2.5px solid transparent; transition: transform .22s var(--ease-spring), border-color .22s, box-shadow .22s;
 }
-.pf-av { overflow: hidden; }
+.pf-av { overflow: hidden; position: relative; }
 .pf-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; transition: transform .18s var(--ease); will-change: transform; }
+/* La bestia VIVA: el vídeo (idle + guiño) aparece sobre la foto al pasar el ratón. */
+.pf-vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: 0; transition: opacity .3s var(--ease); pointer-events: none; }
+.pf:hover .pf-vid { opacity: 1; }
 .pf-name { font-weight: 650; font-size: 15.5px; color: var(--muted); transition: color .22s; }
 .pf-sub { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-top: -7px; }
 .pf:hover { transform: translateY(-2px); }
