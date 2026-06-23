@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type PointerEvent as RPointerEvent } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
 import { play, preloadSfx, setAudio } from '../lib/sound'
@@ -123,6 +123,21 @@ export default function Shell() {
     changeAccent(beastById(id).accent as AccentKey)
   }
 
+  // La bestia de la barra cobra vida: la cabeza sigue al cursor (tilt 3D + parallax),
+  // como el avatar del login. One-shot (sin loops infinitos → no calienta el móvil).
+  function tiltBeast(e: RPointerEvent<HTMLButtonElement>) {
+    const img = e.currentTarget.querySelector('.side-beast') as HTMLElement | null
+    if (!img) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const px = (e.clientX - r.left) / r.width - 0.5
+    const py = (e.clientY - r.top) / r.height - 0.5
+    img.style.transform = `perspective(320px) rotateX(${(-py * 16).toFixed(1)}deg) rotateY(${(px * 20).toFixed(1)}deg) scale(1.09)`
+  }
+  function untiltBeast(e: RPointerEvent<HTMLButtonElement>) {
+    const img = e.currentTarget.querySelector('.side-beast') as HTMLElement | null
+    if (img) img.style.transform = ''
+  }
+
   function selectSection(id: string) {
     if (id !== active) {
       setActive(id)
@@ -167,7 +182,7 @@ export default function Shell() {
       </div>
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
-        <button className={'side-brand' + (settingsOpen ? ' open' : '')} onClick={openSettings} aria-label="Perfil y ajustes del negocio">
+        <button className={'side-brand' + (settingsOpen ? ' open' : '')} onClick={openSettings} onPointerMove={tiltBeast} onPointerLeave={untiltBeast} aria-label="Perfil y ajustes del negocio">
           <img className="side-beast" src={beastById(beast).img} alt="" draggable={false} />
           <div className="sb-txt">
             <b>REBELL</b>
