@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
-import maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { SectionHeader, Badge } from '../components/ui'
 import { play, playBeast } from '../lib/sound'
 
-/* Mapa de Incidencia — rastrea la competencia de tu zona en un mapa 3D estilo
-   videojuego (MapLibre GL: edificios extruidos, vista inclinada, vuelo cinematográfico),
-   con radio configurable, marcadores-carta por rival y un "Radar IA" del semana. v1 con
-   datos de DEMO; con Google Places + Edge Function (Claude) pasarán a ser reales y en vivo.
-   Motor sin token (CARTO dark vector, gratis). Con el token de Mapbox se sube a su estilo
-   premium. Diseño REBELL (oro sobre casi-negro), no el del panel del socio. */
+/* Mapa de Incidencia — rastrea la competencia en un mapa 3D estilo videojuego (Mapbox GL:
+   edificios extruidos y EXAGERADOS, vista inclinada, atmósfera, vuelo cinematográfico, sin
+   nombres de lugares), con radio configurable, marcadores-carta por rival y un "Radar IA".
+   v1 con datos de DEMO; con Google Places + Edge Function (Claude) serán reales. Diseño REBELL
+   (oro sobre casi-negro). Token público en VITE_MAPBOX_TOKEN. */
 
 const LOCAL = { name: 'REBELL · Homeburger', lat: 42.8378, lng: -8.611, rating: 4.6, reviews: 312, precio: 13.5 }
 
@@ -39,12 +38,10 @@ const RADIOS = [
 
 const SIG_LABEL: Record<Signal['k'], string> = { reseña: 'Reseña', promo: 'Promo', noticia: 'Noticia', social: 'Redes' }
 
-// Estilo vectorial oscuro gratis (sin token). Si hay token de Mapbox en el entorno
-// (VITE_MAPBOX_TOKEN), usa su estilo premium dark-v11 (lo que eligió Juan).
-const MAPBOX_TOKEN = (import.meta.env as Record<string, string | undefined>).VITE_MAPBOX_TOKEN
-const MAP_STYLE = MAPBOX_TOKEN
-  ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11?access_token=${MAPBOX_TOKEN}`
-  : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+// Token público de Mapbox (pk...). Es seguro en el cliente; conviene restringirlo por URL.
+const MAPBOX_TOKEN = (import.meta.env as Record<string, string | undefined>).VITE_MAPBOX_TOKEN || ''
+if (MAPBOX_TOKEN) mapboxgl.accessToken = MAPBOX_TOKEN
+const MAP_STYLE = 'mapbox://styles/mapbox/dark-v11'
 
 function distM(aLat: number, aLng: number, bLat: number, bLng: number) {
   const R = 6371000
@@ -67,13 +64,13 @@ function circlePolygon(lat: number, lng: number, radiusM: number, points = 84) {
   }
   return { type: 'Feature' as const, geometry: { type: 'Polygon' as const, coordinates: [coords] }, properties: {} }
 }
-const zoomFor = (m: number) => (m <= 500 ? 16.2 : m <= 1000 ? 15.4 : m <= 2000 ? 14.7 : 13.4)
+const zoomFor = (m: number) => (m <= 500 ? 16.2 : m <= 1000 ? 15.6 : m <= 2000 ? 15.0 : 13.7)
 
 export default function MapaIncidencia() {
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<maplibregl.Map | null>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
   const loadedRef = useRef(false)
-  const [radio, setRadio] = useState(2000)
+  const [radio, setRadio] = useState(1000)
   const [comparar, setComparar] = useState<(Rival & { d: number }) | null>(null)
 
   const abrirComparador = (r: Rival & { d: number }) => {
@@ -90,76 +87,90 @@ export default function MapaIncidencia() {
   // Inicializa el mapa 3D una vez.
   useEffect(() => {
     if (!elRef.current || mapRef.current) return
-    const map = new maplibregl.Map({
+    const map = new mapboxgl.Map({
       container: elRef.current,
       style: MAP_STYLE,
       center: [LOCAL.lng, LOCAL.lat],
-      zoom: 12.4,
+      zoom: 12.6,
       pitch: 60,
       bearing: -17,
       attributionControl: false,
-      maxPitch: 70,
+      maxPitch: 75,
+      antialias: true,
     })
     mapRef.current = map
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right')
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right')
 
-    // El contenedor puede crecer tras el primer paint (layout/fuentes) → el canvas se
-    // quedaría pequeño y en negro. Un ResizeObserver fuerza el resize al tamaño real.
+    // El contenedor puede crecer tras el primer paint → el canvas se quedaría pequeño/negro.
     const ro = new ResizeObserver(() => map.resize())
     if (elRef.current) ro.observe(elRef.current)
 
     map.on('load', () => {
       loadedRef.current = true
 
-      // Edificios 3D extruidos (la fuente vectorial CARTO trae la capa 'building').
+      // Quitar TODOS los nombres/etiquetas (los nombres de pueblos no aportan → mapa limpio).
+      const layers = map.getStyle()?.layers || []
+      let firstSymbolId: string | undefined
+      for (const l of layers) {
+        if (l.type === 'symbol') {
+          if (!firstSymbolId) firstSymbolId = l.id
+          try {
+            map.setLayoutProperty(l.id, 'visibility', 'none')
+          } catch {
+            /* alguna capa sin layout */
+          }
+        }
+      }
+
+      // Edificios 3D EXAGERADOS (×5) → skyline aunque Bertamiráns sea un pueblo.
       try {
-        const layers = map.getStyle().layers || []
-        const labelLayer = layers.find((l) => l.type === 'symbol')?.id
         map.addLayer(
           {
             id: 'rebell-3d-buildings',
-            type: 'fill-extrusion',
-            source: 'carto',
+            source: 'composite',
             'source-layer': 'building',
+            filter: ['==', ['get', 'extrude'], 'true'],
+            type: 'fill-extrusion',
             minzoom: 12,
             paint: {
-              // tinte cálido (oro) en los edificios altos = look videojuego
-              'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#181820', 24, '#262630', 70, '#3a3326', 140, '#4a3d22'],
-              // altura EXAGERADA (×2.6) para dar relieve aunque el pueblo sea bajo
-              'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 12.5, 0, 14.5, ['*', ['coalesce', ['get', 'render_height'], 8], 2.6], 17, ['*', ['coalesce', ['get', 'render_height'], 8], 3]],
-              'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-              'fill-extrusion-opacity': 0.95,
+              'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'height'], 6], 0, '#1b1b22', 12, '#2a2a33', 45, '#3a3326', 110, '#54421f'],
+              'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 12, 0, 13.5, ['*', ['coalesce', ['get', 'height'], 6], 5]],
+              'fill-extrusion-base': ['coalesce', ['get', 'min_height'], 0],
+              'fill-extrusion-opacity': 0.94,
             },
           },
-          labelLayer,
+          firstSymbolId,
         )
       } catch {
-        /* si la fuente/capa no existe en el estilo, el mapa base sigue funcionando */
+        /* el estilo no trae la fuente composite/building */
       }
 
-      // Cielo/atmósfera para el horizonte 3D (si lo soporta el estilo).
+      // Atmósfera / horizonte oscuro premium.
       try {
-        ;(map as unknown as { setSky?: (s: unknown) => void }).setSky?.({
-          'sky-color': '#0a0a12',
-          'horizon-color': '#1a160b',
-          'fog-color': '#0b0b0e',
-          'fog-ground-blend': 0.5,
-          'sky-horizon-blend': 0.6,
-        })
+        map.setFog({ color: '#0a0a0e', 'high-color': '#241c0a', 'horizon-blend': 0.16, 'space-color': '#06060b', 'star-intensity': 0.04 } as never)
       } catch {
-        /* sin sky en este estilo */
+        /* sin fog en este estilo */
       }
 
-      // Radio: capa de relleno + anillo con glow (GeoJSON que se actualiza al cambiar).
-      map.addSource('rebell-radio', { type: 'geojson', data: circlePolygon(LOCAL.lat, LOCAL.lng, radio) })
+      // Radio: relleno + anillo glow (GeoJSON que se actualiza al cambiar).
+      map.addSource('rebell-radio', { type: 'geojson', data: circlePolygon(LOCAL.lat, LOCAL.lng, radio) as never })
       map.addLayer({ id: 'rebell-radio-fill', type: 'fill', source: 'rebell-radio', paint: { 'fill-color': '#ffbf10', 'fill-opacity': 0.05 } })
       map.addLayer({ id: 'rebell-radio-line', type: 'line', source: 'rebell-radio', paint: { 'line-color': '#ffbf10', 'line-width': 1.6, 'line-opacity': 0.65, 'line-blur': 1.2 } })
+
+      // Líneas de conexión táctico-HUD (estilo Watch Dogs): tu local → cada rival.
+      const links = {
+        type: 'FeatureCollection',
+        features: RIVALES.map((r) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[LOCAL.lng, LOCAL.lat], [r.lng, r.lat]] }, properties: {} })),
+      }
+      map.addSource('rebell-links', { type: 'geojson', data: links as never })
+      map.addLayer({ id: 'rebell-links-glow', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffbf10', 'line-width': 3, 'line-opacity': 0.16, 'line-blur': 3 } })
+      map.addLayer({ id: 'rebell-links-core', type: 'line', source: 'rebell-links', paint: { 'line-color': '#ffd45e', 'line-width': 1.1, 'line-opacity': 0.5, 'line-dasharray': [2, 2] } })
 
       // Marcador héroe (tu local) con aura.
       const heroEl = document.createElement('div')
       heroEl.className = 'm3-hero'
       heroEl.innerHTML = `<span class="m3-aura"></span><span class="m3-core"><b>${LOCAL.rating.toFixed(1)}</b><i>TÚ</i></span>`
-      new maplibregl.Marker({ element: heroEl, anchor: 'bottom' }).setLngLat([LOCAL.lng, LOCAL.lat]).addTo(map)
+      new mapboxgl.Marker({ element: heroEl, anchor: 'bottom' }).setLngLat([LOCAL.lng, LOCAL.lat]).addTo(map)
 
       // Marcadores-carta de cada rival.
       RIVALES.forEach((r) => {
@@ -171,10 +182,9 @@ export default function MapaIncidencia() {
           e.stopPropagation()
           openRef.current?.(r)
         })
-        new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([r.lng, r.lat]).addTo(map)
+        new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([r.lng, r.lat]).addTo(map)
       })
 
-      // Asegura el tamaño correcto antes de volar (evita el canvas en negro).
       map.resize()
       window.setTimeout(() => map.resize(), 300)
       // Entrada cinematográfica: vuela hasta el encuadre del radio.
@@ -194,7 +204,7 @@ export default function MapaIncidencia() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loadedRef.current) return
-    const src = map.getSource('rebell-radio') as maplibregl.GeoJSONSource | undefined
+    const src = map.getSource('rebell-radio') as mapboxgl.GeoJSONSource | undefined
     src?.setData(circlePolygon(LOCAL.lat, LOCAL.lng, radio) as never)
     map.flyTo({ center: [LOCAL.lng, LOCAL.lat], zoom: zoomFor(radio), pitch: 60, duration: 1300, essential: true })
   }, [radio])
@@ -329,13 +339,12 @@ export default function MapaIncidencia() {
           </div>
         </aside>
       </div>
-
     </div>
   )
 }
 
-/* ── Comparador 1-a-1 (carta premium, estética de la referencia: oscuro + glossy
-   dorado + muesca orgánica + semitono + barras con glow, count-up GSAP). ── */
+/* ── Comparador 1-a-1 (carta premium que se despliega como tarjeta 3D SOBRE el mapa:
+   oscuro + glossy dorado + muesca orgánica + semitono + barras con glow, count-up GSAP). ── */
 const METRICAS: { key: 'rating' | 'reviews' | 'precio'; label: string; max?: number; suf: string; dec: number; mejor: 'alto' | 'info' }[] = [
   { key: 'rating', label: 'Valoración', max: 5, suf: '★', dec: 1, mejor: 'alto' },
   { key: 'reviews', label: 'Nº de reseñas', suf: '', dec: 0, mejor: 'alto' },

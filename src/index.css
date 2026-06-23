@@ -1830,11 +1830,11 @@ body {
 .m3-pr { font-weight: 600; font-size: 10.5px; color: rgba(255,255,255,.62); }
 .m3-stem { position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #101014; }
 
-/* controles maplibre en oscuro */
-.maplibregl-ctrl-group { background: #15151a !important; box-shadow: 0 4px 14px -4px rgba(0,0,0,.7) !important; border: 1px solid rgba(255,255,255,.12) !important; }
-.maplibregl-ctrl-group button + button { border-top: 1px solid rgba(255,255,255,.1) !important; }
-.maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(.82); }
-.maplibregl-ctrl-attrib { display: none !important; }
+/* controles del mapa en oscuro + sin marcas de agua (logo/atribución) */
+.maplibregl-ctrl-group, .mapboxgl-ctrl-group { background: #15151a !important; box-shadow: 0 4px 14px -4px rgba(0,0,0,.7) !important; border: 1px solid rgba(255,255,255,.12) !important; }
+.maplibregl-ctrl-group button + button, .mapboxgl-ctrl-group button + button { border-top: 1px solid rgba(255,255,255,.1) !important; }
+.maplibregl-ctrl-icon { filter: invert(.82); }
+.maplibregl-ctrl-attrib, .mapboxgl-ctrl-attrib, .mapboxgl-ctrl-logo, .maplibregl-ctrl-logo { display: none !important; }
 
 /* Comparador desplegado SOBRE el mapa como tarjeta 3D (no modal a pantalla completa) */
 .cmp-stage { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; perspective: 1500px; background: radial-gradient(125% 120% at 50% 45%, rgba(8,8,10,.32), rgba(8,8,10,.6)); -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px); }
