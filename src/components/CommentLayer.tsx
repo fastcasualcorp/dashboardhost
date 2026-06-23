@@ -122,8 +122,23 @@ export default function CommentLayer({ on, setOn, active }: { on: boolean; setOn
       return
     }
     const insideUI = (t: EventTarget | null) => !!(t as HTMLElement)?.closest?.('.cm-ui, .cm-fab')
+    // Solo se anota el CONTENIDO; el menú lateral y la barra superior quedan libres para navegar.
+    const inContent = (t: EventTarget | null) => !!(t as HTMLElement)?.closest?.('.panel-content')
     const onClick = (e: MouseEvent) => {
-      if (insideUI(e.target)) return
+      if (insideUI(e.target)) return // clics sobre la propia UI de comentarios: ignorar
+      // Con una nota abierta, el primer clic fuera SOLO la cierra (no deja otro pin).
+      // Si ese clic cae sobre el contenido lo consumimos; si cae sobre el menú/topbar,
+      // dejamos que navegue (cerramos la nota y dejamos pasar el clic).
+      if (openId) {
+        setOpenId(null)
+        if (inContent(e.target)) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+        return
+      }
+      // Fuera del contenido (menú, barra superior, FABs) = navegación libre, sin pin.
+      if (!inContent(e.target)) return
       const picked = pickAt(e.clientX, e.clientY)
       if (!picked) return
       e.preventDefault()

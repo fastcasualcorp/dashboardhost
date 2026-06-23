@@ -4,9 +4,61 @@
    el panel entero comparta el lenguaje visual de la Caja.
    Marca: dorado #ffbf10 sobre casi-negro. Sombras neutras.
    ════════════════════════════════════════════════════════════ */
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 
 export type Tone = 'gold' | 'green' | 'blue' | 'amber' | 'red' | 'muted'
+
+/* Count-up "de videojuego": el número sube de 0 al valor al aparecer (como el cierre
+   de Caja). Funciona con valores ya formateados en es-ES ("30.556", "21,28", "65")
+   sin tocar las llamadas: parsea el número, anima, y CLAVA el texto original al final.
+   Si el valor no es numérico (un nodo JSX) lo pinta tal cual. Respeta reduced-motion. */
+function CountValue({ value }: { value: ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const raw = typeof value === 'string' || typeof value === 'number' ? String(value) : null
+  useEffect(() => {
+    const el = ref.current
+    if (!el || raw == null) return
+    const tok = raw.match(/-?[\d.,]+/)
+    if (!tok) {
+      el.textContent = raw
+      return
+    }
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = raw
+      return
+    }
+    const numStr = tok[0]
+    const hasComma = numStr.includes(',')
+    const norm = hasComma ? numStr.replace(/\./g, '').replace(',', '.') : numStr.replace(/\.(?=\d{3}(\D|$))/g, '')
+    const target = parseFloat(norm)
+    if (isNaN(target)) {
+      el.textContent = raw
+      return
+    }
+    const decimals = hasComma ? numStr.split(',')[1]?.length ?? 0 : 0
+    const prefix = raw.slice(0, tok.index ?? 0)
+    const suffix = raw.slice((tok.index ?? 0) + numStr.length)
+    const fmt = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+    let start: number | null = null
+    let rafId = 0
+    const dur = 900
+    const step = (t: number) => {
+      if (start == null) start = t
+      const p = Math.min(1, (t - start) / dur)
+      const eased = 1 - Math.pow(1 - p, 3)
+      if (p < 1) {
+        el.textContent = prefix + fmt(target * eased) + suffix
+        rafId = requestAnimationFrame(step)
+      } else {
+        el.textContent = raw // clava el original exacto al terminar
+      }
+    }
+    rafId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(rafId)
+  }, [raw])
+  if (raw == null) return <>{value}</>
+  return <span ref={ref}>{raw}</span>
+}
 
 /* Tarjeta base (superficie + borde + spotlight dorado al hover, como en la Caja). */
 export function Card({
@@ -70,7 +122,7 @@ export function KpiTile({
       <div className="k">{label}</div>
       <div className="kpi-body">
         <div className="v tnum">
-          {value}
+          <CountValue value={value} />
           {unit && <small> {unit}</small>}
         </div>
         {(delta || foot) && (
