@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as RPE } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { SectionHeader, Badge } from '../components/ui'
 import { play } from '../lib/sound'
-import { type Mesa, type MesaForma, loadSalon, saveSalon, seatPositions, totalPlazas } from '../lib/salon'
+import { type Mesa, type MesaForma, loadSalon, saveSalon, loadSalonDB, saveSalonDB, seatPositions, totalPlazas } from '../lib/salon'
 
 /* Editor de Salón — diseñas tu sala arrastrando mesas, ajustando tamaño/forma y
    plazas. El plano alimenta el selector de mesa del TPV. Diseño REBELL (cromo +
@@ -22,6 +22,17 @@ export default function Salon() {
   const [saved, setSaved] = useState(false)
   const canvasRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ id: string; px: number; py: number; ox: number; oy: number; moved: boolean } | null>(null)
+
+  // Carga el plano real del local desde Supabase (si hay sesión y mesas guardadas).
+  useEffect(() => {
+    let alive = true
+    loadSalonDB().then((rows) => {
+      if (alive && rows) setMesas(rows)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   // Auto-guardado local en cada cambio (red de seguridad); el botón confirma + suena.
   useEffect(() => {
@@ -66,11 +77,12 @@ export default function Salon() {
     play('toggle', 0.4, 0.8)
   }
 
-  function guardar() {
-    saveSalon(mesas)
+  async function guardar() {
+    saveSalon(mesas) // caché local instantánea
     play('success', 0.45, 1.1)
     setSaved(true)
     window.setTimeout(() => setSaved(false), 1800)
+    await saveSalonDB(mesas) // persiste en Supabase por local
   }
 
   // ── arrastre (pointer capture → suave dentro y fuera del elemento) ──

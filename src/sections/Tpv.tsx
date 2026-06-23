@@ -5,11 +5,32 @@ import { eur } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
 import { loadSalon, type Mesa } from '../lib/salon'
+import { supabase, localId } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
 
 // redondeo a 0,05 € (precios "de carta")
 const round05 = (n: number) => Math.round(n * 20) / 20
+
+// Persistencia en Supabase (por local, vía RLS). Fire-and-forget: no bloquea la caja.
+async function persistVenta(total: number, mesaNombre: string | null) {
+  const lid = localId()
+  if (!supabase || !lid) return
+  try {
+    await supabase.from('ventas').insert({ local_id: lid, total: Math.round(total * 100) / 100, metodo: 'tarjeta', mesa: mesaNombre, doc: 'ticket' })
+  } catch {
+    /* sin conexión: la venta se ve igual en caja */
+  }
+}
+async function persistComanda(items: Line[], mesaNombre: string | null) {
+  const lid = localId()
+  if (!supabase || !lid) return
+  try {
+    await supabase.from('comandas').insert({ local_id: lid, numero: Math.floor(Date.now() % 100000), fuente: 'Sala', mesa: mesaNombre, items, estado: 'nueva' })
+  } catch {
+    /* sin conexión */
+  }
+}
 
 export default function Tpv() {
   const [cart, setCart] = useState<Line[]>([])
@@ -120,7 +141,7 @@ export default function Tpv() {
     play('success', 0.4, 1.28)
     setSent(true)
     window.setTimeout(() => setSent(false), 1700)
-    // TODO Supabase: insert into comandas { local_id, numero, items, mesa, estado:'nueva' }
+    void persistComanda(cart, mesa?.nombre ?? null) // → KDS (cocina)
   }
 
   const cobrar = () => {
@@ -145,8 +166,8 @@ export default function Tpv() {
     setPulse((p) => p + 1)
     setPaid(true)
     setCart([])
+    void persistVenta(total, mesa?.nombre ?? null) // → libro de ventas
     setMesa(null) // la mesa queda libre tras cobrar
-    // TODO Supabase: insert into ventas { local_id, total, metodo, mesa }
   }
 
   useEffect(() => () => cancelAnimationFrame(raf.current), [])

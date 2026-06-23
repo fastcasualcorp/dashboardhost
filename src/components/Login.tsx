@@ -1,8 +1,9 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent, type FormEvent } from 'react'
 import { motion } from 'motion/react'
 import { play, playBeast, preloadSfx } from '../lib/sound'
 import { beastById } from '../lib/beasts'
 import { reduceMotion } from '../lib/data'
+import { supabase, hasSupabase } from '../lib/supabase'
 
 // Fondos de cocina que rotan en bucle (pantalla de carga estilo videojuego),
 // con crossfade suave. El primero es el de siempre; el resto se generaron aparte.
@@ -24,6 +25,11 @@ export const PROFILES: Profile[] = [
 export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   const [sel, setSel] = useState<string | null>(null)
   const [bgIdx, setBgIdx] = useState(0)
+  const [leaving, setLeaving] = useState(false)
+  const [pw, setPw] = useState('Rebell2026!') // pre-rellena la contraseña de demo
+  const [err, setErr] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const selProfile = PROFILES.find((p) => p.id === sel) || null
 
   // Precargar el sonido YA en el login (antes el motor se preparaba en Shell, que
   // monta DESPUÉS → el primer clic disparaba la carga y sonaba con ~1s de retraso).
@@ -82,16 +88,44 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     if (img) img.style.transform = ''
   }
 
+  // Elegir local → se resalta y pide la contraseña (no entra todavía).
   function pick(p: Profile) {
     if (sel) return
     setSel(p.id)
-    // click limpio e inmediato (los buffers ya están precargados → sin retraso)
+    setErr(false)
     play('tap', 0.5, 1.22)
-    // la BESTIA del local se anuncia al entrar (su firma sonora, fuerte)
-    playBeast(p.beast, 0.85)
-    // confirmación suave al entrar
-    window.setTimeout(() => play('success', 0.4, 1.12), 320)
-    window.setTimeout(() => onEnter(p), 820)
+    playBeast(p.beast, 0.8) // la bestia se anuncia al elegir
+  }
+
+  // Autenticar de verdad (Supabase). Sin backend → modo demo (entra directo).
+  async function entrar(ev?: FormEvent) {
+    ev?.preventDefault()
+    const p = selProfile
+    if (!p || busy) return
+    if (!hasSupabase || !supabase) {
+      finish(p)
+      return
+    }
+    setBusy(true)
+    setErr(false)
+    const { error } = await supabase.auth.signInWithPassword({ email: `${p.id}@rebell.app`, password: pw })
+    setBusy(false)
+    if (error) {
+      setErr(true)
+      play('error', 0.4)
+      return
+    }
+    finish(p)
+  }
+  function finish(p: Profile) {
+    play('success', 0.4, 1.12)
+    setLeaving(true)
+    window.setTimeout(() => onEnter(p), 700)
+  }
+  function cancelar() {
+    setSel(null)
+    setErr(false)
+    play('tap', 0.4, 0.85)
   }
 
   // Parallax 2.5D del fondo: la cocina se desplaza un poco con el cursor.
@@ -104,7 +138,7 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
   }
 
   return (
-    <div className={'login' + (sel ? ' leaving' : '')} onMouseMove={bgParallax}>
+    <div className={'login' + (leaving ? ' leaving' : '')} onMouseMove={bgParallax}>
       <div className="login-bgs" aria-hidden="true">
         {BGS.map((src, i) => (
           <div key={src} className={'login-layer' + (i === bgIdx ? ' on' : '')} style={{ backgroundImage: `url(${src})` }}>
@@ -157,7 +191,44 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
         })}
       </div>
 
-      <p className="login-hint">Elige tu local para entrar al panel</p>
+      {selProfile ? (
+        <motion.form
+          className={'login-auth' + (err ? ' err' : '')}
+          onSubmit={entrar}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+        >
+          <div className="la-who">
+            Entrar como <b>{selProfile.name}</b>
+          </div>
+          <div className="la-field">
+            <input
+              type="password"
+              value={pw}
+              onChange={(e) => {
+                setPw(e.target.value)
+                setErr(false)
+              }}
+              placeholder="Contraseña"
+              autoFocus
+              autoComplete="current-password"
+            />
+            <button type="submit" className="la-go" disabled={busy || !pw}>
+              {busy ? '…' : 'Entrar'}
+            </button>
+          </div>
+          {err && <div className="la-err">Contraseña incorrecta</div>}
+          <div className="la-bottom">
+            <button type="button" className="la-cancel" onClick={cancelar}>
+              ‹ Cambiar de local
+            </button>
+            <span className="la-demo">Demo: Rebell2026!</span>
+          </div>
+        </motion.form>
+      ) : (
+        <p className="login-hint">Elige tu local para entrar al panel</p>
+      )}
       </div>
     </div>
   )

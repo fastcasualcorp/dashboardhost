@@ -1,6 +1,7 @@
 /* Modelo del Salón (plano de sala) — fuente única de la que beben el editor de
-   Salón y el selector de mesa del TPV. Persistencia interina en localStorage; en
-   cuanto esté la auth real de Supabase, guardar/cargar por local (tabla `mesas`). */
+   Salón y el selector de mesa del TPV. Persiste en Supabase (tabla `mesas`, RLS por
+   local) cuando hay sesión; localStorage hace de caché para pintar al instante. */
+import { supabase, localId } from './supabase'
 
 export type MesaForma = 'cuadrada' | 'redonda' | 'rect'
 
@@ -49,6 +50,46 @@ export function saveSalon(mesas: Mesa[]) {
 }
 
 export const totalPlazas = (mesas: Mesa[]) => mesas.reduce((s, m) => s + m.sillas, 0)
+
+// ── Persistencia en Supabase (por local, vía RLS) ──
+async function resolveLocalId(): Promise<string | null> {
+  if (localId()) return localId()
+  if (!supabase) return null
+  const { data } = await supabase.auth.getUser()
+  return ((data.user?.app_metadata as { local_id?: string })?.local_id) ?? null
+}
+
+// Carga el plano del local desde la BD. null si no hay sesión o no hay mesas guardadas.
+export async function loadSalonDB(): Promise<Mesa[] | null> {
+  if (!supabase) return null
+  const lid = await resolveLocalId()
+  if (!lid) return null
+  const { data, error } = await supabase.from('mesas').select('*').eq('local_id', lid).order('orden')
+  if (error || !data || !data.length) return null
+  return data.map((r) => ({ id: r.id as string, nombre: r.nombre, x: r.x, y: r.y, w: r.w, h: r.h, sillas: r.sillas, forma: r.forma }))
+}
+
+// Guarda el plano del local (reemplaza el suyo). Devuelve true si se guardó en BD.
+export async function saveSalonDB(mesas: Mesa[]): Promise<boolean> {
+  if (!supabase) return false
+  const lid = await resolveLocalId()
+  if (!lid) return false
+  await supabase.from('mesas').delete().eq('local_id', lid)
+  if (!mesas.length) return true
+  const rows = mesas.map((m, i) => ({
+    local_id: lid,
+    nombre: m.nombre,
+    x: Math.round(m.x),
+    y: Math.round(m.y),
+    w: Math.round(m.w),
+    h: Math.round(m.h),
+    sillas: m.sillas,
+    forma: m.forma,
+    orden: i,
+  }))
+  const { error } = await supabase.from('mesas').insert(rows)
+  return !error
+}
 
 /* Posiciones de las sillas alrededor de una mesa (coordenadas relativas a su
    esquina sup-izq). Redonda → círculo; rectangular → lados largos. */

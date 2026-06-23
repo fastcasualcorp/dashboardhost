@@ -13,3 +13,17 @@ const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 export const supabase = url && anon ? createClient(url, anon) : null
 export const hasSupabase = supabase !== null
+
+/* local_id del usuario logueado (vive en app_metadata, lo fija el service_role).
+   Lo cacheamos de la sesión para que las inserciones lleven su local sin pedir BD. */
+let _localId: string | null = null
+export const localId = () => _localId
+type AppMeta = { local_id?: string; rol?: string }
+if (supabase) {
+  supabase.auth.getSession().then(({ data }) => {
+    _localId = (data.session?.user?.app_metadata as AppMeta)?.local_id ?? null
+  })
+  supabase.auth.onAuthStateChange((_e, session) => {
+    _localId = (session?.user?.app_metadata as AppMeta)?.local_id ?? null
+  })
+}

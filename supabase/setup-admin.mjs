@@ -7,7 +7,9 @@
    Lee la service_role de  rebell-app/.sb-service-role  (gitignored). */
 
 import { readFileSync, writeFileSync } from 'node:fs'
-import { randomBytes } from 'node:crypto'
+
+// Contraseña inicial común para todos los locales (fase demo). CAMBIAR antes de vender.
+const PASSWORD = 'Rebell2026!'
 
 const SR = readFileSync(new URL('../.sb-service-role', import.meta.url), 'utf8').trim()
 const REF = JSON.parse(Buffer.from(SR.split('.')[1], 'base64').toString()).ref
@@ -35,8 +37,6 @@ const api = async (path, opts = {}) => {
   return body
 }
 
-const pass = () => randomBytes(9).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 11) + 'R7'
-
 const creds = []
 for (const L of LOCALES) {
   // 1) local (si no existe por nombre)
@@ -48,7 +48,7 @@ for (const L of LOCALES) {
   }
   // 2) usuario (email = key@rebell.app) con app_metadata { local_id, rol }
   const email = `${L.key}@rebell.app`
-  const password = pass()
+  const password = PASSWORD
   let userId
   try {
     const u = await api('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password, email_confirm: true, app_metadata: { local_id: localId, rol: L.rol } }) })

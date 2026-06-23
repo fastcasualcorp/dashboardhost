@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
 import { BEASTS } from '../lib/beasts'
+import { supabase } from '../lib/supabase'
 
 export type FontKey = 'clash' | 'inter' | 'roundo'
 export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
@@ -216,7 +217,12 @@ export default function SettingsPanel({
       <div className="sp-section">
         <button
           className="sp-action"
-          onClick={() => {
+          onClick={async () => {
+            try {
+              await supabase?.auth.signOut()
+            } catch {
+              /* sin sesión */
+            }
             try {
               localStorage.removeItem('rebell-profile')
             } catch {
