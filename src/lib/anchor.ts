@@ -3,8 +3,6 @@
    humana. Lo usan tanto el Modo Diseño (EditLayer) como el Modo Comentarios
    (CommentLayer): pinchas en algo → lo anclamos por selector + offset normalizado,
    de modo que sobrevive al re-render de React y a la recarga. */
-import { zoneById } from './dsRegistry'
-
 export const STATE_CLS = new Set(['on', 'open', 'active', 'focus', 'focused', 'sel', 'hover', 'show', 'shown', 'visible', 'dragging', 'loading', 'disabled', 'pulse', 'dim', 'focus-mode', 'leaving'])
 export const DECOR_CLS = new Set(['app', 'bg-aura', 'grain', 'el-layer', 'cm-layer'])
 export const SKIP_CLS = /^el-|^cm-/
@@ -48,8 +46,6 @@ function structuralPath(el: HTMLElement): string {
 }
 
 export function selectorFor(el: HTMLElement): string {
-  const ds = el.getAttribute('data-ds')
-  if (ds && zoneById(ds)) return zoneById(ds)!.selector // zonas curadas → selector bonito
   if (el.id) return '#' + esc(el.id)
   const ch = classChain(el)
   if (ch) return ch
@@ -61,9 +57,6 @@ export function hasText(el: HTMLElement): boolean {
 }
 
 export function describe(el: HTMLElement): { label: string; sec: string } {
-  const ds = el.getAttribute('data-ds')
-  const z = ds ? zoneById(ds) : undefined
-  if (z) return { label: z.label, sec: z.seccion }
   const tag = el.tagName
   const klass = cn(el)
   let label = tag.toLowerCase()

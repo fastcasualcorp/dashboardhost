@@ -6,7 +6,6 @@ import Pedidos from './Pedidos'
 import Tpv from './Tpv'
 import Salon from './Salon'
 import Kds from './Kds'
-import Cuadro from './Cuadro'
 import Ventas from './Ventas'
 import VentasTpv from './VentasTpv'
 import MapaIncidencia from './MapaIncidencia'
@@ -17,7 +16,7 @@ import Empleados from './Empleados'
 import Horarios from './Horarios'
 import Coste from './Coste'
 import FoodCost from './FoodCost'
-import Stock from './Stock'
+import Almacen from './Almacen'
 import Platos from './Platos'
 import Compras from './Compras'
 import SectionPreview from './SectionPreview'
@@ -29,7 +28,7 @@ const MAP: Record<string, ComponentType> = {
   tpv: Tpv,
   salon: Salon,
   kds: Kds,
-  cuadro: Cuadro,
+  cuadro: Resumen, // "Cuadro de mando" fusionado dentro de Resumen → cualquier enlace antiguo cae en el merge
   ventas: Ventas,
   ventastpv: VentasTpv,
   mapa: MapaIncidencia,
@@ -40,7 +39,7 @@ const MAP: Record<string, ComponentType> = {
   horarios: Horarios,
   coste: Coste,
   foodcost: FoodCost,
-  stock: Stock,
+  stock: Almacen,
   platos: Platos,
   compras: Compras,
 }

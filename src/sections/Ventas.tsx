@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SectionHeader, Badge } from '../components/ui'
+import { SectionHeader, Badge, Card, Stat, StatRow } from '../components/ui'
 import { eur0, salesForDay, salesForMonth, salesForYear, HOY } from '../lib/data'
 import { play } from '../lib/sound'
 
@@ -72,6 +72,9 @@ function MonthCard({ y, m }: { y: number; m: number }) {
 export default function Ventas() {
   const [year, setYear] = useState(2026)
   const yearTotal = salesForYear(year)
+  // Agregado del año (efectivo/tarjeta/domicilio) para la banda-resumen de Stats canónicos.
+  let yCash = 0, yCard = 0, yHome = 0
+  for (let m = 0; m < 12; m++) { const a = salesForMonth(year, m); yCash += a.e; yCard += a.t; yHome += a.d }
 
   // Exportar el año a Excel (CSV): una fila por día con desglose y total.
   function exportarExcel() {
@@ -119,6 +122,17 @@ export default function Ventas() {
           </div>
         }
       />
+
+      {/* Banda-resumen del año con el criterio de cifra canónico (<Stat>) */}
+      <Card className="stat-band">
+        <StatRow>
+          <Stat value={eur0(yCash)} unit="€" label="Efectivo" count={false} />
+          <Stat value={eur0(yCard)} unit="€" label="Tarjeta" count={false} />
+          <Stat value={eur0(yHome)} unit="€" label="Domicilio" count={false} />
+          <Stat value={eur0(yearTotal)} unit="€" label={`Total ${year}`} tone="green" count={false} />
+        </StatRow>
+      </Card>
+
       <div className="ventas-grid">
         {Array.from({ length: 12 }, (_, m) => (
           <MonthCard key={m} y={year} m={m} />

@@ -4,14 +4,24 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
-import { NAV, ALL_ITEMS, itemById, Icon } from '../nav'
+import { NAV, ALL_ITEMS, itemById } from '../nav'
 import { reduceMotion } from '../lib/data'
-import { play, playBeast, preloadSfx, setAudio } from '../lib/sound'
+import { play, playBeast, playPowerup, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
-import EditLayer from './EditLayer'
 import CommentLayer from './CommentLayer'
+import WalletHoy from './WalletHoy'
 import { beastById } from '../lib/beasts'
 import { renderSection } from '../sections/registry'
+import { applySavedDesign } from '../lib/designTokens'
+import Canon from '../sections/Canon'
+
+// Emoji animado por sección del menú lateral (bob sutil; ver .ni-emo en index.css).
+const NAV_EMOJI: Record<string, string> = {
+  caja: '💰', tpv: '🛒', salon: '🪑', pedidos: '🛵', kds: '🍳',
+  mapa: '🛰️', resumen: '📊', cuadro: '📈', mensual: '🗓️', gastos: '🧾',
+  ventas: '📅', ventastpv: '📖', empleados: '👥', horarios: '⏰', coste: '💶',
+  foodcost: '🍔', stock: '📦', compras: '🛍️', ingresos: '🏦',
+}
 
 type Theme = 'dark' | 'light'
 
@@ -59,6 +69,17 @@ export default function Shell() {
     const v = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('rebell-density') || '') : NaN
     return v >= 0.8 && v <= 1.3 ? v : 1
   })
+  // Modo presentación: al entrar en cualquier sección suena un power-up coordinado con el count-up de las cifras.
+  const [present, setPresent] = useState<boolean>(() => typeof localStorage !== 'undefined' && localStorage.getItem('rebell-present') === '1')
+  function togglePresent() {
+    setPresent((p) => {
+      const n = !p
+      try { localStorage.setItem('rebell-present', n ? '1' : '0') } catch { /* sin localStorage */ }
+      if (n) playPowerup(0.5)
+      else play('toggle', 0.4)
+      return n
+    })
+  }
   function changeDensity(d: number) {
     setDensity(d)
     try {
@@ -78,6 +99,7 @@ export default function Shell() {
 
   useEffect(() => {
     preloadSfx()
+    applySavedDesign() // re-aplica la escala tipográfica + botones guardados en el panel "Sistema de diseño"
   }, [])
 
   // Escuchar caídas/recuperación de red para el aviso de modo offline.
@@ -143,7 +165,7 @@ export default function Shell() {
   // (pop elástico + destello). One-shot, clearProps deja el DOM intacto (el hover CSS sigue).
   useEffect(() => {
     if (reduceMotion()) return
-    const ic = document.querySelector('.nav-item.on .ni-ic svg')
+    const ic = document.querySelector('.nav-item.on .ni-emo')
     if (!ic) return
     const ctx = gsap.context(() => {
       gsap.fromTo(ic, { scale: 0.55, rotate: -18 }, { scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(3)', clearProps: 'transform' })
@@ -238,6 +260,8 @@ export default function Shell() {
       const SEMIS = [0, 2, 4, 5, 7]
       const rate = Math.pow(2, SEMIS[((idx % 5) + 5) % 5] / 12)
       play('nav', 0.38, rate)
+      // Modo presentación: el "marcador se enciende" → power-up coordinado con el count-up de las cifras.
+      if (present) window.setTimeout(() => playPowerup(0.5), 90)
     }
     setDrawer(false)
   }
@@ -289,19 +313,16 @@ export default function Shell() {
             <b>REBELL</b>
             <span>{localName}</span>
           </div>
-          <svg className="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
         </button>
         <nav className="side-nav">
           {NAV.map((group) => (
             <div className="nav-group" key={group.g}>
-              <div className="ng-label">{group.g}</div>
+              <div className={'ng-label' + (group.accent ? ' ng-ia' : '')}>
+                {group.accent ? <><span className="ng-ia-spark">✦</span>{group.g}</> : group.g}
+              </div>
               {group.items.map((it) => (
                 <button key={it.id} className={'nav-item' + (active === it.id ? ' on' : '')} onClick={() => selectSection(it.id)}>
-                  <span className="ni-ic">
-                    <Icon name={it.id} />
-                  </span>
+                  <span className="ni-ic ni-emo" aria-hidden="true">{NAV_EMOJI[it.id] || '•'}</span>
                   <span className="ni-txt">{it.t}</span>
                   {it.tag ? (
                     <span className={'ni-tag' + (it.alert ? ' pulse' : '')}>{it.tag}</span>
@@ -316,7 +337,7 @@ export default function Shell() {
       </aside>
       {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
-      <div className="panel-main">
+      <div className={'panel-main' + (active === 'caja' ? ' caja-full' : '')}>
         <header className="panel-top">
           <button className="iconbtn only-mobile" onClick={() => setDrawer(true)} aria-label="Abrir menú">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -324,6 +345,7 @@ export default function Shell() {
             </svg>
           </button>
           <div className="top-actions">
+            <WalletHoy />
             <button className="iconbtn theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a tema día' : 'Cambiar a tema noche'} aria-pressed={theme === 'light'}>
               <span className="tt-track">
                 <svg className="tt-ic tt-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -349,8 +371,36 @@ export default function Shell() {
         </header>
 
         <main className="panel-content" key={active}>
-          {renderSection(active)}
+          {active === 'canon' ? (
+            <Canon
+              accent={accent}
+              onAccent={changeAccent}
+              font={font}
+              onFont={changeFont}
+              theme={theme}
+              onTheme={toggleTheme}
+              density={density}
+              onDensity={changeDensity}
+            />
+          ) : (
+            renderSection(active)
+          )}
         </main>
+
+        {/* Barra de pestañas inferior (solo móvil) — patrón nativo tipo Revolut. Las 4 vistas más usadas
+            + "Más" (abre el menú completo). Oscura en ambos temas (cockpit). No aparece en la Caja inmersiva. */}
+        <nav className="btab" aria-label="Navegación rápida">
+          {[{ id: 'caja', t: 'Caja' }, { id: 'tpv', t: 'TPV' }, { id: 'mapa', t: 'Rivales' }, { id: 'resumen', t: 'Resumen' }].map((tab) => (
+            <button key={tab.id} className={'btab-i' + (active === tab.id ? ' on' : '')} onClick={() => selectSection(tab.id)} aria-current={active === tab.id ? 'page' : undefined}>
+              <span className="btab-emo" aria-hidden="true">{NAV_EMOJI[tab.id]}</span>
+              <span className="btab-lb">{tab.t}</span>
+            </button>
+          ))}
+          <button className={'btab-i' + (drawer ? ' on' : '')} onClick={() => setDrawer(true)} aria-label="Abrir menú completo">
+            <span className="btab-emo" aria-hidden="true">☰</span>
+            <span className="btab-lb">Más</span>
+          </button>
+        </nav>
       </div>
 
       <AnimatePresence>
@@ -366,11 +416,17 @@ export default function Shell() {
               onBeast={changeBeast}
               density={density}
               onDensity={changeDensity}
+              present={present}
+              onPresent={togglePresent}
               comments={commentsOn}
               onComments={() => {
                 setCommentsOn((c) => !c)
                 setSettingsOpen(false)
                 play('toggle')
+              }}
+              onCanon={() => {
+                setSettingsOpen(false)
+                selectSection('canon')
               }}
             />
           </>
@@ -384,7 +440,6 @@ export default function Shell() {
         Sin conexión · viendo datos guardados
       </div>
 
-      <EditLayer />
       <CommentLayer on={commentsOn} setOn={setCommentsOn} active={active} />
     </div>
   )

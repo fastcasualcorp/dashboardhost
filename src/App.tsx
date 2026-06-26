@@ -19,11 +19,19 @@ function rememberProfile(id: string) {
   const p = PROFILES.find((x) => x.id === id)
   if (!p) return
   try {
-    const beast = beastById(p.beast)
+    // ¿Es el MISMO local que ya estaba recordado? (recarga / re-login del mismo local)
+    const sameLocal = localStorage.getItem('rebell-profile') === id
+    const yaTieneBestia = !!localStorage.getItem('rebell-beast')
     localStorage.setItem('rebell-profile', p.id)
     localStorage.setItem('rebell-profile-name', p.name)
-    localStorage.setItem('rebell-beast', beast.id)
-    localStorage.setItem('rebell-accent', beast.accent)
+    // La bestia/acento POR DEFECTO solo se fijan la PRIMERA vez que se entra a este local. Si es el mismo
+    // local (recarga) y el usuario ya eligió animal/color en la app, se RESPETA su elección — antes la
+    // recarga restablecía la bestia del perfil y "cambiaba de animal" (bug reportado por Juan, 25-jun).
+    if (!sameLocal || !yaTieneBestia) {
+      const beast = beastById(p.beast)
+      localStorage.setItem('rebell-beast', beast.id)
+      localStorage.setItem('rebell-accent', beast.accent)
+    }
   } catch {
     /* sin localStorage */
   }
@@ -74,6 +82,13 @@ export default function App() {
     <Login
       onEnter={(p: Profile) => {
         rememberProfile(p.id)
+        // Al INICIAR SESIÓN siempre se aterriza en Caja diaria (no en la última sección que quedó
+        // guardada de la vez anterior). Se escribe ANTES de montar el Shell → su estado inicial lee 'caja'.
+        try {
+          localStorage.setItem('rebell-active', 'caja')
+        } catch {
+          /* sin localStorage */
+        }
         setProfile(p.id)
       }}
     />

@@ -38,3 +38,9 @@ dist-ssr
 .sb-access-token
 .sb-db-url
 .sb-credentials
+.google-places-key
+
+# tooling local (no producto)
+.agents/
+_verify/
+skills-lock.json

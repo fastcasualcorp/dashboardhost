@@ -84,7 +84,9 @@ function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit, editi
     >
       {/* ── CARA FRONTAL ── */}
       <div className="cc-face cc-front">
-        <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
+        {p.img
+          ? <img className="cc-photo" src={p.img} alt={p.name} loading="lazy" draggable={false} />
+          : <div className="cc-photo cc-photo-empty" aria-hidden="true">{ti.emoji}</div>}
 
         {focus && (
           <button className="cc-edit" onClick={(e) => { e.stopPropagation(); onEdit() }} aria-label="Editar carta">
@@ -157,6 +159,7 @@ export default function Platos() {
   const [cat, setCat] = useState('Todos')
   const [sel, setSel] = useState(0)
   const [editing, setEditing] = useState(false)
+  const [newId, setNewId] = useState<string | null>(null) // id del producto recién creado y aún sin guardar (cancelar lo elimina)
   const [draft, setDraft] = useState<{ name: string; price: string; img: string }>({ name: '', price: '', img: '' })
   const stageRef = useRef<HTMLDivElement>(null)
   const [stageW, setStageW] = useState(960)
@@ -191,8 +194,29 @@ export default function Platos() {
     setSel(i)
   }
   function cancelEdit() {
+    // Si era un producto NUEVO sin guardar, lo quitamos (no dejamos cartas en blanco).
+    if (newId) {
+      setProds((ps) => ps.filter((p) => p.id !== newId))
+      setNewId(null)
+      setSel((s) => Math.max(0, s - 1))
+    }
     setEditing(false)
     play('tap', 0.4)
+  }
+  // ── AÑADIR PRODUCTO: crea una carta en blanco en la categoría activa, la enfoca y abre su edición ──
+  function addProduct() {
+    if (editing) return
+    const c = cat === 'Todos' ? CAT_ORDER[0] : cat
+    const id = 'nuevo-' + Math.round(performance.now())
+    const nuevo: Producto = { id, name: '', price: 0, cat: c, img: '', iva: 10, mods: [] }
+    const idx = prods.filter((p) => p.cat === c).length // posición que ocupará en la lista filtrada (va al final)
+    setProds((ps) => [...ps, nuevo])
+    setCat(c)
+    setSel(idx)
+    setNewId(id)
+    setDraft({ name: '', price: '', img: '' })
+    setEditing(true)
+    play('toggle', 0.5, 1.18)
   }
   function changeCat(c: string) {
     setCat(c)
@@ -207,7 +231,10 @@ export default function Platos() {
   }
   function saveEdit() {
     const price = parseFloat(draft.price.replace(',', '.'))
+    // Un producto NUEVO necesita al menos un nombre (no guardamos cartas fantasma).
+    if (newId && !draft.name.trim()) { play('error', 0.4); return }
     setProds((ps) => ps.map((p) => (p.id === current.id ? { ...p, name: draft.name.trim() || p.name, price: isNaN(price) ? p.price : price, img: draft.img } : p)))
+    setNewId(null)
     setEditing(false)
     play('toggle', 0.5)
   }
@@ -233,6 +260,10 @@ export default function Platos() {
             {f}
           </button>
         ))}
+        <button className="carta-add" onClick={addProduct} disabled={editing} aria-label="Añadir producto nuevo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          Producto
+        </button>
       </div>
 
       <div className="carta-stage" ref={stageRef}>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, SectionHeader, KpiTile, BarChart, BarRow, DataTable, Badge, Grid } from '../components/ui'
+import { Card, SectionHeader, Donut, CountValue, BarChart, BarRow, DataTable, Badge, Grid, KpiTile } from '../components/ui'
 import DatePicker, { rangeFor, type RangeSel } from '../components/DatePicker'
 import { eur, eur0 } from '../lib/data'
 import { imgFor } from '../lib/products'
@@ -53,24 +53,105 @@ const TOP = [
   { plato: 'Veggie Deluxe', uds: 14, ventas: 168 },
 ]
 
+// ── Cuenta de resultados del mes (absorbida del antiguo "Cuadro de mando", ahora integrada aquí) ──
+const columnasPL = [
+  { key: 'concepto', label: 'Concepto' },
+  { key: 'importe', label: 'Importe (€)', align: 'right' as const },
+  { key: 'pct', label: '% s/ventas', align: 'right' as const },
+]
+const filasPL = [
+  { concepto: 'Facturación', importe: '48.250,00 €', pct: <Badge tone="gold">100%</Badge> },
+  { concepto: 'Compras (food cost)', importe: '14.957,50 €', pct: <Badge tone="amber">31%</Badge> },
+  { concepto: 'Coste de personal', importe: '12.400,00 €', pct: <Badge tone="blue">25,7%</Badge> },
+  { concepto: 'Gastos fijos', importe: '11.712,50 €', pct: <Badge tone="muted">24,3%</Badge> },
+  { concepto: 'Resultado neto', importe: '9.180,00 €', pct: <Badge tone="green">19%</Badge> },
+]
+
 export default function Resumen() {
   const init = rangeFor('mes')
   const [range, setRange] = useState<RangeSel>({ key: 'mes', label: 'Este mes', start: init.start, end: init.end })
   const d = dataFor(range.key)
   const f = d.ventas / 1787
   const rangeLow = range.label.toLowerCase()
+  // "Salud del negocio" (0-100): margen + ticket vs objetivo. Etiqueta y tono por tramo.
+  const score = Math.max(20, Math.min(98, Math.round(d.margen * 0.9 + (d.ticket / 19.5) * 28)))
+  const scoreLabel = score >= 85 ? 'Excelente' : score >= 70 ? 'Buena' : score >= 50 ? 'Estable' : 'Atención'
+  const scoreTone: 'green' | 'amber' | 'red' = score >= 70 ? 'green' : score >= 50 ? 'amber' : 'red'
 
   return (
     <div className="section">
       <SectionHeader title="Resumen" subtitle={`La salud del negocio · ${rangeLow}`} right={<DatePicker value={range} onApply={setRange} />} />
 
+      {/* HÉROE: ventas gigantes (count-up) + gauge de salud + stats clave (menos recuadros) */}
+      <div className="rs-hero">
+        <div className="rs-hero-main">
+          <span className="rs-kick">◢ Salud del negocio · {rangeLow}</span>
+          <div className="rs-big">
+            <b className="rs-amount tnum"><CountValue value={eur0(d.ventas)} /></b>
+            <span className="rs-unit">€</span>
+            <span className="rs-delta up">▲ +9,0%</span>
+          </div>
+          <div className="rs-mini">
+            <div className="rs-m"><span>Margen</span><b className="tnum"><CountValue value={d.margen + '%'} /></b></div>
+            <div className="rs-m"><span>Pedidos</span><b className="tnum"><CountValue value={eur0(d.pedidos)} /></b></div>
+            <div className="rs-m"><span>Ticket medio</span><b className="tnum"><CountValue value={eur(d.ticket) + ' €'} /></b></div>
+          </div>
+        </div>
+        <div className="rs-hero-gauge">
+          <Donut value={score} label={scoreLabel} sub="índice de salud" tone={scoreTone} />
+        </div>
+      </div>
+
+      {/* CUENTA DE RESULTADOS (antes "Cuadro de mando", ahora dentro del Resumen) */}
+      <div className="rs-pl-head">
+        <h2 className="rs-h2">Cuenta de resultados</h2>
+        <Badge tone="gold">Junio 2026</Badge>
+      </div>
       <Grid cols={4} className="kpi-grid">
-        <KpiTile label="Ventas" value={eur0(d.ventas)} unit="€" delta="+9,0%" foot={rangeLow} trend="up" />
-        <KpiTile label="Margen bruto" value={String(d.margen)} unit="%" delta="+2 pts" foot="vs media" trend="up" />
-        <KpiTile label="Pedidos" value={eur0(d.pedidos)} delta="+12%" foot={'ticket ' + eur(d.ticket) + ' €'} trend="up" />
-        <KpiTile label="Ticket medio" value={eur(d.ticket)} unit="€" delta="+9%" foot="objetivo 19,50 €" trend="up" />
+        <KpiTile label="Facturación" value="48.250,00" unit="€" delta="+6,3%" foot="vs mes anterior" trend="up" />
+        <KpiTile label="Coste de personal" value="12.400,00" unit="€" delta="-1,2%" foot="vs mes anterior" trend="down" />
+        <KpiTile label="Food cost" value="31" unit="%" delta="-0,8 pts" foot="vs media" trend="up" />
+        <KpiTile label="Resultado neto" value="9.180,00" unit="€" delta="+18,4%" foot="vs mes anterior" trend="up" />
       </Grid>
 
+      <Grid cols={2}>
+        <Card>
+          <div className="card-head">
+            <h3>Margen neto</h3>
+            <Badge tone="green">19% s/facturación</Badge>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.4rem', padding: '0.5rem 0.25rem', flexWrap: 'wrap' }}>
+            <Donut value={19} label="margen neto" sub="sobre facturación" tone="green" />
+            <p className="muted-s" style={{ flex: '1 1 160px', lineHeight: 1.5, margin: 0 }}>
+              Por cada 100 € facturados, <strong style={{ color: 'var(--brand)' }}>19 € son beneficio real</strong> tras costes y gastos.
+              Meta mensual: 20%.
+            </p>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="card-head">
+            <h3>Estructura del mes</h3>
+            <span className="muted-s">sobre 48.250 €</span>
+          </div>
+          <div className="bar-rows">
+            <BarRow label="Facturación" value={48250} max={48250} color="gold" amount="48.250,00 €" />
+            <BarRow label="Compras / food cost" value={14957} max={48250} color="amber" amount="14.957,50 €" />
+            <BarRow label="Coste de personal" value={12400} max={48250} color="blue" amount="12.400,00 €" />
+            <BarRow label="Gastos fijos" value={11712} max={48250} color="green" amount="11.712,50 €" />
+          </div>
+        </Card>
+      </Grid>
+
+      <Card>
+        <div className="card-head">
+          <h3>Cuenta de resultados — detalle</h3>
+          <Badge tone="muted">Junio 2026</Badge>
+        </div>
+        <DataTable columns={columnasPL} rows={filasPL} />
+      </Card>
+
+      {/* VENTAS por periodo + reparto por canal (dinámicos según el selector) */}
       <Grid cols={2}>
         <Card>
           <div className="card-head">

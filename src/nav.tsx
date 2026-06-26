@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 
 export type NavItem = { id: string; t: string; s: string; tag?: string; alert?: string; desc: string }
-export type NavGroup = { g: string; items: NavItem[] }
+export type NavGroup = { g: string; items: NavItem[]; accent?: boolean }
 
 export const NAV: NavGroup[] = [
   {
@@ -16,7 +16,8 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    g: 'Inteligencia',
+    g: 'IA',
+    accent: true,
     items: [
       { id: 'mapa', t: 'Mapa de rivales', s: 'Competencia en tu zona', alert: 'gold', desc: 'Rastrea a tu competencia en un mapa: rivales por radio, sus reseñas, redes y noticias, con un Radar IA que te resume la semana.' },
     ],
@@ -24,17 +25,20 @@ export const NAV: NavGroup[] = [
   {
     g: 'Análisis',
     items: [
-      { id: 'resumen', t: 'Resumen', s: 'KPIs del negocio', desc: 'La foto del negocio de un vistazo: ventas, margen, pedidos y tendencias clave en tiempo real.' },
-    ],
-  },
-  {
-    g: 'Finanzas',
-    items: [
-      { id: 'cuadro', t: 'Cuadro de mando', s: 'Cuenta de resultados', desc: 'Tu cuenta de resultados en tiempo real: facturación − coste de personal − food cost − gastos fijos = resultado neto.' },
+      { id: 'resumen', t: 'Resumen', s: 'KPIs + cuenta de resultados', desc: 'El puesto de mando del negocio: ventas, margen, pedidos y tendencias, con la cuenta de resultados completa (facturación − coste de personal − food cost − gastos fijos = resultado neto) integrada.' },
       { id: 'mensual', t: 'Resumen mensual', s: 'Histórico por meses', desc: 'El histórico de cada mes: ventas, compras, gastos, coste de personal y margen bruto, con la comparativa mes a mes (absorbe la antigua Estadísticas).' },
       { id: 'gastos', t: 'Gastos fijos', s: 'Costes recurrentes', desc: 'Alquiler, luz, seguros… todos tus gastos fijos con IVA, prorrateados al día para un cuadro de mando exacto.' },
       { id: 'ventas', t: 'Ventas', s: 'Calendario por día', desc: 'El año entero de un vistazo: 12 meses en calendario, cada día con su venta y el total de efectivo, tarjeta y mes.' },
       { id: 'ventastpv', t: 'Ventas TPV', s: 'Libro de ventas', desc: 'El libro de cada venta del TPV (ticket o factura): base, IVA, total, con buscador, filtro por periodo y exportación a Excel.' },
+    ],
+  },
+  {
+    g: 'Cocina',
+    items: [
+      { id: 'foodcost', t: 'Food cost', s: 'Ficha técnica', desc: 'Ficha técnica por plato: ingredientes, coste y % de food cost. Sabrás qué plato te da margen.' },
+      { id: 'stock', t: 'Almacén', s: 'Stock por almacén', alert: 'amber', desc: 'Tus almacenes (obrador, cámara, congelados, seco) como fichas con foto; cada uno con su stock, niveles y alertas de umbral. Puedes crear varios.' },
+      { id: 'platos', t: 'Carta', s: 'Catálogo y extras', desc: 'Tu catálogo del TPV con precios, IVA y modificadores (extras, salsas). Una sola fuente de verdad.' },
+      { id: 'compras', t: 'Compras', s: 'Proveedores', desc: 'Calendario de compras por proveedor, concepto, base e IVA. Lo que entra, ordenado.' },
     ],
   },
   {
@@ -43,20 +47,6 @@ export const NAV: NavGroup[] = [
       { id: 'empleados', t: 'Empleados', s: 'Plantilla', desc: 'Tu plantilla con categoría, salario líquido y coste de empresa. La base del coste de personal.' },
       { id: 'horarios', t: 'Horarios', s: 'Turnos semanales', desc: 'Rejilla semanal por empleado para asignar turnos y horas. Se cruza con los salarios para el coste real.' },
       { id: 'coste', t: 'Coste personal', s: 'Análisis de coste', desc: 'Cuánto te cuesta el equipo al día, a la semana y al mes, cruzando horarios reales con salarios.' },
-    ],
-  },
-  {
-    g: 'Cocina',
-    items: [
-      { id: 'foodcost', t: 'Food cost', s: 'Ficha técnica', desc: 'Ficha técnica por plato: ingredientes, coste y % de food cost. Sabrás qué plato te da margen.' },
-      { id: 'stock', t: 'Stock obrador', s: 'Materias primas', alert: 'amber', desc: 'Materias primas con stock inicial, consumo diario y alertas de umbral. El obrador siempre con lo justo.' },
-      { id: 'platos', t: 'Carta', s: 'Catálogo y extras', desc: 'Tu catálogo del TPV con precios, IVA y modificadores (extras, salsas). Una sola fuente de verdad.' },
-    ],
-  },
-  {
-    g: 'Compras',
-    items: [
-      { id: 'compras', t: 'Compras', s: 'Proveedores', desc: 'Calendario de compras por proveedor, concepto, base e IVA. Lo que entra, ordenado.' },
     ],
   },
 ]

@@ -1,114 +1,146 @@
-import type { CSSProperties } from 'react'
-import { Card, SectionHeader, KpiTile, BarRow, Badge, Grid } from '../components/ui'
+import { useMemo, useState, type CSSProperties } from 'react'
+import { Card, SectionHeader, Badge, CountValue } from '../components/ui'
 
-const gastoRows = [
-  { label: 'Alquiler', value: 1200, max: 1200, color: 'gold', amount: '1.200 €' },
-  { label: 'Suministros', value: 620, max: 1200, color: 'amber', amount: '620 €' },
-  { label: 'Otros', value: 930, max: 1200, color: 'violeta', amount: '930 €' },
-  { label: 'Seguros', value: 280, max: 1200, color: 'blue', amount: '280 €' },
-  { label: 'Software', value: 210, max: 1200, color: 'green', amount: '210 €' },
-]
+// Formato es-ES CON punto de millar también en 4 cifras (el locale no lo pone por defecto).
+const e0 = (n: number) => n.toLocaleString('es-ES', { useGrouping: true, maximumFractionDigits: 0 })
 
-// Categorías para la tarta (suman el total mensual).
-const CATS = [
-  { name: 'Alquiler', value: 1200, color: '#ffbf10' },
-  { name: 'Suministros', value: 620, color: '#f5b341' },
-  { name: 'Otros', value: 930, color: '#b58bf0' },
-  { name: 'Seguros', value: 280, color: '#4aa3ff' },
-  { name: 'Software', value: 210, color: '#34d399' },
-]
-const TOTAL = CATS.reduce((s, c) => s + c.value, 0)
-
-const conceptos = [
-  { concepto: 'Alquiler local', cat: 'Alquiler', tone: 'gold', importe: '1.200,00 €', iva: '0 %', pro: '40,00 €' },
-  { concepto: 'Luz (Endesa)', cat: 'Suministros', tone: 'amber', importe: '320,00 €', iva: '10 %', pro: '10,67 €' },
-  { concepto: 'Agua', cat: 'Suministros', tone: 'amber', importe: '90,00 €', iva: '10 %', pro: '3,00 €' },
-  { concepto: 'Gas natural', cat: 'Suministros', tone: 'amber', importe: '210,00 €', iva: '21 %', pro: '7,00 €' },
-  { concepto: 'Seguro RC / incendios', cat: 'Seguros', tone: 'blue', importe: '280,00 €', iva: '0 %', pro: '9,33 €' },
-  { concepto: 'Gestoría laboral', cat: 'Otros', tone: 'muted', importe: '180,00 €', iva: '21 %', pro: '6,00 €' },
-  { concepto: 'Software TPV (REBELL)', cat: 'Software', tone: 'green', importe: '129,00 €', iva: '21 %', pro: '4,30 €' },
-  { concepto: 'Internet + teléfono', cat: 'Software', tone: 'green', importe: '81,00 €', iva: '21 %', pro: '2,70 €' },
-  { concepto: 'Contenedor basura', cat: 'Otros', tone: 'muted', importe: '750,00 €', iva: '0 %', pro: '25,00 €' },
-] as const
-
-/* Tarta (donut) de categorías con conic-gradient + leyenda. Una sola fuente de color
-   por categoría; el agujero muestra el total. Entra con un pop animado (one-shot). */
-function PieGastos() {
-  let acc = 0
-  const stops = CATS.map((c) => {
-    const a = acc
-    acc += (c.value / TOTAL) * 100
-    return `${c.color} ${a.toFixed(2)}% ${acc.toFixed(2)}%`
-  }).join(', ')
-  return (
-    <div className="gp-pie-wrap">
-      <div className="gp-pie" style={{ ['--pie' as string]: `conic-gradient(${stops})` } as CSSProperties}>
-        <div className="gp-pie-hole">
-          <b>{TOTAL.toLocaleString('es-ES')} €</b>
-          <span>al mes</span>
-        </div>
-      </div>
-      <div className="gp-legend">
-        {CATS.map((c) => (
-          <div className="gp-leg" key={c.name}>
-            <i style={{ background: c.color }} />
-            <span className="gp-leg-n">{c.name}</span>
-            <span className="gp-leg-v">{c.value.toLocaleString('es-ES')} €</span>
-            <span className="gp-leg-p">{Math.round((c.value / TOTAL) * 100)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+// Una sola fuente de color por categoría (la comparten tarta, barras y conceptos).
+const CAT_META: Record<string, { color: string }> = {
+  Alquiler: { color: '#ffbf10' },
+  Suministros: { color: '#ff7a45' },
+  Otros: { color: '#b58bf0' },
+  Seguros: { color: '#4aa3ff' },
+  Software: { color: '#34d399' },
 }
+const CAT_ORDER = Object.keys(CAT_META)
+
+type Concepto = { concepto: string; cat: keyof typeof CAT_META | string; importe: number; iva: string }
+
+const CONCEPTOS_INIT: Concepto[] = [
+  { concepto: 'Alquiler local', cat: 'Alquiler', importe: 1200, iva: '0 %' },
+  { concepto: 'Luz (Endesa)', cat: 'Suministros', importe: 320, iva: '10 %' },
+  { concepto: 'Agua', cat: 'Suministros', importe: 90, iva: '10 %' },
+  { concepto: 'Gas natural', cat: 'Suministros', importe: 210, iva: '21 %' },
+  { concepto: 'Seguro RC / incendios', cat: 'Seguros', importe: 280, iva: '0 %' },
+  { concepto: 'Gestoría laboral', cat: 'Otros', importe: 180, iva: '21 %' },
+  { concepto: 'Software TPV (REBELL)', cat: 'Software', importe: 129, iva: '21 %' },
+  { concepto: 'Internet + teléfono', cat: 'Software', importe: 81, iva: '21 %' },
+  { concepto: 'Contenedor basura', cat: 'Otros', importe: 750, iva: '0 %' },
+]
 
 export default function Gastos() {
+  // Estado editable: tocar un importe recalcula tarta + barras + KPIs en vivo (count-up).
+  const [conceptos, setConceptos] = useState<Concepto[]>(CONCEPTOS_INIT)
+  const [editId, setEditId] = useState<number | null>(null)
+
+  const { cats, total, maxCat } = useMemo(() => {
+    const sums: Record<string, number> = {}
+    for (const c of conceptos) sums[c.cat] = (sums[c.cat] || 0) + c.importe
+    const cats = CAT_ORDER.map((name) => ({ name, value: sums[name] || 0, color: CAT_META[name].color })).filter((c) => c.value > 0)
+    const total = cats.reduce((s, c) => s + c.value, 0)
+    const maxCat = Math.max(1, ...cats.map((c) => c.value))
+    return { cats, total, maxCat }
+  }, [conceptos])
+
+  const prorrateo = total / 30
+
+  // conic-gradient de la tarta a partir de las categorías reales.
+  let acc = 0
+  const stops = cats
+    .map((c) => {
+      const a = acc
+      acc += (c.value / total) * 100
+      return `${c.color} ${a.toFixed(2)}% ${acc.toFixed(2)}%`
+    })
+    .join(', ')
+
+  function setImporte(idx: number, raw: string) {
+    const n = Math.max(0, Math.round(Number(raw.replace(/[^\d.,]/g, '').replace(',', '.')) || 0))
+    setConceptos((prev) => prev.map((c, i) => (i === idx ? { ...c, importe: n } : c)))
+  }
+
   return (
     <div className="section">
-      <SectionHeader title="Gastos fijos" subtitle="Costes recurrentes" right={<Badge tone="muted">Junio 2026</Badge>} />
+      <SectionHeader title="Gastos fijos" subtitle="Costes recurrentes · toca un importe para editar" right={<Badge tone="muted">Junio 2026</Badge>} />
 
-      <Grid cols={3} className="kpi-grid">
-        <KpiTile label="Total mensual" value="3.240,00" unit="€" delta="+2,1%" foot="vs mes anterior" trend="down" />
-        <KpiTile label="Prorrateo diario" value="108,00" unit="€" foot="30 días naturales" trend="flat" />
-        <KpiTile label="Nº de gastos" value="9" foot="activos este mes" trend="flat" />
-      </Grid>
-
-      <Card>
-        <div className="card-head">
-          <h3>Reparto de gastos</h3>
-          <Badge tone="muted">por categoría · mensual</Badge>
+      {/* KPIs vivos: recalculan con count-up al editar */}
+      <div className="gx-kpis">
+        <div className="gx-kpi">
+          <span className="gx-kpi-l">Total mensual</span>
+          <b className="gx-kpi-v tnum"><CountValue value={e0(total)} /><i>€</i></b>
+          <span className="gx-kpi-f">{conceptos.length} conceptos activos</span>
         </div>
-        <div className="bar-rows">
-          {gastoRows.map((r) => (
-            <BarRow key={r.label} label={r.label} value={r.value} max={r.max} color={r.color} amount={r.amount} />
-          ))}
+        <div className="gx-kpi">
+          <span className="gx-kpi-l">Prorrateo diario</span>
+          <b className="gx-kpi-v tnum"><CountValue value={e0(prorrateo)} /><i>€</i></b>
+          <span className="gx-kpi-f">30 días naturales</span>
         </div>
-      </Card>
+        <div className="gx-kpi">
+          <span className="gx-kpi-l">Categoría líder</span>
+          <b className="gx-kpi-v tnum" style={{ color: cats[0]?.color }}>{cats.slice().sort((a, b) => b.value - a.value)[0]?.name}</b>
+          <span className="gx-kpi-f">{Math.round(((cats.slice().sort((a, b) => b.value - a.value)[0]?.value || 0) / total) * 100)}% del total</span>
+        </div>
+      </div>
 
+      {/* HÉROE: tarta grande animada + barras gordas por categoría (etiqueta encima) */}
       <Card>
         <div className="card-head">
           <h3>Estructura de gastos</h3>
-          <Badge tone="muted">9 conceptos · 3.240,00 €/mes</Badge>
+          <Badge tone="muted">por categoría · mensual</Badge>
         </div>
-        <div className="gp-grid">
-          <PieGastos />
-          <div className="gp-concepts">
-            {conceptos.map((c, i) => (
-              <div className="gp-con" key={i}>
-                <div className="gp-con-l">
-                  <b>{c.concepto}</b>
-                  <div className="gp-con-badges">
-                    <Badge tone={c.tone}>{c.cat}</Badge>
-                    <span className="gp-con-iva">IVA {c.iva}</span>
-                  </div>
+        <div className="gx-hero">
+          <div className="gx-pie-wrap">
+            <div className="gx-pie" style={{ ['--pie' as string]: `conic-gradient(from -90deg, ${stops})` } as CSSProperties}>
+              <div className="gx-pie-hole">
+                <b className="tnum"><CountValue value={e0(total)} /> €</b>
+                <span>al mes</span>
+              </div>
+            </div>
+          </div>
+          <div className="gx-cats">
+            {cats.map((c, i) => (
+              <div className="gx-cat" key={c.name} style={{ ['--d' as string]: `${i * 70}ms`, ['--c' as string]: c.color } as CSSProperties}>
+                <div className="gx-cat-top">
+                  <span className="gx-cat-n"><i style={{ background: c.color }} />{c.name}</span>
+                  <span className="gx-cat-v tnum">{e0(c.value)} €<em>{Math.round((c.value / total) * 100)}%</em></span>
                 </div>
-                <div className="gp-con-r">
-                  <b className="gp-con-imp">{c.importe}</b>
-                  <span className="gp-con-pro">{c.pro}/día</span>
+                <div className="gx-cat-track">
+                  <span className="gx-cat-fill" style={{ width: (c.value / maxCat) * 100 + '%', background: `linear-gradient(90deg, color-mix(in srgb, ${c.color} 78%, #000), ${c.color})` }} />
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      </Card>
+
+      {/* Conceptos EDITABLES: cambiar un importe recalcula todo arriba */}
+      <Card>
+        <div className="card-head">
+          <h3>Conceptos</h3>
+          <Badge tone="muted">{conceptos.length} · {e0(total)} €/mes</Badge>
+        </div>
+        <div className="gx-cons">
+          {conceptos.map((c, i) => (
+            <div className={'gx-con' + (editId === i ? ' editing' : '')} key={i}>
+              <span className="gx-con-dot" style={{ background: CAT_META[c.cat]?.color || 'var(--muted)' }} />
+              <div className="gx-con-main">
+                <b className="gx-con-name">{c.concepto}</b>
+                <span className="gx-con-sub">{c.cat} · IVA {c.iva} · {e0(c.importe / 30)} €/día</span>
+              </div>
+              <label className="gx-con-edit" title="Editar importe">
+                <input
+                  className="gx-con-input tnum"
+                  inputMode="numeric"
+                  value={c.importe}
+                  onChange={(e) => setImporte(i, e.target.value)}
+                  onFocus={() => setEditId(i)}
+                  onBlur={() => setEditId(null)}
+                  aria-label={`Importe de ${c.concepto}`}
+                />
+                <span className="gx-con-cur">€</span>
+              </label>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

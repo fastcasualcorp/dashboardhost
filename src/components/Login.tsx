@@ -23,10 +23,21 @@ export const PROFILES: Profile[] = [
 ]
 
 export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
-  const [sel, setSel] = useState<string | null>(null)
+  // Recuerda el ÚLTIMO local usado → al recargar (o si la sesión de Supabase expiró) vuelve a
+  // salir ELEGIDO, no por defecto al primero (león). Pedido de Juan (24-jun).
+  const [sel, setSel] = useState<string | null>(() => {
+    try {
+      const last = localStorage.getItem('rebell-profile-last')
+      return last && PROFILES.some((p) => p.id === last) ? last : null
+    } catch {
+      return null
+    }
+  })
   const [bgIdx, setBgIdx] = useState(0)
   const [leaving, setLeaving] = useState(false)
-  const [pw, setPw] = useState('Rebell2026!') // pre-rellena la contraseña de demo
+  // SEGURIDAD: NUNCA pre-rellenar la contraseña en producción (acababa en el bundle público + se mostraba en pantalla).
+  // Solo se pre-rellena en desarrollo local (Vite elimina esta rama del build de prod → la contraseña no viaja al cliente).
+  const [pw, setPw] = useState(import.meta.env.DEV ? 'Rebell2026!' : '')
   const [err, setErr] = useState(false)
   const [busy, setBusy] = useState(false)
   const selProfile = PROFILES.find((p) => p.id === sel) || null
@@ -98,6 +109,11 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
     if (p.id === sel) return
     setSel(p.id)
     setErr(false)
+    try {
+      localStorage.setItem('rebell-profile-last', p.id) // recuerda la elección para el próximo arranque
+    } catch {
+      /* sin localStorage */
+    }
     play('tap', 0.5, 1.22)
     playBeast(p.beast, 0.8) // la bestia se anuncia al elegir
   }
@@ -232,9 +248,12 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
             </button>
           </div>
           {err && <div className="la-err">Contraseña incorrecta</div>}
-          <div className="la-bottom">
-            <span className="la-demo">Demo: Rebell2026!</span>
-          </div>
+          {/* La pista de contraseña SOLO en desarrollo (jamás en el bundle de producción). */}
+          {import.meta.env.DEV && (
+            <div className="la-bottom">
+              <span className="la-demo">Demo (solo local): Rebell2026!</span>
+            </div>
+          )}
         </motion.form>
       ) : (
         <p className="login-hint">Elige tu local para entrar al panel</p>

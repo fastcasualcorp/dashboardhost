@@ -5,6 +5,7 @@
    Marca: dorado #ffbf10 sobre casi-negro. Sombras neutras.
    ════════════════════════════════════════════════════════════ */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { playCount } from '../lib/sound'
 
 export type Tone = 'gold' | 'green' | 'blue' | 'amber' | 'red' | 'muted'
 
@@ -12,7 +13,7 @@ export type Tone = 'gold' | 'green' | 'blue' | 'amber' | 'red' | 'muted'
    de Caja). Funciona con valores ya formateados en es-ES ("30.556", "21,28", "65")
    sin tocar las llamadas: parsea el número, anima, y CLAVA el texto original al final.
    Si el valor no es numérico (un nodo JSX) lo pinta tal cual. Respeta reduced-motion. */
-function CountValue({ value }: { value: ReactNode }) {
+export function CountValue({ value }: { value: ReactNode }) {
   const ref = useRef<HTMLSpanElement>(null)
   const raw = typeof value === 'string' || typeof value === 'number' ? String(value) : null
   useEffect(() => {
@@ -53,6 +54,7 @@ function CountValue({ value }: { value: ReactNode }) {
         el.textContent = raw // clava el original exacto al terminar
       }
     }
+    playCount() // sonido suave de "números cargando" (throttled → 1 vez por tanda)
     rafId = requestAnimationFrame(step)
     return () => cancelAnimationFrame(rafId)
   }, [raw])
@@ -141,6 +143,41 @@ export function KpiTile({
       </div>
     </div>
   )
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Stat — EL CRITERIO ÚNICO de cifra del dashboard (una sola fuente de
+   verdad). Valor grande + unidad pequeña dorada + etiqueta. Cambiar el
+   look aquí lo cambia en TODO el panel → imposible que se descuadre.
+   Pedido de Juan (24-jun): "para de una vez con ese problema".
+   ──────────────────────────────────────────────────────────────── */
+export function Stat({
+  value,
+  unit,
+  label,
+  tone = 'gold',
+  count = true,
+}: {
+  value: ReactNode
+  unit?: string
+  label: string
+  tone?: 'gold' | 'green'
+  count?: boolean
+}) {
+  return (
+    <div className="rstat">
+      <b className={'rstat-val' + (tone === 'green' ? ' g' : '')}>
+        {count ? <CountValue value={value} /> : value}
+        {unit && <i>{unit}</i>}
+      </b>
+      <span className="rstat-lbl">{label}</span>
+    </div>
+  )
+}
+
+/* Fila de Stats con separadores finos verticales (el patrón del hero de la Caja). */
+export function StatRow({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`rstat-row ${className}`}>{children}</div>
 }
 
 /* Fila con barra de proporción (efectivo/tarjeta/categorías…). */
@@ -234,13 +271,13 @@ export function Donut({ value, label, sub, tone = 'gold' }: { value: number; lab
   const r = 34
   const c = 2 * Math.PI * r
   const off = c * (1 - Math.min(1, Math.max(0, value / 100)))
-  const stroke = tone === 'green' ? '#34d399' : tone === 'red' ? '#f87171' : tone === 'amber' ? '#f5b341' : '#ffbf10'
+  // El color SALE del token (clase → var), no de un hex fijo → el anillo sigue al tema (data-accent).
   return (
     <div className="donut-wrap">
       <div className="donut">
         <svg viewBox="0 0 84 84">
           <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="8" />
-          <circle cx="42" cy="42" r={r} fill="none" stroke={stroke} strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 42 42)" />
+          <circle className={`donut-arc dt-${tone}`} cx="42" cy="42" r={r} fill="none" strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 42 42)" />
         </svg>
         <div className="donut-c">
           <b className="tnum">{value}%</b>

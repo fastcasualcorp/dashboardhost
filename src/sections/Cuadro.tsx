@@ -84,10 +84,10 @@ export default function Cuadro() {
             <h3>Margen neto</h3>
             <Badge tone="green">19% s/facturación</Badge>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.4rem', padding: '0.5rem 0.25rem', flexWrap: 'wrap' }}>
             <Donut value={19} label="margen neto" sub="sobre facturación" tone="green" />
-            <p className="muted-s" style={{ textAlign: 'center', maxWidth: '22ch' }}>
-              Por cada 100 € facturados, <strong style={{ color: '#ffbf10' }}>19 € son beneficio real</strong> tras costes y gastos.
+            <p className="muted-s" style={{ flex: '1 1 160px', lineHeight: 1.5, margin: 0 }}>
+              Por cada 100 € facturados, <strong style={{ color: 'var(--brand)' }}>19 € son beneficio real</strong> tras costes y gastos.
               Meta mensual: 20%.
             </p>
           </div>

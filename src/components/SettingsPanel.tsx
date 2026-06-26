@@ -12,7 +12,7 @@ const FONTS: { key: FontKey; name: string; meta: string; stack: string }[] = [
   { key: 'roundo', name: 'Roundo', meta: 'redondeada · amable', stack: "'Roundo', sans-serif" },
 ]
 
-const ACCENTS: { key: AccentKey; name: string; css: string; premium?: boolean }[] = [
+export const ACCENTS: { key: AccentKey; name: string; css: string; premium?: boolean }[] = [
   { key: 'gold', name: 'Oro', css: 'linear-gradient(135deg,#ffd45e,#e8ab0c)' },
   { key: 'azul', name: 'Azul', css: 'linear-gradient(135deg,#7dc0ff,#2b86e0)' },
   { key: 'verde', name: 'Verde', css: 'linear-gradient(135deg,#6ee7b7,#10b981)' },
@@ -38,8 +38,11 @@ export default function SettingsPanel({
   onBeast,
   density,
   onDensity,
+  present,
+  onPresent,
   comments,
   onComments,
+  onCanon,
 }: {
   font: FontKey
   onFont: (f: FontKey) => void
@@ -49,8 +52,11 @@ export default function SettingsPanel({
   onBeast: (id: string) => void
   density: number
   onDensity: (d: number) => void
+  present: boolean
+  onPresent: () => void
   comments: boolean
   onComments: () => void
+  onCanon: () => void
 }) {
   const DENSITIES: { v: number; name: string }[] = [
     { v: 0.9, name: 'Compacto' },
@@ -103,6 +109,24 @@ export default function SettingsPanel({
             <button className="sp-save" type="button">Guardar contraseña</button>
           </div>
         )}
+      </div>
+
+      <div className="sp-section">
+        <button className={'sp-comments' + (present ? ' on' : '')} onClick={onPresent}>
+          <span className="spc-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 5h18M4 5v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5M12 16v5M8 21h8" />
+              <path d="M8 11l2.5-2.5L13 11l3-3" />
+            </svg>
+          </span>
+          <span className="spc-txt">
+            <b>Modo presentación</b>
+            <small>{present ? 'Activo · las cifras se encienden al entrar' : 'Power-up + count-up al entrar en cada sección'}</small>
+          </span>
+          <span className="spc-sw" aria-hidden="true">
+            <span className="spc-knob" />
+          </span>
+        </button>
       </div>
 
       <div className="sp-section">
@@ -212,6 +236,16 @@ export default function SettingsPanel({
             </span>
           </button>
         ))}
+      </div>
+
+      <div className="sp-section">
+        <button className="sp-action sp-canon" onClick={onCanon}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3l2.4 5 5.6.6-4.2 3.7 1.3 5.5L12 20.7 6.9 17.8l1.3-5.5L4 8.6 9.6 8z" />
+          </svg>
+          Sistema de diseño · Canon
+          <span className="sp-canon-tag">interna</span>
+        </button>
       </div>
 
       <div className="sp-section">

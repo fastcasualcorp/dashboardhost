@@ -1,0 +1,325 @@
+import { useState, useEffect, type CSSProperties } from 'react'
+import { Card, SectionHeader, KpiTile, DataTable, Badge, Grid } from '../components/ui'
+import { play } from '../lib/sound'
+import { reduceMotion } from '../lib/data'
+
+/* Almacén (antes "Stock"). Varios almacenes como FICHAS (foto Nano Banana). Al pulsar uno, su stock se ve como
+   un GRID DE PRODUCTOS estilo videojuego: foto de estudio sobre negro + % gigante (verde/ámbar/rojo) + nombre +
+   barra HUD que SANGRA EN VIVO (drena con el consumo, parpadea roja al cruzar umbral). Añadir productos = CATÁLOGO
+   de cards con foto. Pedido de Juan (24-jun): preview "97% High Potato". Fotos en /img/prod (Nano Banana Pro). */
+
+type Tipo = 'obrador' | 'refrigerado' | 'congelado' | 'seco'
+const TIPO_META: Record<Tipo, { label: string; color: string; emoji: string; tone: 'gold' | 'blue' | 'green' }> = {
+  obrador: { label: 'Obrador', color: '#ffbf10', emoji: '🍳', tone: 'gold' },
+  refrigerado: { label: 'Refrigerado', color: '#3a86ff', emoji: '❄️', tone: 'blue' },
+  congelado: { label: 'Congelado', color: '#22d3ee', emoji: '🧊', tone: 'blue' },
+  seco: { label: 'Seco / Bebidas', color: '#34d399', emoji: '📦', tone: 'green' },
+}
+const TIPO_KEYS = Object.keys(TIPO_META) as Tipo[]
+const FOTO: Record<Tipo, string> = {
+  obrador: '/img/almacen-obrador.jpg',
+  refrigerado: '/img/almacen-refrigerados.jpg',
+  congelado: '/img/almacen-congelados.jpg',
+  seco: '/img/almacen-seco.jpg',
+}
+
+// ── Catálogo de PRODUCTOS (ingredientes de la Carta) con su foto de estudio Nano Banana Pro ──
+type Prod = { id: string; name: string; unit: string; foto: string; cad: number }
+const PROD: Prod[] = [
+  { id: 'pan', name: 'Pan brioche', unit: 'uds', foto: '/img/prod/pan-brioche.jpg', cad: 2 },
+  { id: 'carne', name: 'Carne picada', unit: 'kg', foto: '/img/prod/carne.jpg', cad: 2 },
+  { id: 'bacon', name: 'Bacon', unit: 'kg', foto: '/img/prod/bacon.jpg', cad: 4 },
+  { id: 'cheddar', name: 'Queso cheddar', unit: 'kg', foto: '/img/prod/cheddar.jpg', cad: 12 },
+  { id: 'pollo', name: 'Pollo crispy', unit: 'kg', foto: '/img/prod/pollo.jpg', cad: 3 },
+  { id: 'lechuga', name: 'Lechuga', unit: 'kg', foto: '/img/prod/lechuga.jpg', cad: 2 },
+  { id: 'tomate', name: 'Tomate', unit: 'kg', foto: '/img/prod/tomate.jpg', cad: 4 },
+  { id: 'cebolla', name: 'Cebolla', unit: 'kg', foto: '/img/prod/cebolla.jpg', cad: 18 },
+  { id: 'pepinillos', name: 'Pepinillos', unit: 'kg', foto: '/img/prod/pepinillos.jpg', cad: 60 },
+  { id: 'salsa', name: 'Salsa Rebell', unit: 'L', foto: '/img/prod/salsa.jpg', cad: 30 },
+  { id: 'patata', name: 'Patata congelada', unit: 'kg', foto: '/img/prod/patata.jpg', cad: 180 },
+  { id: 'aros', name: 'Aros de cebolla', unit: 'kg', foto: '/img/prod/aros.jpg', cad: 180 },
+  { id: 'cola', name: 'Coca-Cola', unit: 'uds', foto: '/img/prod/cola.jpg', cad: 220 },
+  { id: 'cola-zero', name: 'Coca-Cola Zero', unit: 'uds', foto: '/img/prod/cola-zero.jpg', cad: 220 },
+  { id: 'cerveza', name: 'Cerveza', unit: 'uds', foto: '/img/prod/cerveza.jpg', cad: 200 },
+  { id: 'agua', name: 'Agua', unit: 'uds', foto: '/img/prod/agua.jpg', cad: 300 },
+]
+const PROD_BY: Record<string, Prod> = Object.fromEntries(PROD.map((p) => [p.id, p]))
+
+type Item = { pid: string; nivel: number; actual: string; umbral: string; cad?: number }
+type Almacen = { id: string; nombre: string; tipo: Tipo; foto: string; valor: number; ocupacion: number; items: Item[] }
+
+const ALM0: Almacen[] = [
+  {
+    id: 'a1', nombre: 'Obrador central', tipo: 'obrador', foto: FOTO.obrador, valor: 1980, ocupacion: 72,
+    items: [
+      { pid: 'pan', nivel: 20, actual: '24 uds', umbral: '30 uds' },
+      { pid: 'carne', nivel: 46, actual: '18,5 kg', umbral: '10 kg' },
+      { pid: 'cheddar', nivel: 84, actual: '4,2 kg', umbral: '2 kg' },
+      { pid: 'bacon', nivel: 38, actual: '3,8 kg', umbral: '3 kg' },
+      { pid: 'salsa', nivel: 24, actual: '1,9 L', umbral: '2 L' },
+    ],
+  },
+  {
+    id: 'a2', nombre: 'Cámara refrigerada', tipo: 'refrigerado', foto: FOTO.refrigerado, valor: 1240, ocupacion: 64,
+    items: [
+      { pid: 'lechuga', nivel: 22, actual: '2,1 kg', umbral: '2 kg' },
+      { pid: 'tomate', nivel: 74, actual: '5,6 kg', umbral: '3 kg' },
+      { pid: 'cebolla', nivel: 70, actual: '4,0 kg', umbral: '2 kg' },
+      { pid: 'pepinillos', nivel: 66, actual: '3,2 kg', umbral: '1,5 kg' },
+    ],
+  },
+  {
+    id: 'a3', nombre: 'Congelados', tipo: 'congelado', foto: FOTO.congelado, valor: 430, ocupacion: 48,
+    items: [
+      { pid: 'patata', nivel: 80, actual: '28 kg', umbral: '15 kg' },
+      { pid: 'aros', nivel: 58, actual: '6,5 kg', umbral: '4 kg' },
+    ],
+  },
+  {
+    id: 'a4', nombre: 'Seco y bebidas', tipo: 'seco', foto: FOTO.seco, valor: 1200, ocupacion: 81,
+    items: [
+      { pid: 'cola', nivel: 67, actual: '96 uds', umbral: '48 uds' },
+      { pid: 'cola-zero', nivel: 60, actual: '72 uds', umbral: '48 uds' },
+      { pid: 'cerveza', nivel: 72, actual: '48 uds', umbral: '24 uds' },
+      { pid: 'agua', nivel: 78, actual: '120 uds', umbral: '60 uds' },
+    ],
+  },
+]
+
+const e0 = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 0 })
+const cadOf = (it: Item) => it.cad ?? PROD_BY[it.pid]?.cad ?? 30
+const cadInfo = (d: number): { t: string; tone: 'red' | 'amber' | 'green'; lbl: string } =>
+  d <= 2 ? { t: `${d}d`, tone: 'red', lbl: 'Caduca ya' }
+    : d <= 5 ? { t: `${d}d`, tone: 'amber', lbl: 'Pronto' }
+      : d < 60 ? { t: `${d}d`, tone: 'green', lbl: 'OK' }
+        : { t: d > 360 ? '1a+' : `${Math.round(d / 30)}m`, tone: 'green', lbl: 'Larga' }
+const estadoDe = (nivel: number): { t: string; tone: 'red' | 'amber' | 'green' } =>
+  nivel < 30 ? { t: 'Crítico', tone: 'red' } : nivel < 55 ? { t: 'Bajo', tone: 'amber' } : { t: 'OK', tone: 'green' }
+const toneColor = (tone: 'red' | 'amber' | 'green') => (tone === 'red' ? '#ff5c5c' : tone === 'amber' ? '#f5b341' : '#7CEF5A')
+const alertasDe = (a: Almacen) => a.items.filter((i) => i.nivel < 55).length
+const porCaducarDe = (a: Almacen) => a.items.filter((i) => cadOf(i) <= 5).length
+
+const Pencil = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+)
+const Xmark = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+
+type Draft = { nombre: string; tipo: Tipo }
+
+export default function Almacen() {
+  const [alms, setAlms] = useState<Almacen[]>(ALM0)
+  const [selId, setSelId] = useState<string>(ALM0[0].id)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Draft>({ nombre: '', tipo: 'seco' })
+  const [picker, setPicker] = useState(false) // catálogo de productos para cargar
+
+  const sel = alms.find((a) => a.id === selId) ?? alms[0]
+
+  // Totales del negocio.
+  const totRefs = alms.reduce((n, a) => n + a.items.length, 0)
+  const totAlertas = alms.reduce((n, a) => n + alertasDe(a), 0)
+  const totCaducar = alms.reduce((n, a) => n + porCaducarDe(a), 0)
+  const totValor = alms.reduce((n, a) => n + a.valor, 0)
+
+  // ── BARRAS QUE SANGRAN EN VIVO: cada ~2,2s el stock del almacén abierto baja un poco (consumo del día).
+  //    La barra glidea (CSS) entre pasos → parece drenar de continuo; al cruzar umbral la card parpadea roja.
+  useEffect(() => {
+    if (reduceMotion()) return
+    const iv = window.setInterval(() => {
+      setAlms((list) => list.map((a) => (a.id !== selId ? a : {
+        ...a,
+        // drenaje LENTO y realista (~0,18-0,38%/tick): se ve la barra moverse sin vaciar el almacén en minutos
+        items: a.items.map((it, i) => ({ ...it, nivel: Math.max(6, +(it.nivel - (0.18 + ((i * 7) % 9) / 40)).toFixed(2)) })),
+      })))
+    }, 2200)
+    return () => window.clearInterval(iv)
+  }, [selId])
+
+  function pick(id: string) {
+    if (id === selId) return
+    setSelId(id)
+    setPicker(false)
+    play('tap', 0.4)
+  }
+  function openEdit(a: Almacen) { setDraft({ nombre: a.nombre, tipo: a.tipo }); setEditId(a.id); play('tap', 0.45) }
+  function cancelEdit() { setEditId(null); play('tap', 0.4) }
+  function saveEdit(id: string) {
+    setAlms((list) => list.map((a) => (a.id === id ? { ...a, nombre: draft.nombre.trim() || a.nombre, tipo: draft.tipo, foto: a.foto.startsWith('/img/almacen-') ? FOTO[draft.tipo] : a.foto } : a)))
+    setEditId(null); play('toggle', 0.5)
+  }
+  function borrar(id: string) {
+    setAlms((list) => { const next = list.filter((a) => a.id !== id); if (id === selId && next[0]) setSelId(next[0].id); return next })
+    setEditId(null); play('toggle', 0.45)
+  }
+  function nuevo() {
+    const id = 'a' + Date.now().toString(36)
+    setAlms((list) => [...list, { id, nombre: 'Nuevo almacén', tipo: 'seco', foto: FOTO.seco, valor: 0, ocupacion: 0, items: [] }])
+    setSelId(id); setDraft({ nombre: 'Nuevo almacén', tipo: 'seco' }); setEditId(id); play('pop', 0.5, 1.2)
+  }
+  // Cargar un producto del catálogo en el almacén seleccionado (entra al 92%).
+  function cargarProd(pid: string) {
+    const p = PROD_BY[pid]
+    setAlms((list) => list.map((a) => (a.id === sel.id ? { ...a, items: [...a.items, { pid, nivel: 92, actual: `— ${p.unit}`, umbral: `— ${p.unit}` }] } : a)))
+    play('success', 0.5)
+  }
+
+  const selAlert = alertasDe(sel)
+  const selCaducar = porCaducarDe(sel)
+  const yaTengo = new Set(sel.items.map((i) => i.pid))
+  const disponibles = PROD.filter((p) => !yaTengo.has(p.id))
+
+  return (
+    <div className="section">
+      <SectionHeader
+        title="Almacén"
+        subtitle="Materias primas por almacén"
+        right={totAlertas > 0 ? <Badge tone="red">⚠ {totAlertas} alertas activas</Badge> : <Badge tone="green">Todo en orden</Badge>}
+      />
+
+      <Grid cols={4} className="kpi-grid">
+        <KpiTile label="Almacenes" value={String(alms.length)} unit="espacios" delta={`${totRefs} refs`} foot="referencias totales" trend="flat" />
+        <KpiTile label="Alertas activas" value={String(totAlertas)} unit="prods" delta={totAlertas ? '+' + totAlertas : '0'} foot="bajo umbral" trend={totAlertas ? 'down' : 'flat'} />
+        <KpiTile label="Por caducar" value={String(totCaducar)} unit="prods" delta={totCaducar ? '≤5 días' : 'ninguno'} foot="caducidad próxima" trend={totCaducar ? 'down' : 'flat'} />
+        <KpiTile label="Valor total" value={e0(totValor) + ',00'} unit="€" delta="-2,1%" foot="vs semana pasada" trend="down" />
+      </Grid>
+
+      {/* ── FICHAS de almacén (foto Nano Banana + tipo + valor + alertas + ocupación) ── */}
+      <div className="alm-grid">
+        {alms.map((a, i) => {
+          const tm = TIPO_META[a.tipo]
+          const al = alertasDe(a)
+          const editing = editId === a.id
+          return (
+            <article className={'alm-card' + (a.id === selId ? ' sel' : '')} key={a.id} style={{ ['--accent' as string]: tm.color, ['--i' as string]: i } as CSSProperties} onClick={() => pick(a.id)}>
+              <div className="alm-photo-wrap">
+                <img className="alm-photo" src={a.foto} alt="" loading="lazy" draggable={false} />
+                <span className="alm-tipo">{tm.emoji} {tm.label}</span>
+                {al > 0 && <span className="alm-alert">⚠ {al}</span>}
+                <button className="alm-edit" onClick={(e) => { e.stopPropagation(); openEdit(a) }} aria-label={`Editar ${a.nombre}`}><Pencil /></button>
+                <span className="alm-valor"><b>{e0(a.valor)} €</b><small>valor stock</small></span>
+              </div>
+              <div className="alm-body">
+                <b className="alm-name">{a.nombre}</b>
+                <div className="alm-foot">
+                  <span className="alm-f"><b>{a.items.length}</b><i>referencias</i></span>
+                  <span className="alm-f"><b className={al ? 'r' : 'g'}>{al}</b><i>alertas</i></span>
+                  <span className="alm-occ"><span className="alm-occ-bar"><span style={{ width: a.ocupacion + '%' }} /></span><i>{a.ocupacion}% lleno</i></span>
+                </div>
+              </div>
+              {editing && (
+                <div className="alm-edit-panel" onClick={(e) => e.stopPropagation()}>
+                  <div className="eb-head"><b>Editar almacén</b><button className="eb-close" onClick={cancelEdit} aria-label="Cerrar"><Xmark /></button></div>
+                  <div className="eb-body">
+                    <label className="eb-field"><span>Nombre</span><input autoFocus value={draft.nombre} onChange={(ev) => setDraft({ ...draft, nombre: ev.target.value })} /></label>
+                    <label className="eb-field"><span>Tipo</span>
+                      <select value={draft.tipo} onChange={(ev) => setDraft({ ...draft, tipo: ev.target.value as Tipo })}>
+                        {TIPO_KEYS.map((k) => <option key={k} value={k}>{TIPO_META[k].label}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="eb-actions"><button className="eb-btn danger" onClick={() => borrar(a.id)}>Eliminar</button><button className="eb-btn primary" onClick={() => saveEdit(a.id)}>Guardar</button></div>
+                </div>
+              )}
+            </article>
+          )
+        })}
+        <button className="alm-card alm-add" onClick={nuevo}>
+          <span className="alm-add-plus">+</span><b>Nuevo almacén</b><span>Crea otro espacio de stock</span>
+        </button>
+      </div>
+
+      {/* ── DETALLE del almacén seleccionado ── */}
+      <div className="alm-detail-head">
+        <h2 className="rs-h2">{TIPO_META[sel.tipo].emoji} {sel.nombre}</h2>
+        {selCaducar > 0 && <Badge tone="amber">⏳ {selCaducar} por caducar</Badge>}
+        <Badge tone={selAlert ? 'red' : 'green'}>{selAlert ? `${selAlert} alertas` : 'Sin alertas'}</Badge>
+        <button className="alm-load-btn" onClick={() => { setPicker((v) => !v); play('tap', 0.5, 1.15) }}>{picker ? '✕ Cerrar' : '＋ Cargar producto'}</button>
+      </div>
+
+      {/* CATÁLOGO de productos para cargar (cards con foto, estilo videojuego) */}
+      {picker && (
+        <div className="alm-picker">
+          <div className="alm-picker-kick">◢ CATÁLOGO · pulsa para cargar en {sel.nombre}</div>
+          {disponibles.length === 0 ? (
+            <p className="muted-s" style={{ padding: '8px 2px', margin: 0 }}>Este almacén ya tiene todos los productos del catálogo.</p>
+          ) : (
+            <div className="alm-pick-grid">
+              {disponibles.map((p) => (
+                <button className="alm-pick" key={p.id} onClick={() => cargarProd(p.id)}>
+                  <span className="alm-pick-ph"><img src={p.foto} alt="" loading="lazy" draggable={false} /></span>
+                  <b>{p.name}</b>
+                  <span className="alm-pick-add">＋ Cargar</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {sel.items.length === 0 ? (
+        <Card>
+          <p className="muted-s" style={{ textAlign: 'center', padding: '1.5rem 0', margin: 0 }}>
+            Este almacén está vacío. Pulsa <strong style={{ color: 'var(--brand)' }}>＋ Cargar producto</strong> y elige del catálogo.
+          </p>
+        </Card>
+      ) : (
+        <>
+          {/* GRID de productos = foto sobre negro + % gigante + nombre + barra que sangra (preview de Juan) */}
+          <div className="alm-pgrid">
+            {sel.items.map((it) => {
+              const p = PROD_BY[it.pid]
+              const es = estadoDe(it.nivel)
+              const cd = cadInfo(cadOf(it))
+              const col = toneColor(es.tone)
+              return (
+                <div className={'alm-pcard' + (it.nivel < 30 ? ' crit' : '')} key={it.pid} style={{ ['--tone' as string]: col } as CSSProperties}>
+                  <div className="alm-pcard-top">
+                    <span className="alm-pcard-ph"><img src={p?.foto} alt="" loading="lazy" draggable={false} /></span>
+                    <div className="alm-pcard-stat">
+                      <b className="alm-pcard-pct">{Math.round(it.nivel)}<i>%</i></b>
+                      <span className="alm-pcard-name">{p?.name ?? it.pid}</span>
+                      <span className="alm-pcard-meta">{it.actual} · <em className={'apc-cad ' + cd.tone}>⏳ {cd.t}</em></span>
+                    </div>
+                  </div>
+                  <div className="alm-pcard-track"><span className="alm-pcard-fill" style={{ width: it.nivel + '%' }} /></div>
+                </div>
+              )
+            })}
+          </div>
+
+          <Card>
+            <div className="card-head"><h3>Detalle de materias primas</h3><Badge tone="muted">{sel.items.length} referencias</Badge></div>
+            <DataTable
+              columns={[
+                { key: 'producto', label: 'Producto' },
+                { key: 'actual', label: 'Stock actual', align: 'right' },
+                { key: 'nivel', label: 'Nivel', align: 'right' },
+                { key: 'umbral', label: 'Umbral mínimo', align: 'right' },
+                { key: 'caducidad', label: 'Caducidad', align: 'right' },
+                { key: 'estado', label: 'Estado', align: 'right' },
+              ]}
+              rows={sel.items.map((it) => {
+                const es = estadoDe(it.nivel)
+                const cd = cadInfo(cadOf(it))
+                return {
+                  producto: <span className="cell-plato"><span className="cp-th"><img src={PROD_BY[it.pid]?.foto} alt="" loading="lazy" /></span>{PROD_BY[it.pid]?.name ?? it.pid}</span>,
+                  actual: it.actual,
+                  nivel: Math.round(it.nivel) + '%',
+                  umbral: it.umbral,
+                  caducidad: <Badge tone={cd.tone === 'green' ? 'muted' : cd.tone}>⏳ {cd.t}</Badge>,
+                  estado: <Badge tone={es.tone}>{es.t}</Badge>,
+                }
+              })}
+            />
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}

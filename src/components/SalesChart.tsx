@@ -23,10 +23,11 @@ function smooth(p: Pt[]): string {
   return d
 }
 
-const H = 156
-const PAD_X = 10
-const TOP = 16
-const BOTTOM = 18
+const H = 240
+const PAD_X = 12
+const TOP = 20
+const BOTTOM = 26 // banda de la línea; el área baja hasta H (base del "monte")
+const GRID = 3 // líneas de referencia horizontales
 
 export default function SalesChart() {
   const areaRef = useRef<HTMLDivElement>(null)
@@ -53,10 +54,11 @@ export default function SalesChart() {
 
   const pts: Pt[] = SALES.map((s, i) => ({ x: xOf(i), y: yOf(s.value) }))
   const line = w ? smooth(pts) : ''
+  const area = w ? `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z` : ''
   const last = pts[pts.length - 1]
-  const area = w ? `${line} L ${last.x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z` : ''
-  const medianY = yOf(salesMedian)
-  const grid = [0.18, 0.46, 0.74].map((t) => TOP + t * (H - TOP - BOTTOM))
+  const today = SALES[SALES.length - 1]
+  // niveles de la rejilla (para leer los importes de un vistazo)
+  const gridYs = Array.from({ length: GRID }, (_, k) => TOP + ((k + 1) * (H - TOP - BOTTOM)) / (GRID + 1))
 
   useGSAP(
     () => {
@@ -65,22 +67,25 @@ export default function SalesChart() {
       if (!lineEl) return
       if (reduceMotion()) {
         gsap.set('.dc-area', { opacity: 1 })
-        gsap.set('.dc-dot', { scale: 1 })
+        gsap.set('.dc-dot, .dc-dot-ring, .dc-dot-ring2', { scale: 1 })
+        gsap.set('.dc-dot-pulse', { opacity: 0 })
         return
       }
       const len = lineEl.getTotalLength ? lineEl.getTotalLength() : 500
-      gsap.set(lineEl, { strokeDasharray: len, strokeDashoffset: len })
+      gsap.set('.dc-line', { strokeDasharray: len, strokeDashoffset: len })
       gsap.set('.dc-area', { opacity: 0 })
-      gsap.set('.dc-dot', { scale: 0, transformOrigin: 'center' })
+      gsap.set('.dc-dot, .dc-dot-ring, .dc-dot-ring2', { scale: 0, transformOrigin: 'center' })
+      gsap.set('.dc-dot-pulse', { scale: 1, opacity: 0, transformOrigin: 'center' })
       const tl = gsap.timeline({ delay: 0.1 })
-      tl.to(lineEl, {
+      tl.to('.dc-line', {
         strokeDashoffset: 0,
-        duration: 0.85,
+        duration: 1,
         ease: 'power2.inOut',
-        onComplete: () => gsap.set(lineEl, { clearProps: 'strokeDasharray,strokeDashoffset' }),
+        onComplete: () => gsap.set('.dc-line', { clearProps: 'strokeDasharray,strokeDashoffset' }),
       })
-        .to('.dc-area', { opacity: 1, duration: 0.6 }, '-=0.65')
-        .to('.dc-dot', { scale: 1, duration: 0.5, ease: 'back.out(2.2)' }, '-=0.4')
+        .to('.dc-area', { opacity: 1, duration: 0.7, ease: 'power2.out' }, '-=0.75')
+        .to('.dc-dot, .dc-dot-ring, .dc-dot-ring2', { scale: 1, duration: 0.5, ease: 'back.out(2.2)', stagger: 0.04 }, '-=0.35')
+        .fromTo('.dc-dot-pulse', { scale: 1, opacity: 0.7 }, { scale: 2.7, opacity: 0, duration: 0.9, ease: 'power2.out' }, '-=0.15')
     },
     { scope: areaRef, dependencies: [w > 0] },
   )
@@ -129,42 +134,48 @@ export default function SalesChart() {
         </div>
       </div>
 
-      <div
-        className="chart-area"
-        ref={areaRef}
-        onPointerMove={onMove}
-        onPointerLeave={() => setHover(null)}
-      >
+      <div className="chart-area" ref={areaRef} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
         {w > 0 && (
           <svg viewBox={`0 0 ${w} ${H}`} preserveAspectRatio="none">
             <defs>
+              {/* línea: oro pleno que brilla a blanco cálido hacia la punta (cometa premium) */}
               <linearGradient id="dcl" x1="0" x2={w} y1="0" y2="0">
-                <stop style={{ stopColor: 'var(--gold-deep)' }} />
-                <stop offset="1" style={{ stopColor: 'var(--gold-soft)' }} />
+                <stop offset="0" style={{ stopColor: 'var(--gold)', stopOpacity: 0.85 }} />
+                <stop offset="0.55" style={{ stopColor: 'var(--gold-soft)' }} />
+                <stop offset="0.88" style={{ stopColor: 'var(--gold)' }} />
+                <stop offset="1" style={{ stopColor: '#fff7e0' }} />
               </linearGradient>
-              <linearGradient id="dca" x1="0" y1="0" x2="0" y2={H}>
-                <stop style={{ stopColor: 'var(--gold)', stopOpacity: 0.32 }} />
+              {/* relleno de área: el "monte" — profundidad premium SIN desenfoque */}
+              <linearGradient id="dca" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" style={{ stopColor: 'var(--gold)', stopOpacity: 0.26 }} />
+                <stop offset="0.55" style={{ stopColor: 'var(--gold)', stopOpacity: 0.07 }} />
                 <stop offset="1" style={{ stopColor: 'var(--gold)', stopOpacity: 0 }} />
               </linearGradient>
             </defs>
-            {grid.map((gy, i) => (
-              <line key={i} className="dc-grid" x1="0" x2={w} y1={gy} y2={gy} />
+            {/* rejilla de referencia (clara visualmente, no decorativa) */}
+            {gridYs.map((gy, i) => (
+              <line key={i} className="dc-grid" x1={PAD_X} x2={w - PAD_X} y1={gy} y2={gy} />
             ))}
-            <line className="dc-median" x1="0" x2={w} y1={medianY} y2={medianY} />
-            <path className="dc-area" d={area} fill="url(#dca)" />
-            <path className="dc-line" d={line} stroke="url(#dcl)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            <circle className="dc-dot" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="3.8" style={{ fill: 'var(--gold-soft)' }} />
+            {/* área + línea NÍTIDA (sin glow borroso) */}
+            <path className="dc-area" d={area} fill="url(#dca)" stroke="none" />
+            <path className="dc-line" d={line} stroke="url(#dcl)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            {/* punto VIVO de hoy — anillos NÍTIDOS, cero halo sucio */}
+            <circle className="dc-dot-pulse" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
+            <circle className="dc-dot-ring2" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="10" fill="none" />
+            <circle className="dc-dot-ring" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
+            <circle className="dc-dot" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="4.2" />
           </svg>
         )}
 
-        {/* etiqueta de la media */}
+        {/* etiqueta del valor de HOY anclada al punto (se oculta al hacer hover) */}
         {w > 0 && (
-          <span className="ch-median-lab" style={{ top: medianY }}>
-            media
-          </span>
+          <div className="ch-today-cap" style={{ left: last.x, top: last.y, opacity: hover == null ? 1 : 0 }}>
+            <b className="tnum">{eur0(today.value)} €</b>
+            <small>hoy</small>
+          </div>
         )}
 
-        {/* crosshair + punto + tooltip */}
+        {/* crosshair + punto + tooltip al hover */}
         <div className="ch-cross" style={{ left: hpt?.x ?? 0, opacity: hpt ? 1 : 0 }} />
         <div className="ch-hoverdot" style={{ left: hpt?.x ?? 0, top: hpt?.y ?? 0, opacity: hpt ? 1 : 0 }} />
         <div className="ch-tip" style={{ left: tipLeft, top: tipTop, transform: tipTransform, opacity: hp ? 1 : 0 }}>
@@ -194,7 +205,7 @@ export default function SalesChart() {
         </div>
       </div>
 
-      {/* eje X — fechas */}
+      {/* eje X — fechas como eje real (base + ticks), no números sueltos */}
       <div className="ch-x">
         {w > 0 &&
           SALES.map((s, i) => (

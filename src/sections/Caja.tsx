@@ -1,16 +1,36 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import SalesChart from '../components/SalesChart'
-import { play, playReward } from '../lib/sound'
-import {
-  CAJA, subM, subT, totalDia, avgT, OBJ, META_DIA,
-  FRANJAS_M, FRANJAS_T, eur, reduceMotion,
-} from '../lib/data'
+import { Stat, StatRow } from '../components/ui'
+import { play } from '../lib/sound'
+import { eur, eur0, reduceMotion, HOY } from '../lib/data'
+import { cierreDia, esMismoDia, fmtDiaLargo, addDias } from '../lib/cierre'
+import { useCajaDelDia } from '../lib/wallet'
 
 gsap.registerPlugin(useGSAP)
 
 type Turn = { efectivo: number; tarjeta: number; domicilio: number }
+
+// Brasas que suben (posición/velocidad fijas → no saltan entre renders).
+const EMBERS = [
+  { l: '22%', d: '7.5s', delay: '0s' }, { l: '30%', d: '9s', delay: '1.4s' },
+  { l: '38%', d: '6.5s', delay: '3s' }, { l: '45%', d: '8.2s', delay: '.7s' },
+  { l: '54%', d: '7s', delay: '2.2s' }, { l: '63%', d: '9.5s', delay: '4s' },
+  { l: '34%', d: '8s', delay: '5.2s' }, { l: '48%', d: '6.8s', delay: '6s' },
+]
+// Facturación del negocio (mes) → el número GIGANTE del hero. Con datos reales saldrá de Supabase.
+const NEGOCIO = 47280
+// Abreviaturas de día (tira de fechas, estilo week-strip).
+const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+// Mensajes que motivan y enganchan (estilo "estás en el top X" — alentadores, datos de demo).
+const MOTIV = [
+  'Estás en el top 5% de tu zona 🔥',
+  'Mejor semana en crecimiento del barrio 📈',
+  'Vas camino de tu récord de junio 🏆',
+  'Por encima de la media de tu zona ✨',
+  'Racha de 5 días cuadrando caja 💪',
+]
 
 function Turno({ badge, badgeClass, name, subtotal, t, franjas }: {
   badge: string
@@ -69,72 +89,104 @@ function Turno({ badge, badgeClass, name, subtotal, t, franjas }: {
 export default function Caja() {
   const root = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLElement>(null)
-  const odoRef = useRef<HTMLSpanElement>(null)
-  const ordersRef = useRef<HTMLDivElement>(null)
-  const avgRef = useRef<HTMLSpanElement>(null)
-  const sealRef = useRef<HTMLDivElement>(null)
-  const cerrarBtn = useRef<HTMLButtonElement>(null)
+  const negRef = useRef<HTMLSpanElement>(null) // número GIGANTE = facturación del negocio
   const islandRef = useRef<HTMLDivElement>(null)
   const islandTxt = useRef<HTMLSpanElement>(null)
   const balanceRef = useRef<HTMLDivElement>(null)
-  const cerradoRef = useRef(false)
-  const ringRef = useRef<SVGCircleElement>(null)
-  const objRef = useRef<HTMLElement>(null)
 
   const [descuadre, setDescuadre] = useState(false)
-  const [cerrado, setCerrado] = useState(false)
-  const [celebrate, setCelebrate] = useState(false)
   const [shine, setShine] = useState(false)
+  const [motivIdx, setMotivIdx] = useState(0) // mensaje motivador rotativo
 
-  // Progreso hacia la META del día (el "anillo" del medidor).
-  const progress = Math.min(1, totalDia / META_DIA)
-  const pct = Math.round((totalDia / META_DIA) * 100)
-  const beat = totalDia >= META_DIA
+  // ── Navegación por FECHA: el cierre de cualquier día (no solo hoy) ──
+  const [fecha, setFecha] = useState<Date>(() => new Date(HOY))
+  const dia = useMemo(() => cierreDia(fecha), [fecha])
+  const esHoy = esMismoDia(fecha, HOY)
+  // FUENTE ÚNICA del dinero de HOY: el wallet real (= "Hoy" cabecera = "Ventas hoy" TPV). El desglose
+  // simulado (turnos/franjas/efectivo·tarjeta/medio) se ESCALA al total real (factor kDia) → toda la sección
+  // Caja CUADRA con el wallet y nunca diverge. Días PASADOS siguen con el cierre simulado intacto. (Juan, revisor)
+  const hoyTotal = useCajaDelDia()
+  const totalDia = esHoy ? hoyTotal : dia.total
+  const kDia = esHoy && dia.total > 0 ? hoyTotal / dia.total : 1
+  const sc = (v: number) => Math.round(v * kDia * 100) / 100
+  const scTurn = (t: Turn): Turn => ({ efectivo: sc(t.efectivo), tarjeta: sc(t.tarjeta), domicilio: sc(t.domicilio) })
+  const scFranjas = (fr: [string, number, number][]): [string, number, number][] => fr.map(([h, v, p]) => [h, sc(v), p])
+  const manana = esHoy ? scTurn(dia.manana) : dia.manana
+  const tarde = esHoy ? scTurn(dia.tarde) : dia.tarde
+  const subM = esHoy ? sc(dia.subM) : dia.subM
+  const subT = esHoy ? sc(dia.subT) : dia.subT
+  const franjasM = esHoy ? scFranjas(dia.franjasM) : dia.franjasM
+  const franjasT = esHoy ? scFranjas(dia.franjasT) : dia.franjasT
+  const medioDia = esHoy && dia.tickets ? Math.round((totalDia / dia.tickets) * 100) / 100 : dia.medio
+  const efectivoDia = sc(dia.manana.efectivo + dia.tarde.efectivo)
+  const tarjetaDia = sc(dia.manana.tarjeta + dia.tarde.tarjeta)
+  const descAmt = dia.descuadre < 0 ? dia.descuadre : -12.4
+  const maxUds = Math.max(...dia.topPlatos.map((p) => p.uds), 1)
 
-  useEffect(() => {
-    cerradoRef.current = cerrado
-  }, [cerrado])
+  // ── Comparar 2 días lado a lado ──
+  const [cmpOn, setCmpOn] = useState(false)
+  const [fechaB, setFechaB] = useState<Date>(() => addDias(HOY, -1)) // por defecto: ayer (visible en la tira y distinto)
+  const diaB = useMemo(() => cierreDia(fechaB), [fechaB])
+  const cmpD = totalDia - diaB.total // Δ de caja A−B (A usa el total REAL si es hoy)
+  const cmpPct = diaB.total ? (cmpD / diaB.total) * 100 : 0
 
-  function emotionalWeight() {
-    const el = odoRef.current
-    if (!el || reduceMotion()) return
-    if (totalDia >= OBJ) {
-      gsap.fromTo(el, { scale: 1 }, { scale: 1.045, duration: 0.2, ease: 'power2.out', yoyo: true, repeat: 1 })
-      gsap.fromTo(el, { color: getComputedStyle(el).color }, { color: '#ffe6a3', duration: 0.3, yoyo: true, repeat: 1, ease: 'power1.inOut', onComplete: () => gsap.set(el, { clearProps: 'color' }) })
+  // Tira de días tipo ANILLO: 9 días CENTRADOS en el día seleccionado → el activo queda nítido en el centro
+  // y los extremos se difuminan (mask horizontal, técnica de --sep en eje X). Las flechas rotan ±1 día.
+  const RING = 9
+  const dias = useMemo(() => Array.from({ length: RING }, (_, i) => addDias(fecha, i - (RING >> 1))), [fecha])
+  function stepDia(n: number) {
+    const nx = addDias(fecha, n)
+    if (nx.getTime() > HOY.getTime()) return
+    setFecha(nx)
+    play('nav', 0.4)
+  }
+  function elegirDia(d: Date) {
+    if (d.getTime() > HOY.getTime()) return
+    if (cmpOn) {
+      // en modo comparar, el clic elige el día B (el que enfrentas al principal)
+      if (esMismoDia(d, fecha) || esMismoDia(d, fechaB)) return
+      setFechaB(d)
+      play('tap')
+    } else {
+      if (esMismoDia(d, fecha)) return
+      setFecha(d)
+      play('tap')
     }
   }
+  function toggleCmp() {
+    setCmpOn((v) => {
+      const nx = !v
+      if (nx && esMismoDia(fechaB, fecha)) setFechaB(addDias(fecha, -1))
+      return nx
+    })
+    play('toggle', 0.5)
+  }
+
+  // Al cambiar de día, el cuadre y las barras reflejan ESE día.
+  useEffect(() => {
+    setDescuadre(dia.descuadre < 0)
+    fillBars()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dia])
+
+  // Mensajes que motivan al usuario (rotan despacio para mantenerlo enganchado).
+  useEffect(() => {
+    const iv = window.setInterval(() => setMotivIdx((i) => (i + 1) % MOTIV.length), 5500)
+    return () => clearInterval(iv)
+  }, [])
+
+  // El número GIGANTE (facturación del negocio) se muestra SIEMPRE con su valor final, sin contador ni
+  // desenfoque (pedido de Juan, 26-jun: fuera el efecto rodante, que el número esté ahí de entrada).
   function rollOdo() {
-    const el = odoRef.current
+    const el = negRef.current
     if (!el) return
-    gsap.set(el, { clearProps: 'fontWeight,color', scale: 1 })
-    if (reduceMotion()) {
-      el.textContent = eur(totalDia)
-      el.style.filter = ''
-      emotionalWeight()
-      return
-    }
-    const o = { v: 0, b: 9 }
-    gsap.to(o, { v: totalDia, duration: 1.0, ease: 'power3.out', onUpdate: () => (el.textContent = eur(o.v)), onComplete: emotionalWeight })
-    gsap.to(o, { b: 0, duration: 0.6, ease: 'power2.out', onUpdate: () => (el.style.filter = 'blur(' + o.b.toFixed(2) + 'px)'), onComplete: () => (el.style.filter = '') })
+    el.style.filter = ''
+    el.style.transform = ''
+    el.textContent = eur0(NEGOCIO)
   }
   function reshine() {
     setShine(false)
     requestAnimationFrame(() => setShine(true))
-  }
-  function countTo(el: HTMLElement | null, to: number, fmt: (n: number) => string, dur = 1.1, delay = 0.4, onDone?: () => void) {
-    if (!el) return
-    if (reduceMotion()) {
-      el.textContent = fmt(to)
-      onDone?.()
-      return
-    }
-    const o = { v: 0 }
-    gsap.to(o, { v: to, duration: dur, delay, ease: 'power3.out', onUpdate: () => (el.textContent = fmt(o.v)), onComplete: onDone })
-  }
-  function kpiReact(el: HTMLElement | null) {
-    if (!el || reduceMotion()) return
-    gsap.fromTo(el, { scale: 1 }, { scale: 1.07, duration: 0.22, ease: 'power2.out', yoyo: true, repeat: 1, transformOrigin: 'left center' })
-    gsap.fromTo(el, { color: getComputedStyle(el).color }, { color: '#ffd45e', duration: 0.32, yoyo: true, repeat: 1, ease: 'power1.inOut', onComplete: () => gsap.set(el, { clearProps: 'color' }) })
   }
   function fillBars() {
     root.current?.querySelectorAll<HTMLElement>('.bar span').forEach((b, i) => {
@@ -149,30 +201,15 @@ export default function Caja() {
 
   useGSAP(
     () => {
-      // La Caja se muestra TODO A LA VEZ (sin reveal escalonado): el layout está presente al instante.
-      // Solo el total cuenta y las barras se rellenan, sobre elementos ya visibles → sensación de "vivo", no de "tarde".
-      rollOdo()
+      // Total gigante cuenta sobre la cocina viva. Los stats (Caja del día/Tickets/…) cuentan
+      // solos vía <Stat>/CountValue. Sin reveal escalonado.
+      rollOdo() // número gigante (facturación negocio)
       fillBars()
-      // Anillo de progreso al objetivo, sincronizado con el count-up del total.
-      const ring = ringRef.current
-      if (ring) {
-        const C = 2 * Math.PI * 106
-        gsap.set(ring, { strokeDasharray: C })
-        if (reduceMotion()) {
-          gsap.set(ring, { strokeDashoffset: C * (1 - progress) })
-        } else {
-          gsap.set(ring, { strokeDashoffset: C })
-          gsap.to(ring, { strokeDashoffset: C * (1 - progress), duration: 1.15, ease: 'power3.out', delay: 0.15 })
-        }
-      }
-      countTo(objRef.current, pct, (n) => String(Math.round(n)), 1.0, 0.15)
-      countTo(ordersRef.current, CAJA.pedidos, (n) => String(Math.round(n)), 0.7, 0.05, () => kpiReact(ordersRef.current))
-      countTo(avgRef.current, avgT, eur, 0.7, 0.07, () => kpiReact(avgRef.current?.parentElement as HTMLElement))
-      gsap.delayedCall(0.9, reshine)
-      // red de seguridad para el número si el rAF se frena
-      gsap.delayedCall(1.8, () => {
-        const e = odoRef.current
-        if (e && e.textContent === '0,00') e.textContent = eur(totalDia)
+      gsap.delayedCall(1.0, reshine)
+      // red de seguridad para el número gigante si el rAF se frena
+      gsap.delayedCall(2.0, () => {
+        const e = negRef.current
+        if (e && (e.textContent === '0' || e.textContent === '0,00')) e.textContent = eur0(NEGOCIO)
       })
     },
     { scope: root },
@@ -182,54 +219,38 @@ export default function Caja() {
     if (reduceMotion() || matchMedia('(pointer:coarse)').matches) return
     const cleanups: (() => void)[] = []
     root.current?.querySelectorAll<HTMLElement>('[data-tilt]').forEach((el) => {
-      const rx = gsap.quickTo(el, 'rotationX', { duration: 0.4, ease: 'power3' })
-      const ry = gsap.quickTo(el, 'rotationY', { duration: 0.4, ease: 'power3' })
-      const ys = gsap.quickTo(el, 'y', { duration: 0.4, ease: 'power3' })
-      gsap.set(el, { transformPerspective: 700 })
+      // Estos paneles son GLASS (backdrop-filter) sobre el héroe de vídeo. NO se mueve la tarjeta en hover
+      // (ni rotar ni levantar): al desplazarse, el cristal re-muestrea el fondo y la cocina "nada" por debajo
+      // → parece que "metes el fondo" (queja de Juan, 25-jun). Solo el spotlight del cursor = luz SOBRE el
+      // cristal, que no mueve el fondo.
       const mm = (e: MouseEvent) => {
         const r = el.getBoundingClientRect()
         const px = (e.clientX - r.left) / r.width - 0.5
         const py = (e.clientY - r.top) / r.height - 0.5
         el.style.setProperty('--mx', ((px + 0.5) * 100).toFixed(1) + '%')
         el.style.setProperty('--my', ((py + 0.5) * 100).toFixed(1) + '%')
-        rx(-py * 7)
-        ry(px * 9)
-        ys(-4)
-      }
-      const ml = () => {
-        rx(0)
-        ry(0)
-        ys(0)
       }
       el.addEventListener('mousemove', mm)
-      el.addEventListener('mouseleave', ml)
       cleanups.push(() => {
         el.removeEventListener('mousemove', mm)
-        el.removeEventListener('mouseleave', ml)
       })
     })
-    const b = cerrarBtn.current
-    if (b) {
-      const x = gsap.quickTo(b, 'x', { duration: 0.4, ease: 'power3' })
-      const y = gsap.quickTo(b, 'y', { duration: 0.4, ease: 'power3' })
-      const mm = (e: MouseEvent) => {
-        if (cerradoRef.current) return
-        const r = b.getBoundingClientRect()
-        x((e.clientX - r.left - r.width / 2) * 0.16)
-        y((e.clientY - r.top - r.height / 2) * 0.32)
-      }
-      const ml = () => {
-        x(0)
-        y(0)
-      }
-      b.addEventListener('mousemove', mm)
-      b.addEventListener('mouseleave', ml)
-      cleanups.push(() => {
-        b.removeEventListener('mousemove', mm)
-        b.removeEventListener('mouseleave', ml)
-      })
-    }
     return () => cleanups.forEach((f) => f())
+  }, [])
+
+  // (Las unidades de cada plato se muestran SIEMPRE con su valor final, sin contador — pedido de Juan, 26-jun.)
+
+  // AHORRO de batería/calor: pausar el vídeo de fondo cuando la pestaña no está visible. Un <video loop>
+  // sigue DECODIFICANDO en segundo plano y calienta el equipo (queja de Juan, 25-jun). Al volver, reanuda.
+  useEffect(() => {
+    const vid = root.current?.querySelector<HTMLVideoElement>('video.ck-vid')
+    if (!vid) return
+    const onVis = () => {
+      if (document.hidden) vid.pause()
+      else vid.play().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
   function showIsland(warn: boolean) {
@@ -253,38 +274,6 @@ export default function Caja() {
     showIsland(next)
     if (balanceRef.current) gsap.fromTo(balanceRef.current, { x: next ? -6 : 6 }, { x: 0, duration: 0.5, ease: 'elastic.out(1,.4)' })
   }
-  function wink(frown: boolean) {
-    const eyes = document.querySelectorAll('.eye')
-    if (!eyes.length || reduceMotion()) return
-    if (frown) {
-      gsap.to(eyes, { scaleY: 0.5, y: -1, rotation: (i: number) => (i ? -12 : 12), transformOrigin: 'center', duration: 0.2, yoyo: true, repeat: 1, repeatDelay: 0.5 })
-    } else {
-      gsap.to(eyes, { scaleY: 0.1, transformOrigin: 'center', duration: 0.1, yoyo: true, repeat: 1 })
-    }
-  }
-  function cerrar() {
-    if (cerrado) return
-    const desc = descuadre
-    cerradoRef.current = true
-    setCerrado(true)
-    play('tap')
-    window.setTimeout(() => (desc ? play('error', 0.6) : playReward(0.85)), desc ? 160 : 340)
-    const seal = sealRef.current
-    const hero = heroRef.current
-    if (hero && seal) {
-      const tl = gsap.timeline()
-      tl.to(hero, { scale: 0.99, duration: 0.12, ease: 'power2.in' })
-        .to(hero, { scale: 1, duration: 0.5, ease: 'elastic.out(1,.5)' })
-        .fromTo(seal, { scale: 0.3, opacity: 0, rotate: -30 }, { scale: 1, opacity: 1, rotate: 0, duration: 0.7, ease: 'back.out(2)' }, '-=0.5')
-    }
-    wink(desc)
-    if (!desc) {
-      setCelebrate(true)
-      window.setTimeout(() => setCelebrate(false), 1300)
-    }
-    if (navigator.vibrate) navigator.vibrate(reduceMotion() ? 0 : desc ? [20, 60, 20] : [8, 40, 14])
-  }
-
   const warnIcon = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
@@ -299,127 +288,202 @@ export default function Caja() {
 
   return (
     <div className={'caja' + (shine ? ' shine' : '')} ref={root}>
+      {/* filtro chromatic aberration (RGB split sutil) para las cocinas */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <filter id="chroma" x="-2%" y="-2%" width="104%" height="104%">
+          <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feOffset in="r" dx="1.6" dy="0" result="ro" />
+          <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+          <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+          <feOffset in="b" dx="-1.6" dy="0" result="bo" />
+          <feBlend in="ro" in2="g" mode="screen" result="rg" />
+          <feBlend in="rg" in2="bo" mode="screen" />
+        </filter>
+      </svg>
+
       <div className="island" ref={islandRef}>
         <span className="idot" />
         <span ref={islandTxt} />
       </div>
 
       <div className="wrap">
-        <section className={'hero' + (descuadre ? ' warn' : '') + (celebrate ? ' celebrate' : '') + (beat ? ' beat' : '')} id="hero" ref={heroRef}>
-          <div className={'seal' + (descuadre ? ' warn' : '')} ref={sealRef}>
-            {descuadre ? warnIcon : okIcon}
+        {/* ── HERO COCINA: el local toma el foco; el total del día flota sobre la cocina viva ── */}
+        <section className={'ckitchen' + (descuadre ? ' warn' : '')} ref={heroRef}>
+          <div className="ck-bg" aria-hidden="true">
+            {/* La cocina está VIVA pero la cámara NO se mueve: vídeo Seedance estático en bucle (parrilla
+                con llamas, una luz que parpadea, un cocinero que cruza, el camarero que se encoge de
+                hombros y se va). El póster = primer fotograma del vídeo → sin parpadeo al cargar.
+                Sin zoom/Ken-Burns: era lo que metía el "petardazo" al cambiar de día. Pedido de Juan (25-jun). */}
+            {reduceMotion() ? (
+              <div className="ck-vid ck-still" style={{ backgroundImage: "url('/img/kitchen-1.jpg')" }} />
+            ) : (
+              <video
+                className="ck-vid"
+                src="/video/kitchen-life.mp4"
+                poster="/img/kitchen-1.jpg"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+            )}
+            <div className="ck-flick" />
+            <div className="ck-embers">
+              {EMBERS.map((e, i) => (
+                <span key={i} className="ck-ember" style={{ left: e.l, animationDuration: e.d, animationDelay: e.delay }} />
+              ))}
+            </div>
+            <div className="ck-scrim" />
+            <div className="ck-grain" />
           </div>
 
-          <div className="hero-gauge" data-ds="caja.gauge">
-            <svg className="gauge" viewBox="0 0 240 240" aria-hidden="true">
-              <defs>
-                <linearGradient id="gaugeGrad" x1="0" y1="1" x2="1" y2="0">
-                  <stop offset="0" style={{ stopColor: 'var(--gold-deep)' }} />
-                  <stop offset="1" style={{ stopColor: 'var(--gold-soft)' }} />
-                </linearGradient>
-              </defs>
-              <circle className="gauge-track" cx="120" cy="120" r="106" />
-              <circle className="gauge-fill" ref={ringRef} cx="120" cy="120" r="106" />
-            </svg>
-            <div className="gauge-center">
-              <span className="g-label">Total del día</span>
-              <div className="odo" data-ds="caja.heronum">
-                <span className="odonum" ref={odoRef}>0,00</span>
-                <span className="cur">€</span>
+          <div className="ck-content">
+            {/* identidad arriba-izquierda, flotando a la altura de los botones de tema/sonido */}
+            <div className="ck-ident">
+              <span className="ck-flag" aria-hidden="true" />
+              <div className="ck-ident-tx"><b>REBELL · Bertamiráns</b><span>A Coruña · España</span></div>
+            </div>
+
+            {/* navegador de fecha: tira de días (separados por línea fina, como el StatRow). Va DEBAJO de la identidad */}
+            <div className="ck-datenav">
+              <button className="ckd-arrow" onClick={() => stepDia(-1)} aria-label="Día anterior">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+              </button>
+              <div className="ckd-strip">
+                {dias.map((d) => {
+                  const sel = esMismoDia(d, fecha)
+                  const selB = cmpOn && esMismoDia(d, fechaB)
+                  const hoyD = esMismoDia(d, HOY)
+                  const fut = d.getTime() > HOY.getTime()
+                  return (
+                    <button key={d.getTime()} className={'ckd-cell' + (sel ? ' on' : '') + (selB ? ' onB' : '') + (hoyD ? ' today' : '') + (fut ? ' fut' : '')} onClick={() => elegirDia(d)} aria-pressed={sel || selB} disabled={fut}>
+                      <span className="ckd-dow">{DOW[d.getDay()]}</span>
+                      <span className="ckd-dnum tnum">{String(d.getDate()).padStart(2, '0')}</span>
+                    </button>
+                  )
+                })}
               </div>
+              <button className="ckd-arrow" onClick={() => stepDia(1)} disabled={esHoy} aria-label="Día siguiente">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+              <button className={'ck-cmp-toggle' + (cmpOn ? ' on' : '')} onClick={toggleCmp} aria-pressed={cmpOn} title="Comparar dos días">
+                <span className="cmp-ic">⚖</span>{cmpOn ? 'Comparando' : 'Comparar'}
+              </button>
             </div>
-          </div>
 
-          <div className="hero-side">
-            <div className="hs-row">
-              <span className="hs-k">Vs ayer</span>
-              <span className="hs-v up">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
-                9,0%
-              </span>
+            <div className="ck-center">
+              <span className="ck-kick">◢ Facturación del negocio · junio</span>
+              <div className="ck-total" data-ds="caja.heronum">
+                {/* el "ghost" reserva el ANCHO final → el count-up no reajusta la pantalla (sin bug de movimiento) */}
+                <span className="odo-wrap">
+                  <span className="odo-ghost" aria-hidden="true">{eur0(NEGOCIO)}</span>
+                  <span className="odonum" ref={negRef}>0</span>
+                </span>
+                <span className="u">€</span>
+              </div>
+              <div className="ck-motiv" key={motivIdx}>{MOTIV[motivIdx]}</div>
+              <div className={'ck-cuadre' + (descuadre ? ' warn' : '')} ref={balanceRef}>
+                <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
+                {descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}
+              </div>
+              <div className="ck-cuadre-sub">Efectivo {eur(efectivoDia)} € · Tarjeta {eur(tarjetaDia)} €</div>
             </div>
-            <div className="hs-row">
-              <span className="hs-k">Objetivo del día</span>
-              <span className="hs-v"><b ref={objRef} className="tnum">0</b>%{beat ? ' ✓' : ''}</span>
-            </div>
-            <div className="hs-row">
-              <span className="hs-k">Racha</span>
-              <span className="hs-v">5 días</span>
-            </div>
-            <div className={'balance' + (descuadre ? ' warn' : '')} ref={balanceRef}>
-              <span className="ic">{descuadre ? warnIcon : okIcon}</span>
-              <span className="txt">
-                {descuadre ? 'Descuadre de −12,40 €' : 'Caja cuadrada'}
-                <small>{descuadre ? 'El efectivo declarado no coincide con los pedidos cobrados' : 'Efectivo declarado coincide con los pedidos cobrados'}</small>
-              </span>
+
+            {/* UNA línea de diseño: el MISMO componente <Stat> para todos → valor grande + unidad
+                pequeña dorada + label. Imposible que se descuadre (criterio único del dashboard). */}
+            <StatRow className="ck-statrow">
+              <Stat value={esHoy ? eur(totalDia) : eur0(totalDia)} unit="€" label="Caja del día" count={false} />
+              <Stat value={String(dia.tickets)} label="Tickets" count={false} />
+              <Stat value={eur(medioDia)} unit="€" label="Ticket medio" count={false} />
+              <Stat value={(dia.deltaSemana >= 0 ? '+' : '') + dia.deltaSemana.toFixed(1)} unit="%" label="vs sem. pasada" tone={dia.deltaSemana >= 0 ? 'green' : 'gold'} count={false} />
+              <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
+            </StatRow>
+
+            {/* Comparativa de 2 días: cifras-héroe enfrentadas (A = principal, B = el elegido en la tira) con Δ central */}
+            {cmpOn && (
+              <div className="ck-compare">
+                <div className="ckc-col">
+                  <span className="ckc-day">{fmtDiaLargo(fecha, HOY)}</span>
+                  <span className="ckc-hero tnum">{eur0(totalDia)}<i>€</i></span>
+                  <span className="ckc-mini"><b className="tnum">{dia.tickets}</b> tickets · <b className="tnum">{eur(medioDia)}</b> € medio</span>
+                </div>
+                <div className="ckc-delta">
+                  <span className={'ckc-dnum ' + (cmpD >= 0 ? 'up' : 'down')}>{cmpD >= 0 ? '▲' : '▼'} {eur0(Math.abs(cmpD))} €</span>
+                  <span className={'ckc-dpct ' + (cmpD >= 0 ? 'up' : 'down')}>{(cmpPct >= 0 ? '+' : '') + cmpPct.toFixed(1)}%</span>
+                  <span className="ckc-dlbl">diferencia</span>
+                </div>
+                <div className="ckc-col b">
+                  <span className="ckc-day">{fmtDiaLargo(fechaB, HOY)}</span>
+                  <span className="ckc-hero tnum">{eur0(diaB.total)}<i>€</i></span>
+                  <span className="ckc-mini"><b className="tnum">{diaB.tickets}</b> tickets · <b className="tnum">{eur(diaB.medio)}</b> € medio</span>
+                </div>
+              </div>
+            )}
+
+            {/* Gráfica + turnos INTEGRADOS dentro de la misma página de cocina (glass), no como recuadros aparte */}
+            <div className="ck-sub">
+              <SalesChart />
+              <div className="turnos">
+                <Turno badge="☀" badgeClass="sol" name="Mañana" subtotal={subM} t={manana} franjas={franjasM} />
+                <Turno badge="☾" badgeClass="luna" name="Tarde" subtotal={subT} t={tarde} franjas={franjasT} />
+              </div>
+
+              {/* Balance de platos del día + alerta de stock para mañana (cruce ventas × stock) */}
+              <div className="ck-extra">
+                <div className="ck-panel ck-platos" data-tilt>
+                  <div className="ck-panel-h"><span className="ck-panel-emo">🍔</span> Platos más vendidos <small>· {fmtDiaLargo(fecha, HOY).toLowerCase()}</small></div>
+                  <div className="ck-plato-list">
+                    {dia.topPlatos.map((p, i) => (
+                      <div className={'ck-plato' + (i < 3 ? ' r' + (i + 1) : '')} key={p.name} style={{ ['--i' as string]: i }}>
+                        <span className="ck-plato-emo">{p.emoji}</span>
+                        <span className="ck-plato-nm">{p.name}</span>
+                        <span className="ck-plato-uds tnum" data-val={p.uds}>{p.uds}</span>
+                        <span className="ck-plato-bar"><i style={{ width: ((p.uds / maxUds) * 100).toFixed(1) + '%' }} /></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ck-panel ck-stock" data-tilt>
+                  <div className="ck-panel-h"><span className="ck-panel-emo">📦</span> Stock para mañana <small>· si vendes igual</small></div>
+                  {dia.alertas.length ? (
+                    <div className="ck-alert-list">
+                      {dia.alertas.map((a, i) => (
+                        <div className={'ck-alert ' + a.nivel} key={a.item} style={{ ['--i' as string]: i }}>
+                          <span className="ck-alert-emo">{a.emoji}</span>
+                          <span className="ck-alert-tx">
+                            <b>{a.item} <span className="ck-alert-q">· {a.quedan} {a.unidad}</span></b>
+                            <small>necesitas ~{a.necesita} {a.unidad}</small>
+                          </span>
+                          <span className="ck-alert-pill">{a.nivel === 'alta' ? 'Repón ya' : a.nivel === 'media' ? 'Justo' : 'Suficiente'}</span>
+                          <span className="ck-alert-bar"><i style={{ width: Math.min(100, (a.quedan / a.necesita) * 100).toFixed(1) + '%' }}><span className="ck-shine" /></i></span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="ck-alert-ok"><span>✓</span> Stock suficiente para mañana</div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>
-
-        <div className="stats">
-          <div className="stat kpi" data-tilt>
-            <div className="k">Pedidos</div>
-            <div className="kpi-body">
-              <div className="v tnum" ref={ordersRef}>0</div>
-              <div className="kpi-foot up">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 17 17 7M9 7h8v8" />
-                </svg>
-                +12%<span className="kpi-obj">objetivo 75</span>
-              </div>
-            </div>
-          </div>
-          <div className="stat kpi" data-tilt>
-            <div className="k">Ticket medio</div>
-            <div className="kpi-body">
-              <div className="v tnum">
-                <span ref={avgRef}>0</span>
-                <small> €</small>
-              </div>
-              <div className="kpi-foot up">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 17 17 7M9 7h8v8" />
-                </svg>
-                +9%<span className="kpi-obj">objetivo 19,50 €</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <SalesChart />
-
-        <div className="turnos">
-          <Turno badge="☀" badgeClass="sol" name="Mañana" subtotal={subM} t={CAJA.manana} franjas={FRANJAS_M} />
-          <Turno badge="☾" badgeClass="luna" name="Tarde" subtotal={subT} t={CAJA.tarde} franjas={FRANJAS_T} />
-        </div>
       </div>
 
       <div className="actionbar">
         <div className="action-inner">
-          <label className={'switch' + (descuadre ? ' on' : '')} onClick={toggleDescuadre}>
-            <span>Simular descuadre</span>
-            <span className="track" />
-          </label>
-          <button className={'btn' + (cerrado ? ' done' : '') + (cerrado && descuadre ? ' warn' : '')} ref={cerrarBtn} onClick={cerrar}>
-            {!cerrado ? (
-              'Cerrar caja'
-            ) : descuadre ? (
-              <>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" style={{ verticalAlign: -3 }}>
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 8v5M12 16.5v.01" />
-                </svg>{' '}
-                Cerrado con descuadre
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: -3 }}>
-                  <path d="M5 13l4 4L19 7" />
-                </svg>{' '}
-                Día cerrado · 23:47
-              </>
-            )}
-          </button>
+          {esHoy ? (
+            <>
+              <label className={'switch' + (descuadre ? ' on' : '')} onClick={toggleDescuadre}>
+                <span>Simular descuadre</span>
+                <span className="track" />
+              </label>
+              <div className="ck-pastnote">🔒 El cierre de caja se hace ahora en el <b>TPV</b></div>
+            </>
+          ) : (
+            <div className="ck-pastnote">📅 Cierre del {fmtDiaLargo(fecha, HOY).toLowerCase()} · ya cerrado</div>
+          )}
         </div>
       </div>
     </div>
