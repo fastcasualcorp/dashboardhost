@@ -1,0 +1,43 @@
+# Auto-deploy a Cloudflare Pages (dashboardhost) en cada push a main.
+# Único secreto a configurar en GitHub → Settings → Secrets and variables → Actions:
+#   CLOUDFLARE_API_TOKEN   (token de Cloudflare con permiso "Cloudflare Pages: Edit")
+# El Account ID y las claves VITE de Supabase NO son secretas (la anon key va en el cliente,
+# protegida por RLS) → se dejan en claro aquí para que el build de CI funcione sin más pasos.
+name: Deploy a Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # permite lanzarlo a mano desde la pestaña Actions
+
+# Evita despliegues solapados: si llega un push nuevo, cancela el anterior en curso.
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build de producción
+        env:
+          VITE_SUPABASE_URL: https://pcmzovivezvuccoevwjh.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbXpvdml2ZXp2dWNjb2V2d2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzYwNzMsImV4cCI6MjA5NzcxMjA3M30.T5UT2MCiAmUsuiR7ycVahtbPLL-75nZvSN8O1KT_2Mo
+        run: npm run build
+
+      - name: Desplegar a Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 9f60d87dfe1bc0e00132b702440c1577
+          command: pages deploy dist --project-name dashboardhost --branch main
