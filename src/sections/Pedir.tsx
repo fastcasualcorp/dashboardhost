@@ -143,29 +143,48 @@ export default function Pedir() {
   function onNum(v: string) { setNum(v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim()) }
   function onExp(v: string) { const d = v.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d) }
 
-  // EL PAGO: ticket pagado online → cocina + stock + libro de ventas.
-  function pagarOnline() {
-    if (!cardOk || paying || !cart.length || pagar <= 0) return // nunca cobrar un carrito vacío / importe 0
+  // EL PAGO del pedido online. Intenta el pedido REAL: el cliente es ANÓNIMO, así
+  // que el pedido entra por una Edge Function server-side (que sí pasa la RLS) →
+  // la comanda aparece en la cocina del local. Si no hay backend/red, cae a demo local.
+  async function pagarOnline() {
+    if (!cardOk || paying || !cart.length || pagar <= 0) return // nunca cobrar carrito vacío / importe 0
     setPaying(true)
     const items = cart.map((l) => ({ name: l.name, qty: l.qty }))
-    // El pedido online RESERVA su nº por la MISMA secuencia diaria que el TPV
-    // (lib/caja) → cocina y libro no colisionan nº entre online y mostrador.
-    const tk = nextTicket()
-    const tn = ticketNum(tk)
-    const ms = rm ? 350 : 1400
-    setTimeout(() => {
-      pushComanda({ n: tn, mesa: mesaName, items, src: 'Sala' }) // → KDS (cocina lo ve)
-      consumirVenta(items) // → ALMACÉN: baja el stock de lo vendido
-      appendVenta({ id: tk, tipo: 'ticket', arts: units, total: pagar, metodo: 'tarjeta', mesa: mesaName }) // → libro de ventas
-      recordOrder(items, pagar) // → ADN: la cuenta del cliente aprende qué pidió (+1 sello)
-      if (redeem && tieneRecompensa) redeemReward() // gastó su recompensa
-      setPaidAmount(pagar) // congela lo cobrado ANTES de que pagar se recalcule sin descuento
-      setOrderN(tn)
-      setEstado('cocina')
-      setPaying(false)
-      setStep('ok')
-      if (!rm) playReward(0.7)
-    }, ms)
+    const importe = pagar // congelar antes de que se gaste la recompensa
+    const procesando = new Promise<void>((r) => setTimeout(r, rm ? 300 : 1100)) // sensación de "procesando"
+    let numero = 0
+    try {
+      const base = import.meta.env.VITE_SUPABASE_URL as string | undefined
+      const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+      if (base && anon) {
+        const res = await fetch(`${base}/functions/v1/pedido`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
+          body: JSON.stringify({ local: (qp('l') || 'bertamirans').toLowerCase(), mesa: mesaName, items, total: importe, metodo: 'tarjeta' }),
+        })
+        const j = (await res.json().catch(() => ({}))) as { ok?: boolean; numero?: number }
+        if (res.ok && j?.ok && j.numero) numero = j.numero
+      }
+    } catch {
+      /* sin red → demo */
+    }
+    if (!numero) {
+      // fallback demo (sin backend): stores locales de este navegador
+      const tk = nextTicket()
+      numero = ticketNum(tk)
+      pushComanda({ n: numero, mesa: mesaName, items, src: 'Sala' })
+      consumirVenta(items)
+      appendVenta({ id: tk, tipo: 'ticket', arts: units, total: importe, metodo: 'tarjeta', mesa: mesaName, numero })
+    }
+    recordOrder(items, importe) // ADN del cliente (su propia cuenta, localStorage) — siempre
+    if (redeem && tieneRecompensa) redeemReward()
+    await procesando
+    setPaidAmount(importe)
+    setOrderN(numero)
+    setEstado('cocina')
+    setPaying(false)
+    setStep('ok')
+    if (!rm) playReward(0.7)
   }
 
   // SEGUIMIENTO EN VIVO del pedido pagado (En cocina → Saliendo → ¡Listo!).

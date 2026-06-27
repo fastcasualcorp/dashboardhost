@@ -43,8 +43,11 @@ for (const L of LOCALES) {
   const existing = await api(`/rest/v1/locales?select=id&nombre=eq.${encodeURIComponent(L.nombre)}`)
   let localId = existing[0]?.id
   if (!localId) {
-    const ins = await api('/rest/v1/locales', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ nombre: L.nombre, ciudad: L.ciudad, accent: L.accent }) })
+    const ins = await api('/rest/v1/locales', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ nombre: L.nombre, ciudad: L.ciudad, accent: L.accent, slug: L.key }) })
     localId = ins[0].id
+  } else {
+    // asegurar el slug en locales ya creados (idempotente)
+    await api(`/rest/v1/locales?id=eq.${localId}`, { method: 'PATCH', body: JSON.stringify({ slug: L.key }) }).catch(() => {})
   }
   // 2) usuario (email = key@rebell.app) con app_metadata { local_id, rol }
   const email = `${L.key}@rebell.app`

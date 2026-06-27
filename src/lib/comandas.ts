@@ -14,7 +14,7 @@ export type CItem = { name: string; qty: number }
 export type CStatus = 'nueva' | 'prep' | 'lista'
 export type Comanda = { id: number; dbId?: string; n: number; src: string; color: string; mesa: string | null; items: CItem[]; born: number; status: CStatus }
 
-export const C_SOURCES: Record<string, string> = { Sala: '#ffbf10', Glovo: '#ffc244', 'Uber Eats': '#06c167', 'Just Eat': '#ff8000' }
+export const C_SOURCES: Record<string, string> = { Sala: '#ffbf10', Online: '#3ad6c8', Glovo: '#ffc244', 'Uber Eats': '#06c167', 'Just Eat': '#ff8000' }
 export const colorForSrc = (src: string) => C_SOURCES[src] || '#ffbf10'
 
 // semilla demo: unas comandas ya envejecidas para que el tablero no esté vacío y se vean los colores al entrar

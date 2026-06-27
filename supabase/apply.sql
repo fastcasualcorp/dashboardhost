@@ -57,7 +57,11 @@ alter table public.ventas add column if not exists mesa text;
 alter table public.ventas add column if not exists doc text not null default 'ticket';
 alter table public.ventas add column if not exists numero int;
 alter table public.ventas add column if not exists arts int default 0;
+alter table public.ventas add column if not exists fuente text default 'Sala';
 alter table public.ventas enable row level security;
+-- slug del local (el QR del cliente trae ?l=<slug>; la Edge Function lo resuelve a local_id)
+alter table public.locales add column if not exists slug text;
+create unique index if not exists locales_slug_idx on public.locales (slug) where slug is not null;
 create index if not exists ventas_local_idx on public.ventas (local_id, creado_at desc);
 drop policy if exists "ventas: ver las de mi local" on public.ventas;
 create policy "ventas: ver las de mi local" on public.ventas for select to authenticated
