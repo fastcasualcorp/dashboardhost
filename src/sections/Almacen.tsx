@@ -2,7 +2,7 @@ import { useState, useEffect, type CSSProperties } from 'react'
 import { Card, SectionHeader, KpiTile, DataTable, Badge, Grid } from '../components/ui'
 import { play } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
-import { useAlmacen, updateAlmacenes, FOTO, type Tipo, type Almacen } from '../lib/almacen'
+import { useAlmacen, updateAlmacenes, setItemStock, removeItem, FOTO, type Tipo, type Almacen } from '../lib/almacen'
 
 /* Almacén (antes "Stock"). Varios almacenes como FICHAS (foto Nano Banana). Al pulsar uno, su stock se ve como
    un GRID DE PRODUCTOS estilo videojuego: foto de estudio sobre negro + % gigante (verde/ámbar/rojo) + nombre +
@@ -73,6 +73,8 @@ export default function Almacen() {
   const [editId, setEditId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft>({ nombre: '', tipo: 'seco' })
   const [picker, setPicker] = useState(false) // catálogo de productos para cargar
+  const [editPid, setEditPid] = useState<string | null>(null) // producto cuyo stock se está ajustando
+  const [idraft, setIdraft] = useState<{ nivel: number; actual: string; umbral: string }>({ nivel: 0, actual: '', umbral: '' })
 
   const sel = alms.find((a) => a.id === selId) ?? alms[0]
 
@@ -120,9 +122,26 @@ export default function Almacen() {
   // Cargar un producto del catálogo en el almacén seleccionado (entra al 92%).
   function cargarProd(pid: string) {
     const p = PROD_BY[pid]
-    updateAlmacenes((list) => list.map((a) => (a.id === sel.id ? { ...a, items: [...a.items, { pid, nivel: 92, actual: `— ${p.unit}`, umbral: `— ${p.unit}` }] } : a)))
+    updateAlmacenes((list) => list.map((a) => (a.id === sel.id ? { ...a, items: [...a.items, { pid, nivel: 92, actual: `0 ${p.unit}`, umbral: `0 ${p.unit}` }] } : a)))
     play('success', 0.5)
   }
+  // Ajustar el stock de un producto a mano (recepción / inventario). Abre el editor con sus valores.
+  function openItem(it: Item) {
+    setEditPid(it.pid)
+    setIdraft({ nivel: Math.round(it.nivel), actual: it.actual, umbral: it.umbral })
+    play('tap', 0.5, 1.1)
+  }
+  function saveItem() {
+    if (!editPid) return
+    setItemStock(sel.id, editPid, { nivel: Math.max(0, Math.min(100, idraft.nivel)), actual: idraft.actual.trim() || '—', umbral: idraft.umbral.trim() || '—' })
+    setEditPid(null); play('success', 0.5, 1.1)
+  }
+  function quitarItem() {
+    if (!editPid) return
+    removeItem(sel.id, editPid)
+    setEditPid(null); play('toggle', 0.5)
+  }
+  const editProd = editPid ? PROD_BY[editPid] : null
 
   const selAlert = alertasDe(sel)
   const selCaducar = porCaducarDe(sel)
@@ -233,7 +252,8 @@ export default function Almacen() {
               const cd = cadInfo(cadOf(it))
               const col = toneColor(es.tone)
               return (
-                <div className={'alm-pcard' + (it.nivel < 30 ? ' crit' : '')} key={it.pid} style={{ ['--tone' as string]: col } as CSSProperties}>
+                <button className={'alm-pcard' + (it.nivel < 30 ? ' crit' : '')} key={it.pid} style={{ ['--tone' as string]: col } as CSSProperties} onClick={() => openItem(it)} title={`Ajustar stock de ${p?.name ?? it.pid}`}>
+                  <span className="alm-pcard-edit" aria-hidden="true"><Pencil /></span>
                   <div className="alm-pcard-top">
                     <span className="alm-pcard-ph"><img src={p?.foto} alt="" loading="lazy" draggable={false} /></span>
                     <div className="alm-pcard-stat">
@@ -243,7 +263,7 @@ export default function Almacen() {
                     </div>
                   </div>
                   <div className="alm-pcard-track"><span className="alm-pcard-fill" style={{ width: it.nivel + '%' }} /></div>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -273,6 +293,53 @@ export default function Almacen() {
               })}
             />
           </Card>
+        </>
+      )}
+
+      {/* ── EDITOR de stock de un producto (recepción de mercancía / ajuste de inventario) ── */}
+      {editPid && editProd && (
+        <>
+          <div className="vtpv-scrim" onClick={() => setEditPid(null)} />
+          <div className="vtpv-center">
+            <div className="vtpv-z alm-iedit" onClick={(e) => e.stopPropagation()}>
+              <div className="vtpv-z-head">
+                <div className="alm-ie-id">
+                  <span className="alm-ie-ph"><img src={editProd.foto} alt="" draggable={false} /></span>
+                  <div className="vtpv-z-id">
+                    <span className="vtpv-z-kick">Ajustar stock · {sel.nombre}</span>
+                    <b>{editProd.name}</b>
+                  </div>
+                </div>
+                <button className="vtpv-dr-close" onClick={() => setEditPid(null)} aria-label="Cerrar"><Xmark /></button>
+              </div>
+
+              <div className="alm-ie-pct" style={{ ['--tone' as string]: toneColor(estadoDe(idraft.nivel).tone) } as CSSProperties}>
+                <b>{Math.round(idraft.nivel)}<i>%</i></b>
+                <span className="alm-ie-track"><span className="alm-ie-fill" style={{ width: idraft.nivel + '%' }} /></span>
+              </div>
+              <input className="alm-ie-range" type="range" min={0} max={100} step={1} value={idraft.nivel}
+                onChange={(e) => setIdraft({ ...idraft, nivel: parseInt(e.target.value) })} aria-label="Nivel de stock" />
+              <div className="alm-ie-quick">
+                <button onClick={() => setIdraft({ ...idraft, nivel: 100 })}>📦 Recepción · 100%</button>
+                <button onClick={() => setIdraft({ ...idraft, nivel: Math.min(100, idraft.nivel + 25) })}>＋25%</button>
+                <button onClick={() => setIdraft({ ...idraft, nivel: Math.max(0, idraft.nivel - 25) })}>−25%</button>
+              </div>
+
+              <div className="alm-ie-fields">
+                <label className="eb-field"><span>Stock actual <i className="alm-ie-unit">({editProd.unit})</i></span>
+                  <input value={idraft.actual} onChange={(e) => setIdraft({ ...idraft, actual: e.target.value })} placeholder={`p. ej. 24 ${editProd.unit}`} />
+                </label>
+                <label className="eb-field"><span>Umbral mínimo</span>
+                  <input value={idraft.umbral} onChange={(e) => setIdraft({ ...idraft, umbral: e.target.value })} placeholder={`p. ej. 10 ${editProd.unit}`} />
+                </label>
+              </div>
+
+              <div className="alm-ie-actions">
+                <button className="eb-btn danger" onClick={quitarItem}>Quitar producto</button>
+                <button className="eb-btn primary" onClick={saveItem}>Guardar stock</button>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>

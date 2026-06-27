@@ -2,6 +2,7 @@ import { useEffect, useState, lazy, Suspense } from 'react'
 import Shell from './components/Shell'
 import Login, { type Profile, PROFILES } from './components/Login'
 import BootIntro from './components/BootIntro'
+import Planes from './components/Planes'
 import { beastById } from './lib/beasts'
 import { reduceMotion } from './lib/data'
 import { supabase, hasSupabase } from './lib/supabase'
@@ -68,6 +69,7 @@ export default function App() {
   const [profile, setProfile] = useState<string | null>(() => (hasSupabase ? null : readProfile()))
   const [authReady, setAuthReady] = useState<boolean>(!hasSupabase)
   const [booting, setBooting] = useState<boolean>(shouldBoot)
+  const [planesOpen, setPlanesOpen] = useState(false)
 
   useEffect(() => {
     if (!hasSupabase || !supabase) return
@@ -94,10 +96,16 @@ export default function App() {
   }, [])
 
   // "Ver intro" desde el perfil (Ajustes) → re-reproduce el reveal SIN cerrar sesión.
+  // "Mejorar" desde el perfil → abre la pantalla de Planes.
   useEffect(() => {
     const replay = () => setBooting(true)
+    const planes = () => setPlanesOpen(true)
     window.addEventListener('rebell:play-intro', replay)
-    return () => window.removeEventListener('rebell:play-intro', replay)
+    window.addEventListener('rebell:open-planes', planes)
+    return () => {
+      window.removeEventListener('rebell:play-intro', replay)
+      window.removeEventListener('rebell:open-planes', planes)
+    }
   }, [])
 
   const content = !profile ? (
@@ -133,6 +141,7 @@ export default function App() {
           }}
         />
       )}
+      {planesOpen && <Planes onClose={() => setPlanesOpen(false)} />}
     </>
   )
 }

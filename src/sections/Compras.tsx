@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Card, SectionHeader, KpiTile, BarRow, DataTable, Badge, Grid, Donut } from '../components/ui'
+import { Card, SectionHeader, KpiTile, DataTable, Badge, Grid } from '../components/ui'
 import { play } from '../lib/sound'
 import { useEquipo } from '../lib/equipo'
 import { useCompras, addAlbaran, toggleEstado, cuotaIva, totalAlbaran, comprasMes, pendienteMes, pagadoMes, proveedoresActivos, gastoPorProveedor } from '../lib/compras'
@@ -40,7 +40,11 @@ export default function Compras() {
   }, [albaranes])
 
   const pctPagado = total ? Math.round((pagado / total) * 100) : 0
-  const top2 = total ? Math.round(((porProv[0]?.total || 0) + (porProv[1]?.total || 0)) / total * 100) : 0
+  // Donut ÚNICO (conic-gradient) del gasto por proveedor — unifica las 2 gráficas de antes (Juan 28-jun).
+  let acc = 0
+  const stops = total
+    ? porProv.map((r) => { const a = acc; acc += (r.total / total) * 100; return `${r.color} ${a.toFixed(2)}% ${acc.toFixed(2)}%` }).join(', ')
+    : 'var(--line) 0% 100%'
   const baseNum = Number(base.replace(/[^\d.,]/g, '').replace(',', '.')) || 0
 
   function guardar() {
@@ -86,31 +90,40 @@ export default function Compras() {
         <KpiTile label="Pendiente de pago" value={e0(pendiente)} unit="€" delta={`${albaranes.filter((a) => a.estado === 'pendiente').length} facturas`} foot="por pagar" trend="down" />
       </Grid>
 
-      <Grid cols={2}>
-        <Card>
-          <div className="card-head">
-            <h3>Gasto por proveedor</h3>
-            <Badge tone="muted">{nProv} proveedores</Badge>
+      {/* DONUT ÚNICO: distribución del gasto por proveedor + leyenda con barras (mismo donut premium que Gastos) */}
+      <Card>
+        <div className="card-head">
+          <h3>Gasto por proveedor</h3>
+          <Badge tone={pctPagado >= 100 ? 'green' : 'amber'}>{pctPagado}% pagado · {e0(pendiente)} € pendiente</Badge>
+        </div>
+        {porProv.length === 0 ? (
+          <p className="muted-s" style={{ textAlign: 'center', padding: '1.5rem 0', margin: 0 }}>Aún no hay compras este mes. Pulsa <strong style={{ color: 'var(--brand)' }}>＋ Nuevo albarán</strong>.</p>
+        ) : (
+          <div className="gx-hero">
+            <div className="gx-pie-wrap">
+              <div className="gx-pie" style={{ ['--pie' as string]: `conic-gradient(from -90deg, ${stops})` }}>
+                <div className="gx-pie-hole">
+                  <b className="tnum">{e0(total)} €</b>
+                  <span>este mes</span>
+                </div>
+              </div>
+            </div>
+            <div className="gx-cats">
+              {porProv.map((r, i) => (
+                <div className="gx-cat" key={r.proveedor} style={{ ['--d' as string]: `${i * 70}ms`, ['--c' as string]: r.color }}>
+                  <div className="gx-cat-top">
+                    <span className="gx-cat-n"><i style={{ background: r.color }} />{r.proveedor}</span>
+                    <span className="gx-cat-v tnum">{e0(r.total)} €<em>{total ? Math.round((r.total / total) * 100) : 0}%</em></span>
+                  </div>
+                  <div className="gx-cat-track">
+                    <span className="gx-cat-fill" style={{ width: (r.total / maxProv) * 100 + '%', background: `linear-gradient(90deg, color-mix(in srgb, ${r.color} 78%, #000), ${r.color})` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bar-rows">
-            {porProv.map((r) => (
-              <BarRow key={r.proveedor} label={r.proveedor} value={r.total} max={maxProv} color={r.color} amount={e0(r.total) + ' €'} />
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <div className="card-head">
-            <h3>Distribución del gasto</h3>
-            <Badge tone="muted">{nProv} proveedores</Badge>
-          </div>
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', paddingTop: '0.5rem' }}>
-            <Donut value={top2} label="top 2 proveed." sub={porProv.slice(0, 2).map((p) => p.proveedor.split(' ')[0]).join(' + ')} tone="gold" />
-            <Donut value={total ? Math.round((pendiente / total) * 100) : 0} label="pendiente" sub="del total del mes" tone="amber" />
-            <Donut value={pctPagado} label="pagado" sub="del total del mes" tone="green" />
-          </div>
-        </Card>
-      </Grid>
+        )}
+      </Card>
 
       <Card>
         <div className="card-head">

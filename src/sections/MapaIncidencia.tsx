@@ -1389,7 +1389,7 @@ export default function MapaIncidencia() {
       // 2) CABECERA (sobre el mapa)
       ctx.textBaseline = 'alphabetic'
       ctx.fillStyle = GOLD; ctx.font = '800 21px Inter, system-ui, sans-serif'
-      ctx.fillText('◢  INTELIGENCIA DE ZONA · EN VIVO', 56, 80)
+      ctx.fillText('INTELIGENCIA DE ZONA · EN VIVO', 56, 80)
       ctx.fillStyle = INK; ctx.font = '800 84px "Clash Grotesk", Inter, sans-serif'
       ctx.fillText('Bertamiráns', 52, 162)
       const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -1555,7 +1555,6 @@ export default function MapaIncidencia() {
             })()}
           </AnimatePresence>
 
-          <div className="mapa-scan" aria-hidden="true" />
           <div className="mapa-hud" aria-hidden="true" />
 
           {/* Onda glitch de TRANSICIÓN vector↔satélite: velo + ola de píxeles morados que barre y revela el nuevo estilo. */}
@@ -1593,7 +1592,7 @@ export default function MapaIncidencia() {
           {/* HUD superior estilo F1: zona + datos en vivo */}
           <div className={'map-hud-top' + (armed ? ' armed' : '')}>
             <div className="mht-title">
-              <span className="mht-kick">◢ Área de influencia{realData && <em className="mht-src">● Google en vivo</em>}</span>
+              <span className="mht-kick">Área de influencia{realData && <em className="mht-src">● Google en vivo</em>}</span>
               <b>Bertamiráns</b>
             </div>
             <div className="mht-stats">
@@ -1675,7 +1674,7 @@ export default function MapaIncidencia() {
 
           {/* 1 · TU POSICIÓN (HÉROE del panel): rank + gauge de rating + barra de dominancia */}
           <div className="mp-block mp-pos mp-hero">
-            <span className="mp-kick"><span className="mp-emo">🎯</span>M-01 · Tu posición en la zona</span>
+            <span className="mp-kick"><span className="mp-emo">🎯</span>Tu posición en la zona</span>
             <div className="mp-pos-main">
               <div className="mp-rank">
                 <span className="mp-rank-pos">#<CountValue value={String(pos)} /></span>
@@ -1696,7 +1695,7 @@ export default function MapaIncidencia() {
 
           {/* 2 · INTELIGENCIA: mini-stats + ticker de señales + oportunidad (ya no prosa) */}
           <div className="mp-block mp-intel">
-            <span className="mp-kick"><span className="mp-emo">📡</span>M-02 · Inteligencia · semana</span>
+            <span className="mp-kick"><span className="mp-emo">📡</span>Inteligencia de la semana</span>
             <div className="mp-intel-stats">
               <div className="mp-ist"><b><CountValue value={String(enRango.length)} /></b><span>Rivales</span></div>
               <div className="mp-ist"><b className="r"><CountValue value={String(nPromos)} /></b><span>Promos</span></div>
@@ -1733,7 +1732,7 @@ export default function MapaIncidencia() {
 
           {/* 3 · RIVALES por AMENAZA (medidor 0-100, ordenados, color por nivel) */}
           <div className="mp-block mp-threats">
-            <span className="mp-kick"><span className="mp-emo">⚔️</span>M-03 · Rivales por amenaza · pulsa para comparar</span>
+            <span className="mp-kick"><span className="mp-emo">⚔️</span>Rivales por amenaza · pulsa para comparar</span>
             <div className="mp-threat-list">
               {visibles.map((r, i) => {
                 const lvl = threatLvl(r.threat)
@@ -1771,7 +1770,7 @@ export default function MapaIncidencia() {
           {/* 4 · SLOTS LIBRES (huecos como badges de inventario) */}
           {huecos.length > 0 && (
             <div className="mp-block mp-gaps">
-              <span className="mp-kick">◈ Slots libres en {radioT}</span>
+              <span className="mp-kick">Slots libres en {radioT}</span>
               <div className="mp-gap-wrap">
                 {huecos.map((h, i) => (
                   <span className="mp-gap" key={h} style={{ ['--i' as string]: i } as CSSProperties}>
@@ -2005,8 +2004,8 @@ function Cromo({ rival, rank, wins, flash, onRemove }: { rival: Rival & { d: num
     const my = ((e.clientY - b.top) / b.height) * 100
     el.style.setProperty('--mx', mx.toFixed(1) + '%')
     el.style.setProperty('--my', my.toFixed(1) + '%')
-    el.style.setProperty('--rx', ((50 - my) / 9).toFixed(2) + 'deg') // inclina arriba/abajo
-    el.style.setProperty('--ry', ((mx - 50) / 7).toFixed(2) + 'deg') // inclina izq/dcha
+    el.style.setProperty('--rx', ((50 - my) / 18).toFixed(2) + 'deg') // inclina arriba/abajo (sutil)
+    el.style.setProperty('--ry', ((mx - 50) / 15).toFixed(2) + 'deg') // inclina izq/dcha (sutil)
   }
   const onLeave = () => {
     const el = ref.current; if (!el) return
@@ -2019,18 +2018,16 @@ function Cromo({ rival, rank, wins, flash, onRemove }: { rival: Rival & { d: num
       className={'cromo r-' + rz.tier + (flash ? ' cromo-flash' : '')}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
-      initial={{ opacity: 0, y: 26, scale: 0.9, rotate: -5 }}
-      animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-      exit={{ opacity: 0, y: 18, scale: 0.92 }}
-      transition={{ type: 'spring', stiffness: 240, damping: 23 }}
+      initial={{ opacity: 0, y: 18, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 14, scale: 0.96 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 26 }}
       layout
     >
       <div className="cromo-inner">
         <div className="cromo-foil" aria-hidden="true" />
-        <div className="cromo-shine" aria-hidden="true" />
-        {onRemove && <button className="cromo-x" onClick={onRemove} aria-label="Quitar cromo">✕</button>}
+        {onRemove && <button className="cromo-x" onClick={onRemove} aria-label="Quitar de la comparación">✕</button>}
         <div className="cromo-top">
-          <span className="cromo-rar">◈ {rz.label}</span>
           {rank != null && <span className="cromo-rank">#{rank}</span>}
         </div>
         <div className="cromo-portrait">

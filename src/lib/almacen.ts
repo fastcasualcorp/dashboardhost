@@ -132,6 +132,18 @@ export function updateAlmacenes(fn: (list: Almacen[]) => Almacen[]) {
   persistDebounced()
 }
 
+// ACTUALIZAR el stock de UN producto a mano (recepción de mercancía / ajuste de inventario) (Juan 28-jun).
+export function setItemStock(almId: string, pid: string, patch: Partial<Item>) {
+  updateAlmacenes((list) => list.map((a) => (a.id !== almId ? a : {
+    ...a,
+    items: a.items.map((it) => (it.pid === pid ? { ...it, ...patch } : it)),
+  })))
+}
+// Quitar un producto del almacén.
+export function removeItem(almId: string, pid: string) {
+  updateAlmacenes((list) => list.map((a) => (a.id !== almId ? a : { ...a, items: a.items.filter((it) => it.pid !== pid) })))
+}
+
 // EL TPV cobra → baja el stock de los ingredientes vendidos (receta). Devuelve qué ingredientes se tocaron.
 export function consumirVenta(items: { name: string; qty: number }[]): string[] {
   const tocados = new Set<string>()

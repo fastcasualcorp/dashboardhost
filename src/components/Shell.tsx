@@ -82,6 +82,38 @@ export default function Shell() {
     const v = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('rebell-density') || '') : NaN
     return v >= 0.8 && v <= 1.3 ? v : 1
   })
+  // Ancho del menú lateral AJUSTABLE arrastrando su borde (Juan, 28-jun). Gobierna --side-w,
+  // del que ya cuelgan el margen del contenido, la actionbar y el plano del TPV → todo lo sigue.
+  const [sideW, setSideW] = useState<number>(() => {
+    const v = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('rebell-sidew') || '') : NaN
+    return v >= 220 && v <= 460 ? v : 264
+  })
+  const [resizing, setResizing] = useState(false)
+  function startResize(e: RPointerEvent<HTMLDivElement>) {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = sideW
+    let cur = startW
+    setResizing(true)
+    play('tap')
+    const move = (ev: PointerEvent) => {
+      cur = Math.max(220, Math.min(460, Math.round(startW + (ev.clientX - startX))))
+      setSideW(cur)
+    }
+    const up = () => {
+      setResizing(false)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      try { localStorage.setItem('rebell-sidew', String(cur)) } catch { /* sin localStorage */ }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  function resetSide() {
+    setSideW(264)
+    try { localStorage.setItem('rebell-sidew', '264') } catch { /* sin localStorage */ }
+    play('toggle')
+  }
   // Modo presentación: al entrar en cualquier sección suena un power-up coordinado con el count-up de las cifras.
   const [present, setPresent] = useState<boolean>(() => typeof localStorage !== 'undefined' && localStorage.getItem('rebell-present') === '1')
   function togglePresent() {
@@ -287,7 +319,7 @@ export default function Shell() {
   }
 
   return (
-    <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent} style={{ ['--den' as string]: density }}>
+    <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent} data-resizing={resizing ? '1' : undefined} style={{ ['--den' as string]: density, ['--side-w' as string]: sideW + 'px' }}>
       <div className="bg-aura" />
       <div className="grain" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg">
@@ -340,6 +372,16 @@ export default function Shell() {
         </nav>
         <DeployBadge />
       </aside>
+      {/* Borde arrastrable para ensanchar el menú (solo escritorio). Doble clic = restaurar. */}
+      <div
+        className="side-resize"
+        onPointerDown={startResize}
+        onDoubleClick={resetSide}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Ajustar ancho del menú"
+        title="Arrastra para ensanchar · doble clic para restaurar"
+      />
       {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
       <div className={'panel-main' + (active === 'caja' ? ' caja-full' : '')}>

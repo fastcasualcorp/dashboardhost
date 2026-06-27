@@ -164,6 +164,22 @@ export default function SettingsPanel({
       </div>
 
       <div className="sp-section">
+        <button className="sp-comments" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))}>
+          <span className="spc-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2 4 7v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V7l-8-5Z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </span>
+          <span className="spc-txt">
+            <b>Plan: Pro <span className="sp-plan-tag">★</span></b>
+            <small>Mira los planes Free · Basic · Pro y lo que incluye cada uno</small>
+          </span>
+          <span className="spc-go" aria-hidden="true">Mejorar →</span>
+        </button>
+      </div>
+
+      <div className="sp-section">
         <button className={'sp-comments' + (comments ? ' on' : '')} onClick={onComments}>
           <span className="spc-ic">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

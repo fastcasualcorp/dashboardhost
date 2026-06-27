@@ -10,7 +10,7 @@ import { Card, SectionHeader, Stat, StatRow, KpiTile, BarRow, BarChart, Donut, B
 import { ACCENTS, type AccentKey, type FontKey } from './../components/SettingsPanel'
 import { SFX } from '../lib/sfx'
 import { SFX_LIST, getSfxVolume, setSfxVolume, play, playSweep, playGlitch, type SfxName } from '../lib/sound'
-import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn } from '../lib/designTokens'
+import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT } from '../lib/designTokens'
 
 type Theme = 'dark' | 'light'
 
@@ -71,21 +71,25 @@ const EASINGS: { name: string; val: string; use: string }[] = [
 function DesignSystemEditor() {
   const [type, setType] = useState<Record<string, number>>(() => loadType())
   const [btn, setBtn] = useState<Record<string, number>>(() => loadBtn())
+  const [wide, setWide] = useState<number>(() => loadWide())
   const [saved, setSaved] = useState(false)
   // refs "en vivo" → evitan closures viejos al aplicar al soltar
   const liveType = useRef(type)
   const liveBtn = useRef(btn)
+  const liveWide = useRef(wide)
+  // Anchura de fuente: en vivo (solo transform → cero reflow). Estira los números-héroe.
+  const setW = (v: number) => { liveWide.current = v; setWide(v); applyWide(v) }
   // Tipografía: mientras ARRASTRAS solo se mueve la muestra (setType) → cero reflow de la app = fluido.
   // Al SOLTAR (commitType) entra en toda la app de una vez (un solo cambio, sin "golpes").
   const dragType = (k: string, v: number) => { const next = { ...liveType.current, [k]: v }; liveType.current = next; setType(next) }
   const commitType = () => applyType(liveType.current)
   // Botones: en vivo (en Canon no se ven CTAs reales → no salta nada, y el botón-demo cambia al momento).
   const setB = (k: string, v: number) => { const next = { ...liveBtn.current, [k]: v }; liveBtn.current = next; setBtn(next); applyBtn(next) }
-  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
+  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveWide(liveWide.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
   const reset = () => {
-    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }
-    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS })
-    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS)
+    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveWide.current = WIDE_DEFAULT
+    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setWide(WIDE_DEFAULT)
+    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyWide(WIDE_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveWide(WIDE_DEFAULT)
     play('toggle', 0.5)
   }
   return (
@@ -121,6 +125,22 @@ function DesignSystemEditor() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="ds-row ds-row-wide">
+        <div className="ds-meta">
+          <b>Anchura</b>
+          <small>estira los números-héroe</small>
+        </div>
+        <div className="ds-sample" style={{ transform: `scaleX(${wide})`, transformOrigin: 'left' }}>1.787 €</div>
+        <div className="ds-ctrl">
+          <input
+            type="range" min={WIDE_MIN} max={WIDE_MAX} step={0.005} value={wide}
+            onChange={(e) => setW(parseFloat(e.target.value))}
+            aria-label="Anchura de fuente"
+          />
+          <span className="ds-px tnum">{Math.round(wide * 100)}%</span>
+        </div>
       </div>
 
       <div className="ds-head ds-head-btn">

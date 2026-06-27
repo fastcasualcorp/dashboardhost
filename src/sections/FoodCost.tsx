@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, SectionHeader, KpiTile, BarRow, Badge, Donut, Grid } from '../components/ui'
-import { useFoodcost, setCoste, fichaFoodCost, fcMedio } from '../lib/foodcost'
+import { useFoodcost, setCoste, fichaFoodCost, fcMedio, getIngredientes, setIngredienteCoste, costeMateriaMes } from '../lib/foodcost'
 import { imgFor } from '../lib/products'
 
 /* Food cost — escandallo sobre la CARTA REAL (`products.ts`). PVP de la carta, coste editable aquí →
@@ -10,9 +10,12 @@ const e2 = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, 
 const fcTone = (fc: number): 'green' | 'amber' | 'red' => (fc <= 28 ? 'green' : fc <= 33 ? 'amber' : 'red')
 const fcColor = (fc: number) => (fc <= 28 ? 'green' : fc <= 33 ? 'amber' : 'red')
 
+const e0 = (n: number) => Math.round(n).toLocaleString('es-ES')
+
 export default function FoodCost() {
   const costes = useFoodcost() // suscribe: editar un coste recalcula todo
-  const { ficha, medio, mejor, peor, maxFc } = useMemo(() => {
+  const [recorte, setRecorte] = useState(5) // % de recorte para el what-if de ahorro
+  const { ficha, medio, mejor, peor, maxFc, ings, materiaMes } = useMemo(() => {
     const ficha = fichaFoodCost().slice().sort((a, b) => a.fc - b.fc)
     return {
       ficha,
@@ -20,8 +23,11 @@ export default function FoodCost() {
       mejor: ficha[0],
       peor: ficha[ficha.length - 1],
       maxFc: Math.max(1, ...ficha.map((f) => f.fc)),
+      ings: getIngredientes(),
+      materiaMes: costeMateriaMes(),
     }
   }, [costes])
+  const ahorroMes = materiaMes * (recorte / 100)
 
   return (
     <div className="section">
@@ -56,6 +62,46 @@ export default function FoodCost() {
           </div>
         </Card>
       </Grid>
+
+      {/* ── ESCANDALLO POR INGREDIENTE + WHAT-IF: editar un céntimo muestra el ahorro al mes (norte ROI) ── */}
+      <Card>
+        <div className="card-head">
+          <h3>Escandallo por ingrediente</h3>
+          <Badge tone="muted">coste materia ≈ {e0(materiaMes)} €/mes</Badge>
+        </div>
+        <div className="fc-whatif">
+          <div className="fc-wi-ctrl">
+            <span className="fc-wi-lab">Si negocias tus materias un <b>{recorte}%</b> más baratas…</span>
+            <input className="fc-wi-range" type="range" min={1} max={15} step={1} value={recorte}
+              onChange={(e) => setRecorte(parseInt(e.target.value))} aria-label="Porcentaje de recorte" />
+          </div>
+          <div className="fc-wi-out">
+            <span className="fc-wi-out-lab">ahorras al mes</span>
+            <b className="fc-wi-num tnum">{e0(ahorroMes)}<i>€</i></b>
+            <span className="fc-wi-year">≈ {e0(ahorroMes * 12)} €/año</span>
+          </div>
+        </div>
+        <div className="fc-ings">
+          {ings.map((i) => {
+            const mes = i.coste * i.usoMes
+            const save = mes * (recorte / 100)
+            return (
+              <div className="fc-ing" key={i.id}>
+                <span className="fc-ing-emo" aria-hidden="true">{i.emo}</span>
+                <span className="fc-ing-name">{i.name}<small>{e0(i.usoMes)} {i.unit}/mes</small></span>
+                <label className="fc-ing-cost" title={`Coste por ${i.unit}`}>
+                  <input className="tnum" inputMode="decimal" value={String(i.coste).replace('.', ',')}
+                    onChange={(e) => setIngredienteCoste(i.id, Number(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0)}
+                    aria-label={`Coste de ${i.name}`} />
+                  <i>€/{i.unit}</i>
+                </label>
+                <span className="fc-ing-mes tnum">{e0(mes)} €<small>/mes</small></span>
+                <span className="fc-ing-save">−{recorte}% = <b>+{e0(save)} €</b></span>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
 
       <Card>
         <div className="card-head">

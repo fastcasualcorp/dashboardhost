@@ -69,3 +69,38 @@ export function useFoodcost(): Record<string, number> {
   }, [])
   return costes
 }
+
+/* ── ESCANDALLO POR INGREDIENTE: el coste de cada materia prima (€/unidad) y su consumo mensual estimado.
+   Editar un céntimo aquí muestra EN VIVO cuánto se ahorra al mes en toda la carta → el norte ROI de Juan
+   ("baja X céntimos la carne → +X € de margen al mes"). Persiste y avisa con el mismo evento. (Juan 28-jun) */
+export type Ingrediente = { id: string; name: string; emo: string; unit: string; coste: number; usoMes: number }
+const ING_SEED: Ingrediente[] = [
+  { id: 'carne', name: 'Carne picada', emo: '🥩', unit: 'kg', coste: 8.2, usoMes: 180 },
+  { id: 'pan', name: 'Pan brioche', emo: '🍞', unit: 'ud', coste: 0.42, usoMes: 2600 },
+  { id: 'cheddar', name: 'Queso cheddar', emo: '🧀', unit: 'kg', coste: 9.5, usoMes: 42 },
+  { id: 'bacon', name: 'Bacon', emo: '🥓', unit: 'kg', coste: 7.8, usoMes: 30 },
+  { id: 'pollo', name: 'Pollo crispy', emo: '🍗', unit: 'kg', coste: 6.4, usoMes: 55 },
+  { id: 'patata', name: 'Patata congelada', emo: '🍟', unit: 'kg', coste: 1.3, usoMes: 240 },
+  { id: 'salsa', name: 'Salsa Rebell', emo: '🥫', unit: 'L', coste: 4.1, usoMes: 60 },
+  { id: 'lechuga', name: 'Lechuga', emo: '🥬', unit: 'kg', coste: 1.8, usoMes: 40 },
+  { id: 'tomate', name: 'Tomate', emo: '🍅', unit: 'kg', coste: 2.1, usoMes: 38 },
+]
+const ING_KEY = 'rebell-escandallo-ing-v1'
+function loadIng(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(ING_KEY)
+    if (raw) return JSON.parse(raw) as Record<string, number>
+  } catch { /* sin localStorage */ }
+  return {}
+}
+let ingCostes = loadIng()
+export function getIngredientes(): Ingrediente[] {
+  return ING_SEED.map((i) => ({ ...i, coste: ingCostes[i.id] ?? i.coste }))
+}
+export function setIngredienteCoste(id: string, v: number) {
+  ingCostes = { ...ingCostes, [id]: Math.max(0, Math.round(v * 100) / 100) }
+  try { localStorage.setItem(ING_KEY, JSON.stringify(ingCostes)) } catch { /* */ }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:escandallo'))
+}
+// Coste de materia prima al mes (suma de coste × consumo de cada ingrediente).
+export const costeMateriaMes = () => getIngredientes().reduce((s, i) => s + i.coste * i.usoMes, 0)

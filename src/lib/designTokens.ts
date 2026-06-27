@@ -31,6 +31,14 @@ export const BTN_DEFAULTS: Record<string, number> = { fs: 15, py: 13, px: 24, ra
 
 const TYPE_KEY = 'rebell-typescale-v1'
 const BTN_KEY = 'rebell-buttons-v1'
+const WIDE_KEY = 'rebell-fontwide-v1'
+
+// Anchura de fuente: factor scaleX que ESTIRA horizontalmente los números-héroe y titulares
+// (Inter se ve más fina/estrecha que Clash → así se puede ensanchar hasta verse premium tipo SF Pro
+// "wide"). 1.0 = sin estirar. Pedido de Juan (28-jun): meterlo como control vivo en Canon.
+export const WIDE_MIN = 1.0
+export const WIDE_MAX = 1.12
+export const WIDE_DEFAULT = 1.0
 
 const read = (k: string, def: Record<string, number>): Record<string, number> => {
   try {
@@ -63,8 +71,24 @@ export function applyBtn(v: Record<string, number>) {
   for (const t of BTN_TOKENS) if (v[t.key] != null) app.style.setProperty(t.varName, v[t.key] + 'px')
 }
 
+export function loadWide(): number {
+  try {
+    const r = parseFloat(localStorage.getItem(WIDE_KEY) || '')
+    if (r >= WIDE_MIN && r <= WIDE_MAX) return r
+  } catch { /* sin localStorage */ }
+  return WIDE_DEFAULT
+}
+export function saveWide(v: number) {
+  try { localStorage.setItem(WIDE_KEY, String(v)) } catch { /* */ }
+}
+export function applyWide(v: number) {
+  const app = appEl()
+  if (app) app.style.setProperty('--font-wide', String(v))
+}
+
 // Al arrancar la app: re-aplica lo guardado para que el diseño persista entre recargas.
 export function applySavedDesign() {
   applyType(loadType())
   applyBtn(loadBtn())
+  applyWide(loadWide())
 }
