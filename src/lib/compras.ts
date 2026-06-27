@@ -1,0 +1,109 @@
+/* ════════════════════════════════════════════════════════════════════
+   COMPRAS — fuente ÚNICA reactiva de albaranes/facturas de proveedor.
+   Antes Compras era una tabla fija (sin alta, sin persistencia, año 2025).
+   Ahora: cada albarán tiene base + IVA → cuota/total calculados; das de ALTA
+   uno y entran a la vez la tabla, las barras por proveedor y los KPIs. El
+   estado pagado/pendiente se alterna con un clic. Mismo patrón que
+   wallet/equipo/gastos/ventas. Persiste en localStorage. (audit · Compras)
+   ════════════════════════════════════════════════════════════════════ */
+import { useEffect, useState } from 'react'
+
+export type EstadoPago = 'pagado' | 'pendiente'
+export type Albaran = { id: string; ts: number; proveedor: string; concepto: string; base: number; iva: number; estado: EstadoPago }
+
+// Paleta por proveedor (tonos válidos del sistema) → barras y leyendas coherentes.
+export const PROV_COLORS = ['gold', 'amber', 'blue', 'green', 'muted'] as const
+
+const d = (day: number) => new Date(2026, 5, day, 9, 0).getTime()
+const SEED: Albaran[] = [
+  { id: 'a1', ts: d(18), proveedor: 'Makro', concepto: 'Carne / frescos sem. 25', base: 1234.5, iva: 12, estado: 'pagado' },
+  { id: 'a2', ts: d(17), proveedor: 'Transgourmet', concepto: 'Salsas, congelados', base: 876, iva: 12, estado: 'pagado' },
+  { id: 'a3', ts: d(16), proveedor: 'Campofrío / Frigoríficos', concepto: 'Bacon, queso lonchas', base: 1020, iva: 12, estado: 'pagado' },
+  { id: 'a4', ts: d(15), proveedor: 'Cervecería Estrella Galicia', concepto: 'Barriles Estrella 30L ×6', base: 960, iva: 12, estado: 'pendiente' },
+  { id: 'a5', ts: d(14), proveedor: 'Makro', concepto: 'Papas, aceites, misc.', base: 654.2, iva: 12, estado: 'pagado' },
+  { id: 'a6', ts: d(12), proveedor: 'Unilever Food Sol.', concepto: 'Ketchup, mostaza, mayonesa', base: 430, iva: 12, estado: 'pagado' },
+  { id: 'a7', ts: d(11), proveedor: 'Panadería Galega', concepto: 'Pan brioche artesano ×400', base: 540, iva: 5, estado: 'pagado' },
+  { id: 'a8', ts: d(10), proveedor: 'Transgourmet', concepto: 'Bebidas y refrescos', base: 380, iva: 12, estado: 'pendiente' },
+  { id: 'a9', ts: d(8), proveedor: 'Unilever Food Sol.', concepto: 'Productos limpieza cocina', base: 210, iva: 21, estado: 'pagado' },
+]
+
+const r2 = (n: number) => Math.round(n * 100) / 100
+export const cuotaIva = (a: Albaran) => r2((a.base * a.iva) / 100)
+export const totalAlbaran = (a: Albaran) => r2(a.base + (a.base * a.iva) / 100)
+
+const KEY = 'rebell-compras-v1'
+function load(): Albaran[] {
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (raw) {
+      const a = JSON.parse(raw) as Albaran[]
+      if (Array.isArray(a) && a.length) return a
+    }
+  } catch {
+    /* sin localStorage */
+  }
+  return SEED.map((a) => ({ ...a }))
+}
+let albaranes: Albaran[] = load()
+let seq = albaranes.length
+
+function emit() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(albaranes.slice(0, 300)))
+  } catch {
+    /* almacenamiento lleno/privado */
+  }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:compras'))
+}
+
+export const getCompras = (): Albaran[] => albaranes
+
+export function addAlbaran(a: { proveedor: string; concepto: string; base: number; iva: number; estado?: EstadoPago }): Albaran {
+  const nuevo: Albaran = {
+    id: 'a' + ++seq + '_' + String(Date.now()).slice(-4),
+    ts: Date.now(),
+    proveedor: a.proveedor.trim() || 'Proveedor',
+    concepto: a.concepto.trim() || '—',
+    base: Math.max(0, r2(a.base)),
+    iva: a.iva,
+    estado: a.estado ?? 'pendiente',
+  }
+  albaranes = [nuevo, ...albaranes].slice(0, 300)
+  emit()
+  return nuevo
+}
+
+export function toggleEstado(id: string) {
+  albaranes = albaranes.map((a) => (a.id === id ? { ...a, estado: a.estado === 'pagado' ? 'pendiente' : 'pagado' } : a))
+  emit()
+}
+
+export function removeAlbaran(id: string) {
+  albaranes = albaranes.filter((a) => a.id !== id)
+  emit()
+}
+
+// ── Derivadas del mes (una sola fuente para tabla, barras y KPIs) ──
+export const comprasMes = () => r2(albaranes.reduce((s, a) => s + totalAlbaran(a), 0))
+export const pendienteMes = () => r2(albaranes.filter((a) => a.estado === 'pendiente').reduce((s, a) => s + totalAlbaran(a), 0))
+export const pagadoMes = () => r2(comprasMes() - pendienteMes())
+export const proveedoresActivos = () => new Set(albaranes.map((a) => a.proveedor)).size
+
+export function gastoPorProveedor(): { proveedor: string; total: number; color: string }[] {
+  const map = new Map<string, number>()
+  for (const a of albaranes) map.set(a.proveedor, (map.get(a.proveedor) || 0) + totalAlbaran(a))
+  return Array.from(map.entries())
+    .map(([proveedor, total]) => ({ proveedor, total: r2(total) }))
+    .sort((x, y) => y.total - x.total)
+    .map((row, i) => ({ ...row, color: PROV_COLORS[i % PROV_COLORS.length] }))
+}
+
+export function useCompras(): Albaran[] {
+  const [, force] = useState(0)
+  useEffect(() => {
+    const on = () => force((n) => n + 1)
+    window.addEventListener('rebell:compras', on)
+    return () => window.removeEventListener('rebell:compras', on)
+  }, [])
+  return albaranes
+}

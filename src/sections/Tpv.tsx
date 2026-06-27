@@ -11,6 +11,7 @@ import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
 import { pushComanda } from '../lib/comandas'
 import { cuentaTotal, seedCuenta, clearCuenta, clearAllCuentas } from '../lib/cuentas'
+import { appendVenta } from '../lib/ventas'
 import { supabase, localId } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
@@ -233,10 +234,12 @@ export default function Tpv() {
   }
   function confirmCobro(m: Metodo) {
     if (!cart.length) return
+    const arts = cart.reduce((s, l) => s + l.qty, 0) // nº de artículos ANTES de vaciar el carrito (para el libro)
     // "Caja que suma": el ticket entra al MISMO bote que las moneditas (caja del día). La cartera "Hoy" y
     // "Ventas hoy" cuentan-arriba a la vez (mismo store + count-up del hook). + ka-ching escalado.
     addWallet(total)
     logCobro(total, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}`, m)
+    appendVenta({ id: ticket, tipo: 'ticket', arts, total, metodo: m, mesa: mesa?.nombre ?? null }) // → LIBRO de Ventas TPV (fuente única, en vivo)
     play('success', 0.5, total > 50 ? 0.84 : total > 25 ? 0.92 : 1)
     setPulse((p) => p + 1)
     setPaid(true)

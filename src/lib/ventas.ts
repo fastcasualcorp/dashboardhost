@@ -1,0 +1,82 @@
+/* ════════════════════════════════════════════════════════════════════
+   VENTAS DEL TPV — fuente ÚNICA del libro de ventas (tickets y facturas).
+   Antes el libro (VentasTpv) pintaba un mock fijo y el TPV cobraba por otro
+   lado → un cobro NUNCA aparecía en el libro. Ahora: cada cobro del TPV hace
+   `appendVenta(...)` y el libro lo lee al instante (mismo patrón reactivo que
+   wallet/equipo/gastos). El histórico de demo va de SEMILLA → el libro nunca
+   sale vacío. Persiste por navegador (localStorage). (gaps 0.3 / 3 del TPV)
+   ════════════════════════════════════════════════════════════════════ */
+import { useEffect, useState } from 'react'
+import type { Metodo } from './wallet'
+
+export type TipoDoc = 'ticket' | 'factura'
+export type Venta = { id: string; tipo: TipoDoc; ts: number; arts: number; total: number; metodo?: Metodo; mesa?: string | null }
+
+// Histórico de demo (tickets/facturas recientes) → el libro arranca poblado.
+const SEED: Venta[] = [
+  { id: 'F-0002', tipo: 'factura', ts: new Date(2026, 5, 21, 13, 11).getTime(), arts: 1, total: 10.85, metodo: 'tarjeta' },
+  { id: 'T-0009', tipo: 'ticket', ts: new Date(2026, 5, 21, 12, 4).getTime(), arts: 3, total: 31.4, metodo: 'efectivo' },
+  { id: 'T-0008', tipo: 'ticket', ts: new Date(2026, 5, 20, 22, 51).getTime(), arts: 2, total: 24.2, metodo: 'tarjeta' },
+  { id: 'T-0007', tipo: 'ticket', ts: new Date(2026, 5, 20, 21, 18).getTime(), arts: 4, total: 47.3, metodo: 'tarjeta' },
+  { id: 'F-0001', tipo: 'factura', ts: new Date(2026, 5, 20, 14, 2).getTime(), arts: 1, total: 11.5, metodo: 'tarjeta' },
+  { id: 'T-0006', tipo: 'ticket', ts: new Date(2026, 5, 19, 23, 36).getTime(), arts: 1, total: 12.2, metodo: 'efectivo' },
+  { id: 'T-0005', tipo: 'ticket', ts: new Date(2026, 5, 19, 23, 6).getTime(), arts: 2, total: 27.4, metodo: 'tarjeta' },
+  { id: 'T-0004', tipo: 'ticket', ts: new Date(2026, 5, 18, 22, 57).getTime(), arts: 1, total: 13.0, metodo: 'efectivo' },
+  { id: 'T-0003', tipo: 'ticket', ts: new Date(2026, 5, 18, 21, 40).getTime(), arts: 3, total: 33.6, metodo: 'tarjeta' },
+  { id: 'T-0002', tipo: 'ticket', ts: new Date(2026, 5, 17, 22, 12).getTime(), arts: 2, total: 22.8, metodo: 'tarjeta' },
+  { id: 'T-0001', tipo: 'ticket', ts: new Date(2026, 5, 17, 20, 5).getTime(), arts: 1, total: 11.0, metodo: 'efectivo' },
+]
+
+const KEY = 'rebell-ventas-v1'
+const r2 = (n: number) => Math.round(n * 100) / 100
+
+function load(): Venta[] {
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (raw) {
+      const a = JSON.parse(raw) as Venta[]
+      if (Array.isArray(a)) return a
+    }
+  } catch {
+    /* sin localStorage */
+  }
+  return SEED.map((v) => ({ ...v }))
+}
+let ventas: Venta[] = load()
+
+function emit() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(ventas.slice(0, 400)))
+  } catch {
+    /* almacenamiento lleno/privado */
+  }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:ventas'))
+}
+
+export const getVentas = (): Venta[] => ventas
+
+// Cada cobro del TPV cae aquí → aparece en el libro al instante. Devuelve la venta creada.
+export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; metodo?: Metodo; mesa?: string | null; id?: string | null }): Venta {
+  const venta: Venta = {
+    id: v.id || 'T-' + String(Date.now()).slice(-4),
+    tipo: v.tipo ?? 'ticket',
+    ts: Date.now(),
+    arts: Math.max(0, Math.round(v.arts)),
+    total: r2(v.total),
+    metodo: v.metodo,
+    mesa: v.mesa ?? null,
+  }
+  ventas = [venta, ...ventas].slice(0, 400)
+  emit()
+  return venta
+}
+
+export function useVentas(): Venta[] {
+  const [, force] = useState(0)
+  useEffect(() => {
+    const on = () => force((n) => n + 1)
+    window.addEventListener('rebell:ventas', on)
+    return () => window.removeEventListener('rebell:ventas', on)
+  }, [])
+  return ventas
+}

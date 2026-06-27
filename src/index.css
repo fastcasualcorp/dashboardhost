@@ -2630,9 +2630,126 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .vtpv-dr-tot span { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); }
 .vtpv-dr-tot b { font-family: var(--font-num); font-size: clamp(28px, 5vw, 38px); font-weight: var(--num-weight); letter-spacing: var(--num-spacing); color: var(--gold); }
 
+/* botón Cierre Z (neutro, junto a Excel) */
+.vtpv-zbtn {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 100px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink);
+  font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); transition: filter .2s, transform .14s var(--ease-spring), border-color .18s;
+}
+.vtpv-zbtn svg { width: 15px; height: 15px; }
+.vtpv-zbtn:hover { border-color: rgba(var(--brand-rgb),.5); color: var(--gold); }
+.vtpv-zbtn:active { transform: scale(.95); }
+
+/* buscador del libro */
+.vtpv-searchrow { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.vtpv-search { position: relative; flex: 1; display: flex; align-items: center; gap: 9px; padding: 10px 13px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); transition: border-color .18s, box-shadow .18s; }
+.vtpv-search:focus-within { border-color: rgba(var(--brand-rgb),.5); }
+.vtpv-search svg { width: 16px; height: 16px; color: var(--faint); flex: none; }
+.vtpv-search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font-family: var(--font); font-size: var(--fs-sm); outline: none; }
+.vtpv-search input::placeholder { color: var(--faint); }
+.vtpv-search-x { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: var(--fs-sm); padding: 2px 4px; border-radius: 6px; transition: color .15s; }
+.vtpv-search-x:hover { color: var(--ink); }
+.vtpv-search-count { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; white-space: nowrap; }
+
+/* modal Cierre Z (centrado, glass) */
+.vtpv-z {
+  position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto;
+  display: flex; flex-direction: column; padding: 22px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 24px 70px rgba(0,0,0,.5);
+}
+.vtpv-z-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.vtpv-z-kick { display: block; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.vtpv-z-id b { font-size: var(--fs-lg); font-weight: 800; color: var(--ink); }
+.vtpv-z-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 6px; }
+.vtpv-z-mini { display: flex; flex-direction: column; gap: 3px; padding: 11px 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); text-align: center; }
+.vtpv-z-mini span { font-size: var(--fs-3xs); color: var(--muted); font-weight: 600; }
+.vtpv-z-mini b { font-size: var(--fs-md); font-weight: 750; color: var(--ink); }
+.vtpv-z-sec { margin-top: 14px; margin-bottom: 2px; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.vtpv-z .vtpv-dr-tot { margin-top: 14px; }
+.vtpv-z-print {
+  margin-top: 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 13px; border-radius: 13px; cursor: pointer; border: 1px solid rgba(var(--brand-rgb),.45);
+  background: linear-gradient(135deg, rgba(var(--brand-rgb),.24), rgba(var(--brand-rgb),.1)); color: var(--gold);
+  font-family: var(--font); font-weight: 700; font-size: var(--fs-sm); transition: filter .2s, transform .14s var(--ease-spring);
+}
+.vtpv-z-print svg { width: 17px; height: 17px; }
+.vtpv-z-print:hover { filter: brightness(1.12); }
+.vtpv-z-print:active { transform: scale(.97); }
+
 @media (max-width: 760px) {
   .vtpv-hero { flex-direction: column; }
   .vtpv-hero-chart { width: 100%; }
+  .vtpv-z-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Compras: alta de albarán + estado ── */
+.cmp-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cmp-add {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 100px; cursor: pointer;
+  border: 1px solid rgba(var(--brand-rgb),.45); background: linear-gradient(135deg, rgba(var(--brand-rgb),.22), rgba(var(--brand-rgb),.1));
+  color: var(--gold); font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); transition: filter .2s, transform .14s var(--ease-spring);
+}
+.cmp-add svg { width: 15px; height: 15px; }
+.cmp-add:hover { filter: brightness(1.12); }
+.cmp-add:active { transform: scale(.95); }
+.cmp-conc { color: var(--muted); }
+.cmp-estado { border: 0; background: transparent; padding: 0; cursor: pointer; transition: transform .14s var(--ease-spring); }
+.cmp-estado:hover { transform: translateY(-1px); }
+.cmp-estado:active { transform: scale(.95); }
+
+.cmp-modal {
+  position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto;
+  display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 24px 70px rgba(0,0,0,.5);
+}
+.cmp-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.cmp-modal-kick { display: block; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.cmp-modal-head b { font-size: var(--fs-lg); font-weight: 800; color: var(--ink); }
+.cmp-f { display: flex; flex-direction: column; gap: 6px; }
+.cmp-f > span { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.cmp-f input, .cmp-f select {
+  width: 100%; padding: 11px 13px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line);
+  color: var(--ink); font-family: var(--font); font-size: var(--fs-sm); outline: none; transition: border-color .18s;
+}
+.cmp-f input:focus, .cmp-f select:focus { border-color: rgba(var(--brand-rgb),.5); }
+.cmp-f input::placeholder { color: var(--faint); }
+.cmp-f-row { display: grid; grid-template-columns: 1fr 110px; gap: 12px; }
+.cmp-prev { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 2px 2px; border-top: 1px dashed var(--line-strong); margin-top: 4px; }
+.cmp-prev span { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); }
+.cmp-prev b { font-family: var(--font-num); font-size: clamp(22px, 4vw, 30px); font-weight: var(--num-weight); letter-spacing: var(--num-spacing); color: var(--gold); }
+.cmp-save {
+  margin-top: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 13px; border-radius: 13px; cursor: pointer; border: 1px solid rgba(var(--brand-rgb),.45);
+  background: linear-gradient(135deg, rgba(var(--brand-rgb),.24), rgba(var(--brand-rgb),.1)); color: var(--gold);
+  font-family: var(--font); font-weight: 700; font-size: var(--fs-sm); transition: filter .2s, transform .14s var(--ease-spring);
+}
+.cmp-save svg { width: 17px; height: 17px; }
+.cmp-save:hover { filter: brightness(1.12); }
+.cmp-save:active { transform: scale(.97); }
+@media (max-width: 760px) { .cmp-f-row { grid-template-columns: 1fr; } }
+
+/* ── Food cost: ficha técnica editable ── */
+.fc-ficha { display: flex; flex-direction: column; }
+.fc-row { display: grid; grid-template-columns: 2.2fr 1fr 1.2fr 1fr 1fr; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); min-height: 52px; }
+.fc-row.fc-head { border-top: 0; padding-bottom: 8px; }
+.fc-row.fc-head span { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fc-row.fc-head span:not(:first-child) { text-align: right; }
+.fc-plato { display: flex; align-items: center; gap: 11px; font-size: var(--fs-sm); font-weight: 650; color: var(--ink); min-width: 0; }
+.fc-th { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex: none; background: var(--surface-2); border: 1px solid var(--line); }
+.fc-th img { width: 100%; height: 100%; object-fit: cover; }
+.fc-pvp, .fc-margen { text-align: right; }
+.fc-pvp { color: var(--muted); }
+.fc-margen { color: var(--ok); font-weight: 700; }
+.fc-fc { display: flex; justify-content: flex-end; }
+.fc-coste { display: inline-flex; align-items: center; gap: 4px; justify-self: end; padding: 7px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); transition: border-color .18s; cursor: text; }
+.fc-coste:focus-within { border-color: rgba(var(--brand-rgb),.5); }
+.fc-coste input { width: 56px; border: 0; background: transparent; color: var(--ink); font-family: var(--font-num); font-weight: 650; font-size: var(--fs-sm); text-align: right; outline: none; }
+.fc-coste i { font-style: normal; color: var(--muted); font-size: var(--fs-xs); }
+@media (max-width: 720px) {
+  .fc-row { grid-template-columns: 1.8fr 1fr 1.1fr; }
+  .fc-row .fc-fc, .fc-row .fc-margen, .fc-head span:nth-child(4), .fc-head span:nth-child(5) { display: none; }
 }
 
 /* ── Mapa de Incidencia (rivales) ── */
