@@ -2,8 +2,10 @@
    Estrategia: navegación = network-first con caída al index cacheado (la SPA
    arranca sin conexión); assets propios = stale-while-revalidate (instantáneo y
    se refresca en segundo plano). Lo de fuera de nuestro origen (Supabase, CDNs)
-   NO se toca → offline degrada con los defaults de la app, sin romper. */
-const CACHE = 'rebell-v1'
+   NO se toca → offline degrada con los defaults de la app, sin romper.
+   El nº de versión del CACHE se sube en cada release: al activar el SW nuevo se
+   PURGAN las cachés viejas → nunca se queda servido un bundle obsoleto ("no carga"). */
+const CACHE = 'rebell-v2'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
