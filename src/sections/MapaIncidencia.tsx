@@ -7,15 +7,14 @@ import { CountValue } from '../components/ui'
 import { play, playBeast, playLock, playTick, playSweep, playGlitch, setCountMuted } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
 import { fetchRivalsCached, type PlaceReview, type PlaceRival } from '../lib/places'
+import { LOCAL } from '../lib/local'
 
 /* Mapa de Incidencia — rastrea la competencia en un mapa 3D estilo videojuego (Mapbox GL:
    edificios extruidos y EXAGERADOS, vista inclinada, atmósfera, vuelo cinematográfico, sin
    nombres de lugares), con radio configurable, marcadores-carta por rival y un "Radar IA".
    v1 con datos de DEMO; con Google Places + Edge Function (Claude) serán reales. Diseño REBELL
-   (oro sobre casi-negro). Token público en VITE_MAPBOX_TOKEN. */
-
-// Ubicación REAL de Rebell - Homeburger (Avenida da Maía, 26, Bertamiráns) + rating/reseñas reales de Google.
-const LOCAL = { name: 'REBELL · Homeburger', lat: 42.8576544, lng: -8.657097, rating: 4.2, reviews: 495, precio: 13.5 }
+   (oro sobre casi-negro). Token público en VITE_MAPBOX_TOKEN.
+   La ubicación del local sale de `lib/local` (fuente única) → ya NO está hardcodeada (multi-tenant). */
 
 type Signal = { k: 'reseña' | 'promo' | 'noticia' | 'social'; txt: string }
 type Rival = { id: string; name: string; tipo: string; lat: number; lng: number; rating: number; reviews: number; precio: number; signal: Signal; reviewsList?: PlaceReview[] }
