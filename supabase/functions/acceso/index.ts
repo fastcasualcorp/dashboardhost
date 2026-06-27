@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
 
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '').split(',')[0].trim() || null
 
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  // Clave secreta NUEVA (sb_secret) si está, con fallback a la legacy auto-inyectada.
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_SECRET') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   // anti-flood: máx. 30 registros/min por local (un acceso normal es esporádico)
   const { data: rateOk } = await admin.rpc('check_rate', { p_key: 'acceso:' + local_id, p_max: 30, p_secs: 60 })

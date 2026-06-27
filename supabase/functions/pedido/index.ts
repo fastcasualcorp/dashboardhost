@@ -60,7 +60,8 @@ Deno.serve(async (req) => {
   const minEsperado = items.reduce((s, i) => s + (PRICES[i.name] ?? 3) * i.qty, 0)
   if (t < minEsperado * 0.5) return json({ error: 'total-bajo' }, 400) // total absurdo → fraude
 
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  // Clave secreta NUEVA (sb_secret) si está, con fallback a la legacy auto-inyectada.
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_SECRET') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   // ── rate-limit por IP (anti-spam del endpoint público): 8 pedidos / minuto ──
   const ip = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'x').split(',')[0].trim()

@@ -32,7 +32,7 @@ jobs:
       - name: Build de producción
         env:
           VITE_SUPABASE_URL: https://pcmzovivezvuccoevwjh.supabase.co
-          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbXpvdml2ZXp2dWNjb2V2d2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzYwNzMsImV4cCI6MjA5NzcxMjA3M30.T5UT2MCiAmUsuiR7ycVahtbPLL-75nZvSN8O1KT_2Mo
+          VITE_SUPABASE_ANON_KEY: sb_publishable_SLqz0hcZz3lIBXGv59s6qA_aQkrt29a
         run: npm run build
 
       - name: Desplegar a Cloudflare Pages
