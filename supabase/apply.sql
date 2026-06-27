@@ -55,6 +55,8 @@ create table if not exists public.ventas (
 );
 alter table public.ventas add column if not exists mesa text;
 alter table public.ventas add column if not exists doc text not null default 'ticket';
+alter table public.ventas add column if not exists numero int;
+alter table public.ventas add column if not exists arts int default 0;
 alter table public.ventas enable row level security;
 create index if not exists ventas_local_idx on public.ventas (local_id, creado_at desc);
 drop policy if exists "ventas: ver las de mi local" on public.ventas;
@@ -104,5 +106,20 @@ create index if not exists mesas_local_idx on public.mesas (local_id, orden);
 drop policy if exists "mesas: gestionar las de mi local" on public.mesas;
 create policy "mesas: gestionar las de mi local" on public.mesas for all to authenticated
   using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
+
+-- ── M4: permitir forma 'ele' (su ausencia GARANTIZABA pérdida del plano) + rotación ──
+alter table public.mesas drop constraint if exists mesas_forma_check;
+alter table public.mesas add constraint mesas_forma_check check (forma in ('cuadrada','rect','redonda','ele'));
+alter table public.mesas add column if not exists rot int not null default 0;
+
+-- ── Realtime: avisos EN VIVO de comandas/ventas/mesas (cross-device). Idempotente. ──
+do $$ begin
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='comandas')
+    then alter publication supabase_realtime add table public.comandas; end if;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='ventas')
+    then alter publication supabase_realtime add table public.ventas; end if;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='mesas')
+    then alter publication supabase_realtime add table public.mesas; end if;
+end $$;
 
 -- Listo. Ahora Claude crea los locales + usuarios (service_role) y conecta la app.

@@ -8,6 +8,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import type { Metodo } from './wallet'
+import { supabase, localId } from './supabase'
 
 export type TipoDoc = 'ticket' | 'factura'
 export type Venta = { id: string; tipo: TipoDoc; ts: number; arts: number; total: number; metodo?: Metodo; mesa?: string | null }
@@ -55,8 +56,36 @@ function emit() {
 
 export const getVentas = (): Venta[] => ventas
 
+/* ── Cableado Supabase (libro real por local), solo si hay sesión ── */
+type VRow = { id: string; numero: number | null; doc: TipoDoc; total: number; metodo: Metodo | null; mesa: string | null; arts: number | null; creado_at: string }
+const fmt = (n: number | null, id: string) => (n ? 'T-' + String(n).padStart(4, '0') : id.slice(0, 6))
+function fromVRow(r: VRow): Venta {
+  return { id: fmt(r.numero, r.id), tipo: r.doc, ts: new Date(r.creado_at).getTime(), arts: r.arts ?? 0, total: r.total, metodo: r.metodo ?? undefined, mesa: r.mesa }
+}
+let _syncStarted = false
+let _live = false
+async function initSync() {
+  if (_syncStarted || !supabase) return
+  _syncStarted = true
+  const { data } = await supabase.auth.getSession()
+  const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
+  if (!lid || !data.session) return // demo → localStorage
+  _live = true
+  supabase.realtime.setAuth(data.session.access_token) // token del usuario al socket realtime (RLS)
+  const { data: rows } = await supabase.from('ventas').select('*').order('creado_at', { ascending: false }).limit(400)
+  if (rows) { ventas = (rows as VRow[]).map(fromVRow); if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:ventas')) }
+  supabase
+    .channel('ventas-' + lid)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ventas', filter: 'local_id=eq.' + lid }, (payload) => {
+      const v = fromVRow(payload.new as VRow)
+      if (!ventas.some((x) => x.id === v.id && x.ts === v.ts)) ventas = [v, ...ventas].slice(0, 400)
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:ventas'))
+    })
+    .subscribe()
+}
+
 // Cada cobro del TPV cae aquí → aparece en el libro al instante. Devuelve la venta creada.
-export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; metodo?: Metodo; mesa?: string | null; id?: string | null }): Venta {
+export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; metodo?: Metodo; mesa?: string | null; id?: string | null; numero?: number }): Venta {
   const venta: Venta = {
     id: v.id || 'T-' + String(Date.now()).slice(-4),
     tipo: v.tipo ?? 'ticket',
@@ -66,7 +95,15 @@ export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; me
     metodo: v.metodo,
     mesa: v.mesa ?? null,
   }
-  ventas = [venta, ...ventas].slice(0, 400)
+  if (_live && supabase) {
+    const lid = localId()
+    if (lid) {
+      // La verdad va a Supabase; el realtime lo añade al libro (aquí y en otros dispositivos).
+      supabase.from('ventas').insert({ local_id: lid, total: venta.total, metodo: venta.metodo ?? 'tarjeta', mesa: venta.mesa, doc: venta.tipo, numero: v.numero ?? null, arts: venta.arts }).then(({ error }) => { if (error) { ventas = [venta, ...ventas].slice(0, 400); emit() } })
+      return venta
+    }
+  }
+  ventas = [venta, ...ventas].slice(0, 400) // demo / sin sesión
   emit()
   return venta
 }
@@ -91,6 +128,7 @@ export function ventasPorDia(list: Venta[] = ventas): Map<string, { e: number; t
 export function useVentas(): Venta[] {
   const [, force] = useState(0)
   useEffect(() => {
+    void initSync()
     const on = () => force((n) => n + 1)
     window.addEventListener('rebell:ventas', on)
     return () => window.removeEventListener('rebell:ventas', on)

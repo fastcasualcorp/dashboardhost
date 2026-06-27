@@ -13,7 +13,6 @@ import { pushComanda } from '../lib/comandas'
 import { cuentaTotal, cuentaItems, addToCuenta, seedCuenta, clearCuenta, clearAllCuentas, useCuentas } from '../lib/cuentas'
 import { appendVenta } from '../lib/ventas'
 import { consumirVenta } from '../lib/almacen'
-import { supabase, localId } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
 
@@ -23,26 +22,8 @@ const round05 = (n: number) => Math.round(n * 20) / 20
 // nº de ticket → entero para la columna `numero` de la comanda (la BD guarda int; la UI muestra "T-013").
 const ticketNum = (t: string | null) => (t ? parseInt(t.replace(/\D/g, ''), 10) || 0 : 0)
 
-// Persistencia en Supabase (por local, vía RLS). Fire-and-forget: no bloquea la caja.
-// El nº de ticket viaja a venta Y comanda → trazabilidad (si se pierde una comanda y el cliente llama).
-async function persistVenta(total: number, mesaNombre: string | null, ticket: string | null, metodo: Metodo) {
-  const lid = localId()
-  if (!supabase || !lid) return
-  try {
-    await supabase.from('ventas').insert({ local_id: lid, total: Math.round(total * 100) / 100, metodo, mesa: mesaNombre, doc: 'ticket', numero: ticketNum(ticket) })
-  } catch {
-    /* sin conexión: la venta se ve igual en caja */
-  }
-}
-async function persistComanda(items: Line[], mesaNombre: string | null, ticket: string | null) {
-  const lid = localId()
-  if (!supabase || !lid) return
-  try {
-    await supabase.from('comandas').insert({ local_id: lid, numero: ticketNum(ticket), fuente: 'Sala', mesa: mesaNombre, items, estado: 'nueva' })
-  } catch {
-    /* sin conexión */
-  }
-}
+// La persistencia en Supabase (ventas/comandas por local, vía RLS) la hacen ahora
+// los STORES (lib/comandas · lib/ventas): una sola fuente, con realtime cross-device.
 
 export default function Tpv() {
   const [cart, setCart] = useState<Line[]>([])
@@ -237,8 +218,7 @@ export default function Tpv() {
     setSent(true)
     window.setTimeout(() => setSent(false), 1700)
     // → COCINA en vivo (KDS): la comanda aparece en el tablero al instante (store local)
-    pushComanda({ n: ticketNum(tk), mesa: mesa?.nombre ?? null, items: cart.map((l) => ({ name: l.name, qty: l.qty })), src: 'Sala' })
-    void persistComanda(cart, mesa?.nombre ?? null, tk) // + Supabase (trazabilidad), cuando haya backend
+    pushComanda({ n: ticketNum(tk), mesa: mesa?.nombre ?? null, items: cart.map((l) => ({ name: l.name, qty: l.qty })), src: 'Sala' }) // → KDS (Supabase realtime si hay sesión, si no local)
     // CUENTA ABIERTA: si es una mesa, la ronda se SUMA a su cuenta y el carrito se vacía → listo para otra ronda.
     if (mesa) {
       addToCuenta(mesa.id, total, cart.map((l) => ({ name: l.name, qty: l.qty })))
@@ -358,13 +338,12 @@ export default function Tpv() {
     addWallet(payAmount) // solo la última parte (las anteriores ya sumaron); si no se divide, = cobroTotal
     logCobro(payAmount, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}${split > 1 ? ` · parte ${split}/${split}` : ''}`, m)
     if (split > 1 && reciboPorPersona) printRecibo(payAmount, `Parte ${split} de ${split}`, m) // justificante de la última persona
-    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroFinal, metodo: m, mesa: mesa?.nombre ?? null }) // venta = la cuenta COMPLETA (con propina), una vez
+    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroFinal, metodo: m, mesa: mesa?.nombre ?? null, numero: ticketNum(ticket) }) // → libro (Supabase si hay sesión, si no local); con propina, una vez
     consumirVenta(allItems) // → ALMACÉN: baja el stock de TODO lo vendido (una vez)
     play('success', 0.5, cobroFinal > 50 ? 0.84 : cobroFinal > 25 ? 0.92 : 1)
     setPulse((p) => p + 1)
     setPaid(true)
     setCart([])
-    void persistVenta(cobroFinal, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
     if (mesa) {
       clearCuenta(mesa.id) // saldada la cuenta de la mesa
       setMesas((prev) => { const next = prev.map((mm) => (mm.id === mesa.id ? { ...mm, estado: 'libre' as const, since: undefined, reservaFin: undefined } : mm)); saveSalon(next); return next })
