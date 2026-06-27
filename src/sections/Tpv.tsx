@@ -56,6 +56,8 @@ export default function Tpv() {
   const [split, setSplit] = useState(1) // dividir la cuenta entre N personas
   const [paidShares, setPaidShares] = useState(0) // partes ya cobradas
   const [reciboPorPersona, setReciboPorPersona] = useState(false) // al dividir: imprimir el justificante de cada parte
+  const [propinaPct, setPropinaPct] = useState(0) // propina opcional (% sobre la cuenta)
+  const [email, setEmail] = useState('') // email del cliente para enviarle el recibo (CRM)
   const [cat, setCat] = useState('Burgers')
   const [building, setBuilding] = useState<Producto | null>(null)
   const [picks, setPicks] = useState<Record<string, string>>({})
@@ -152,11 +154,14 @@ export default function Tpv() {
   // CUENTA ABIERTA (multi-ronda): lo ya acumulado en la mesa + lo del carrito actual = lo que se cobra al cerrar.
   const mesaTab = mesa ? cuentaTotal(mesa.id) : 0
   const cobroTotal = Math.round((total + mesaTab) * 100) / 100
-  // DIVIDIR CUENTA: importe de la parte actual (la última parte ajusta los céntimos para cuadrar el total).
+  // PROPINA (opcional) sobre la cuenta → el total final que se reparte/cobra.
   const r2 = (n: number) => Math.round(n * 100) / 100
-  const shareAmount = split > 1 ? r2(cobroTotal / split) : cobroTotal
+  const propina = r2((cobroTotal * propinaPct) / 100)
+  const cobroFinal = r2(cobroTotal + propina)
+  // DIVIDIR CUENTA: importe de la parte actual (la última parte ajusta los céntimos para cuadrar el total).
+  const shareAmount = split > 1 ? r2(cobroFinal / split) : cobroFinal
   const isLastShare = paidShares >= split - 1
-  const payAmount = split > 1 ? (isLastShare ? r2(cobroTotal - shareAmount * (split - 1)) : shareAmount) : cobroTotal
+  const payAmount = split > 1 ? (isLastShare ? r2(cobroFinal - shareAmount * (split - 1)) : shareAmount) : cobroFinal
 
   // ── Mesa (del plano del Salón) ──
   function openPicker() {
@@ -248,12 +253,20 @@ export default function Tpv() {
   }
 
   // "Cobrar" abre el panel de pago (elegir efectivo/tarjeta). El cobro real lo hace confirmCobro.
-  // Justificante (recibo) de una PARTE al dividir la cuenta → cada persona se lleva el suyo.
-  function printRecibo(amount: number, parteLabel: string, m: Metodo) {
+  // URL del QR del recibo → futura carta/pedido online de ESTA mesa (self-order por QR). Hoy lleva a pedir/valorar.
+  function ordenUrl(): string {
+    const base = 'https://rebell.app/pedir'
+    const params = `l=bertamirans${mesa ? `&m=${encodeURIComponent(mesa.nombre)}` : ''}`
+    return `${base}?${params}`
+  }
+  // HTML del justificante (recibo) — reutilizado para imprimir y para el email.
+  function reciboHTML(amount: number, parteLabel: string, m: Metodo): string {
     const f = new Date()
     const dd = `${f.getDate()}/${f.getMonth() + 1}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`
     const dest = mesa ? `Mesa ${mesa.nombre}` : 'Para llevar'
-    const html = `<!doctype html><meta charset="utf-8"><title>Recibo</title>
+    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&margin=0&data=${encodeURIComponent(ordenUrl())}`
+    const propLine = propinaPct > 0 ? `<div class="r"><span>Propina</span><b>${propinaPct}% incl.</b></div>` : ''
+    return `<!doctype html><meta charset="utf-8"><title>Recibo REBELL</title>
       <style>
         *{box-sizing:border-box} body{margin:0;background:#0d0d0f;color:#f5f5f7;font:13px/1.55 ui-monospace,Menlo,monospace;padding:22px}
         .t{max-width:300px;margin:0 auto}
@@ -263,7 +276,10 @@ export default function Tpv() {
         .r:first-of-type{border-top:0}.r span{color:#9a9aa2}.r b{font-weight:700}
         .tot{border-top:1px solid #ffbf10;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;align-items:baseline}
         .tot span{font-weight:800}.tot b{font:800 26px/1 system-ui;color:#ffbf10}
-        .foot{text-align:center;color:#6a6a72;font-size:10px;margin-top:18px}
+        .qr{text-align:center;margin-top:18px}
+        .qr .box{display:inline-block;background:#fff;padding:9px;border-radius:10px}
+        .qr .cap{color:#9a9aa2;font-size:11px;margin-top:8px}
+        .foot{text-align:center;color:#6a6a72;font-size:10px;margin-top:16px}
       </style>
       <div class="t">
         <h1>REBELL</h1>
@@ -271,14 +287,38 @@ export default function Tpv() {
         <div class="r"><span>Destino</span><b>${dest}</b></div>
         <div class="r"><span>Concepto</span><b>${parteLabel}</b></div>
         <div class="r"><span>Método</span><b>${m === 'efectivo' ? 'Efectivo' : 'Tarjeta'}</b></div>
+        ${propLine}
         <div class="tot"><span>PAGADO</span><b>${eur(amount)} €</b></div>
+        <div class="qr"><div class="box"><img width="130" height="130" src="${qr}" alt="QR pedir online"/></div><div class="cap">📱 Pide online o valóranos</div></div>
         <div class="foot">¡Gracias! · Documento no fiscal · demo REBELL</div>
-      </div>
-      <script>window.onload=function(){setTimeout(function(){window.print()},120)}<\/script>`
-    const w = window.open('', '_blank', 'width=380,height=560')
+      </div>`
+  }
+  // Imprime el justificante (cada persona se lleva el suyo).
+  function printRecibo(amount: number, parteLabel: string, m: Metodo) {
+    const w = window.open('', '_blank', 'width=380,height=620')
     if (!w) return
-    w.document.write(html)
+    w.document.write(reciboHTML(amount, parteLabel, m) + '<script>window.onload=function(){setTimeout(function(){window.print()},150)}<\/script>')
     w.document.close()
+  }
+  // Envía el recibo por email del cliente (sin backend: abre el cliente de correo prerrellenado).
+  // En producción esto irá por una Edge Function con API de email (Resend) — y el email se guarda como CRM.
+  function emailRecibo(toEmail: string, amount: number, parteLabel: string, m: Metodo) {
+    const dest = mesa ? `Mesa ${mesa.nombre}` : 'Para llevar'
+    const cuerpo = [
+      'REBELL · Justificante de pago',
+      '',
+      `Destino: ${dest}`,
+      `Concepto: ${parteLabel}`,
+      `Método: ${m === 'efectivo' ? 'Efectivo' : 'Tarjeta'}`,
+      propinaPct > 0 ? `Propina: ${propinaPct}% incl.` : '',
+      `PAGADO: ${eur(amount)} €`,
+      '',
+      `Pide online o valóranos: ${ordenUrl()}`,
+      '',
+      '¡Gracias! · Documento no fiscal · demo REBELL',
+    ].filter(Boolean).join('\n')
+    const href = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent('Tu recibo · REBELL')}&body=${encodeURIComponent(cuerpo)}`
+    window.open(href, '_blank')
   }
 
   function openPay() {
@@ -289,6 +329,8 @@ export default function Tpv() {
     setSplit(1) // empieza sin dividir
     setPaidShares(0)
     setReciboPorPersona(false)
+    setPropinaPct(0)
+    setEmail('')
     setPayOpen(true)
     play('tap', 0.45)
   }
@@ -313,13 +355,13 @@ export default function Tpv() {
     addWallet(payAmount) // solo la última parte (las anteriores ya sumaron); si no se divide, = cobroTotal
     logCobro(payAmount, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}${split > 1 ? ` · parte ${split}/${split}` : ''}`, m)
     if (split > 1 && reciboPorPersona) printRecibo(payAmount, `Parte ${split} de ${split}`, m) // justificante de la última persona
-    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroTotal, metodo: m, mesa: mesa?.nombre ?? null }) // venta = la cuenta COMPLETA, una vez
+    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroFinal, metodo: m, mesa: mesa?.nombre ?? null }) // venta = la cuenta COMPLETA (con propina), una vez
     consumirVenta(allItems) // → ALMACÉN: baja el stock de TODO lo vendido (una vez)
-    play('success', 0.5, cobroTotal > 50 ? 0.84 : cobroTotal > 25 ? 0.92 : 1)
+    play('success', 0.5, cobroFinal > 50 ? 0.84 : cobroFinal > 25 ? 0.92 : 1)
     setPulse((p) => p + 1)
     setPaid(true)
     setCart([])
-    void persistVenta(cobroTotal, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
+    void persistVenta(cobroFinal, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
     if (mesa) {
       clearCuenta(mesa.id) // saldada la cuenta de la mesa
       setMesas((prev) => { const next = prev.map((mm) => (mm.id === mesa.id ? { ...mm, estado: 'libre' as const, since: undefined, reservaFin: undefined } : mm)); saveSalon(next); return next })
@@ -786,8 +828,17 @@ export default function Tpv() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="pay-head">
-                <span className="pay-k">Cobrar {mesa ? '· Mesa ' + mesa.nombre : '· Para llevar'}</span>
-                <b className="pay-total tnum">{eur(cobroTotal)} €</b>
+                <span className="pay-k">Cobrar {mesa ? '· Mesa ' + mesa.nombre : '· Para llevar'}{propina > 0 ? ` · propina ${eur(propina)} €` : ''}</span>
+                <b className="pay-total tnum">{eur(cobroFinal)} €</b>
+              </div>
+              {/* Propina opcional sobre la cuenta. Bloqueada una vez se cobra la 1ª parte. */}
+              <div className="pay-split">
+                <span className="pay-split-lab">Propina</span>
+                <div className="pay-split-steps">
+                  {[0, 5, 10, 15].map((p) => (
+                    <button key={p} className={'pay-split-n' + (propinaPct === p ? ' on' : '')} disabled={paidShares > 0} onClick={() => { setPropinaPct(p); setMetodo(null); setCash(''); play('tap', 0.4, 1 + p * 0.01) }}>{p === 0 ? 'No' : p + '%'}</button>
+                  ))}
+                </div>
               </div>
               {/* Dividir la cuenta entre N personas (partes iguales). Bloqueado una vez se cobra la 1ª parte. */}
               <div className="pay-split">
@@ -840,6 +891,15 @@ export default function Tpv() {
                   </motion.div>
                 )}
               </AnimatePresence>
+              {/* Recibo del cliente: imprimir o enviar por email (captamos el correo = CRM). */}
+              <div className="pay-recibo-row">
+                <label className="pay-email">
+                  <span className="pe-ic">📧</span>
+                  <input type="email" inputMode="email" placeholder="email del cliente (recibo)" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email del cliente para el recibo" />
+                </label>
+                <button className="pay-email-send" disabled={!/.+@.+\..+/.test(email)} onClick={() => { emailRecibo(email, payAmount, split > 1 ? `Parte ${Math.min(paidShares + 1, split)} de ${split}` : 'Cuenta completa', metodo ?? 'tarjeta'); play('success', 0.4, 1.1) }}>Enviar</button>
+                <button className="pay-email-send ghost" onClick={() => printRecibo(payAmount, split > 1 ? `Parte ${Math.min(paidShares + 1, split)} de ${split}` : 'Cuenta completa', metodo ?? 'tarjeta')} title="Imprimir recibo">🧾</button>
+              </div>
               <button className="pay-cancel" onClick={() => setPayOpen(false)}>Cancelar</button>
             </motion.div>
           </motion.div>

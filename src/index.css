@@ -1700,6 +1700,18 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .pay-recibo.on { border-color: rgba(var(--brand-rgb),.5); color: var(--ink); background: rgba(var(--brand-rgb),.08); }
 .pay-recibo .pr-check { width: 16px; height: 16px; flex: none; display: grid; place-items: center; border-radius: 5px; border: 1px solid var(--line-strong); font-size: 11px; color: var(--accent-ink, #1a1404); }
 .pay-recibo.on .pr-check { background: var(--gold); border-color: transparent; }
+/* Email / imprimir recibo */
+.pay-recibo-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 10px; }
+.pay-email { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 11px; background: rgba(255,255,255,.04); border: 1px solid var(--line); transition: border-color .15s; }
+.pay-email:focus-within { border-color: rgba(var(--brand-rgb),.5); }
+.pay-email .pe-ic { font-size: 14px; flex: none; opacity: .8; }
+.pay-email input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font-family: var(--font); font-size: var(--fs-sm); outline: none; }
+.pay-email input::placeholder { color: var(--faint); }
+.pay-email-send { flex: none; padding: 10px 14px; border-radius: 11px; border: 1px solid rgba(var(--brand-rgb),.45); background: linear-gradient(135deg, rgba(var(--brand-rgb),.22), rgba(var(--brand-rgb),.1)); color: var(--gold); font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; transition: filter .18s, transform .12s var(--ease-spring); }
+.pay-email-send.ghost { border-color: var(--line-strong); background: rgba(255,255,255,.04); color: var(--ink); padding: 10px 12px; }
+.pay-email-send:hover:not(:disabled) { filter: brightness(1.12); }
+.pay-email-send:active:not(:disabled) { transform: scale(.95); }
+.pay-email-send:disabled { opacity: .4; cursor: not-allowed; }
 .pay-k { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.55); font-weight: 700; }
 .pay-total { font-family: var(--font-num); font-size: clamp(28px, 4vw, 38px); font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
 .pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
