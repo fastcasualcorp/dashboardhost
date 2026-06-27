@@ -183,18 +183,6 @@ export default function Caja() {
 
   // (Las unidades de cada plato se muestran SIEMPRE con su valor final, sin contador — pedido de Juan, 26-jun.)
 
-  // AHORRO de batería/calor: pausar el vídeo de fondo cuando la pestaña no está visible. Un <video loop>
-  // sigue DECODIFICANDO en segundo plano y calienta el equipo (queja de Juan, 25-jun). Al volver, reanuda.
-  useEffect(() => {
-    const vid = root.current?.querySelector<HTMLVideoElement>('video.ck-vid')
-    if (!vid) return
-    const onVis = () => {
-      if (document.hidden) vid.pause()
-      else vid.play().catch(() => {})
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [])
 
   function showIsland(warn: boolean) {
     const isl = islandRef.current
@@ -253,24 +241,9 @@ export default function Caja() {
         {/* ── HERO COCINA: el local toma el foco; el total del día flota sobre la cocina viva ── */}
         <section className={'ckitchen' + (descuadre ? ' warn' : '')} ref={heroRef}>
           <div className="ck-bg" aria-hidden="true">
-            {/* La cocina está VIVA pero la cámara NO se mueve: vídeo Seedance estático en bucle (parrilla
-                con llamas, una luz que parpadea, un cocinero que cruza, el camarero que se encoge de
-                hombros y se va). El póster = primer fotograma del vídeo → sin parpadeo al cargar.
-                Sin zoom/Ken-Burns: era lo que metía el "petardazo" al cambiar de día. Pedido de Juan (25-jun). */}
-            {reduceMotion() ? (
-              <div className="ck-vid ck-still" style={{ backgroundImage: "url('/img/kitchen-1.jpg')" }} />
-            ) : (
-              <video
-                className="ck-vid"
-                src="/video/kitchen-life.mp4"
-                poster="/img/kitchen-1.jpg"
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-              />
-            )}
+            {/* Fondo de cocina ESTÁTICO (sin vídeo) → la información se lee mejor y no calienta el equipo.
+                (Juan, 27-jun: "quita el vídeo del fondo para dejar mejor la información".) */}
+            <div className="ck-vid ck-still" style={{ backgroundImage: "url('/img/kitchen-1.jpg')" }} />
             <div className="ck-flick" />
             <div className="ck-embers">
               {EMBERS.map((e, i) => (
@@ -330,7 +303,7 @@ export default function Caja() {
                 <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
                 {descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}
               </div>
-              <div className="ck-cuadre-sub">Efectivo {eur(efectivoDia)} € · Tarjeta {eur(tarjetaDia)} €</div>
+              <div className="ck-cuadre-sub">💵 Efectivo {eur(efectivoDia)} € · 💳 Tarjeta {eur(tarjetaDia)} €</div>
             </div>
 
             {/* UNA línea de diseño: el MISMO componente <Stat> para todos → valor grande + unidad
