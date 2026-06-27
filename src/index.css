@@ -410,6 +410,18 @@ body {
 .day-split .ds-dot { color: var(--faint); }
 [data-theme='light'] .day-row { border-top-color: rgba(15,20,35,.07); }
 
+/* Gráfica de ventas + Caja del día LADO A LADO (desktop); apiladas en móvil */
+.ck-toprow { display: grid; grid-template-columns: 1fr; gap: 16px; }
+/* la .chartcard trae un `grid-area: chart` de un layout antiguo (.wrap, ≥1024px) que
+   la saca de sitio dentro de esta rejilla → lo reseteo para que fluya normal. */
+.ck-toprow .chartcard { grid-area: auto; }
+@media (min-width: 900px) {
+  .ck-toprow { grid-template-columns: 1.5fr 1fr; align-items: stretch; }
+  .ck-toprow > * { min-width: 0; }
+  .ck-toprow .turno-day { display: flex; flex-direction: column; }
+  .ck-toprow .day-rows { flex: 1; justify-content: center; }
+}
+
 /* CAJA INMERSIVA: ocupa TODA la pestaña sin bordes ni padding; la cabecera (tema/sonido/dino) flota DENTRO
    sobre la cocina. Pedido de Juan (24-jun): "que ocupe la pestaña completa, sin bordes, todo dentro". */
 .panel-main.caja-full .panel-content { padding: 0; }

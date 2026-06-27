@@ -366,6 +366,9 @@ export default function Caja() {
 
             {/* Gráfica + turnos INTEGRADOS dentro de la misma página de cocina (glass), no como recuadros aparte */}
             <div className="ck-sub">
+              {/* Gráfica de ventas + Caja del día LADO A LADO (ahorra espacio, todo de un vistazo).
+                  En móvil se apilan. (Juan, 27-jun) */}
+              <div className="ck-toprow">
               <SalesChart />
               {/* Caja del día UNIFICADA: total + métodos en números limpios (sin barras),
                   con el split Mañana/Tarde debajo. (Juan, 27-jun: "las barras sobran, unificar en 1") */}
@@ -384,6 +387,7 @@ export default function Caja() {
                   <span className="ds-dot">·</span>
                   <span className="ds-seg">☾ Tarde <b className="tnum">{eur(subT)} €</b></span>
                 </div>
+              </div>
               </div>
 
               {/* Balance de platos del día + alerta de stock para mañana (cruce ventas × stock) */}
