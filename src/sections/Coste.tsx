@@ -1,65 +1,69 @@
+import { useMemo } from 'react'
 import { Card, SectionHeader, KpiTile, BarChart, DataTable, Badge, Donut, Grid } from '../components/ui'
+import { useEquipo, horasSemana, costeHora, costeSemana, costeMes, costeDia, DIAS_CORTO } from '../lib/equipo'
 
-const costeSemana = [
-  { label: 'Lun', value: 390 },
-  { label: 'Mar', value: 410 },
-  { label: 'Mié', value: 420 },
-  { label: 'Jue', value: 445 },
-  { label: 'Vie', value: 510 },
-  { label: 'Sáb', value: 560 },
-  { label: 'Dom', value: 365 },
-]
+/* Coste personal — TODO derivado de la FUENTE ÚNICA `lib/equipo`: coste REAL = horas trabajadas (turnos
+   de Horarios) × coste/hora de cada empleado. Edita un sueldo en Empleados o un turno en Horarios y aquí
+   cambia al instante. Antes era una tabla 100% estática con personas distintas. (cimiento 0.1, ask de Juan) */
 
-const columnas = [
-  { key: 'empleado', label: 'Empleado' },
-  { key: 'horas', label: 'Horas/sem', align: 'right' as const },
-  { key: 'costeHora', label: 'Coste/hora', align: 'right' as const },
-  { key: 'costeSem', label: 'Coste/sem', align: 'right' as const },
-]
+// Facturación del mes para el % sobre ventas. PENDIENTE (0.3): enchufar a la fuente única VENTAS real.
+const VENTAS_MES = 48250
 
-const filas = [
-  { empleado: 'Carlos Vázquez', horas: 40, costeHora: '9,50 €', costeSem: '380,00 €' },
-  { empleado: 'Laura Díaz', horas: 35, costeHora: '9,50 €', costeSem: '332,50 €' },
-  { empleado: 'Iván Fernández', horas: 38, costeHora: '10,20 €', costeSem: '387,60 €' },
-  { empleado: 'Marta Soto', horas: 32, costeHora: '9,80 €', costeSem: '313,60 €' },
-  { empleado: 'Pablo Romero', horas: 40, costeHora: '11,00 €', costeSem: '440,00 €' },
-  { empleado: 'Ana López', horas: 28, costeHora: '9,50 €', costeSem: '266,00 €' },
-]
+const fmt2 = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmt0 = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 0 })
+const todayIdx = (new Date().getDay() + 6) % 7 // Lun=0 … Dom=6
 
 export default function Coste() {
+  const roster = useEquipo()
+
+  const d = useMemo(() => {
+    const perEmp = roster.map((e) => ({ nombre: e.nombre, horas: horasSemana(e), costeHora: costeHora(e), costeSem: costeSemana(e) }))
+    const costePorDia = DIAS_CORTO.map((_, di) => Math.round(roster.reduce((s, e) => s + costeDia(e, di), 0)))
+    const semana = perEmp.reduce((s, e) => s + e.costeSem, 0)
+    const mes = roster.reduce((s, e) => s + costeMes(e), 0)
+    const hoy = costePorDia[todayIdx]
+    const media = Math.round(costePorDia.reduce((s, v) => s + v, 0) / 7)
+    const pctVentas = Math.round((mes / VENTAS_MES) * 100)
+    const completas = roster.filter((e) => e.jornada === 'Completa').length
+    const pctCompletas = roster.length ? Math.round((completas / roster.length) * 100) : 0
+    const costeFinde = costePorDia[5] + costePorDia[6]
+    const pctFinde = semana > 0 ? Math.round((costeFinde / semana) * 100) : 0
+    return { perEmp, costePorDia, semana, mes, hoy, media, pctVentas, pctCompletas, pctFinde }
+  }, [roster])
+
   return (
     <div className="section">
       <SectionHeader
         title="Coste personal"
         subtitle="Análisis de coste"
-        right={<Badge tone="amber">⚠ 26% s/ventas</Badge>}
+        right={<Badge tone={d.pctVentas > 30 ? 'amber' : 'green'}>{d.pctVentas}% s/ventas</Badge>}
       />
 
       <Grid cols={4} className="kpi-grid">
-        <KpiTile label="Coste hoy" value="430,00" unit="€" delta="+2,4%" foot="vs ayer" trend="down" />
-        <KpiTile label="Coste semana" value="3.100,00" unit="€" delta="-1,1%" foot="vs sem. anterior" trend="up" />
-        <KpiTile label="Coste mes" value="12.400,00" unit="€" delta="+3,2%" foot="vs mes anterior" trend="down" />
-        <KpiTile label="% sobre ventas" value="26" unit="%" delta="-0,5 pts" foot="vs media sector 28%" trend="up" />
+        <KpiTile label="Coste hoy" value={fmt0(d.hoy)} unit="€" delta="real" foot="turnos de hoy" trend="flat" />
+        <KpiTile label="Coste semana" value={fmt0(d.semana)} unit="€" delta="real" foot="horas × coste/hora" trend="flat" />
+        <KpiTile label="Coste mes" value={fmt0(d.mes)} unit="€" delta="estimado" foot="semana × 4,33" trend="flat" />
+        <KpiTile label="% sobre ventas" value={String(d.pctVentas)} unit="%" delta={d.pctVentas <= 28 ? '✓ sano' : '⚠ alto'} foot="media sector 28%" trend={d.pctVentas <= 28 ? 'up' : 'down'} />
       </Grid>
 
       <Grid cols={2}>
         <Card>
           <div className="card-head">
             <h3>Coste por día · esta semana</h3>
-            <Badge tone="amber">media 443 €</Badge>
+            <Badge tone="amber">media {fmt0(d.media)} €</Badge>
           </div>
-          <BarChart data={costeSemana} height={140} color="amber" />
+          <BarChart data={DIAS_CORTO.map((l, i) => ({ label: l, value: d.costePorDia[i] }))} height={140} color="amber" />
         </Card>
 
         <Card>
           <div className="card-head">
             <h3>Distribución del coste</h3>
-            <Badge tone="muted">6 empleados</Badge>
+            <Badge tone="muted">{roster.length} empleados</Badge>
           </div>
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', justifyContent: 'space-around', padding: '1rem 0' }}>
-            <Donut value={26} label="% s/ventas" sub="umbral recomendado 28%" tone="gold" />
-            <Donut value={68} label="jornadas completas" sub="vs contratos parciales" tone="green" />
-            <Donut value={42} label="coste fijo" sub="sobre total nómina" tone="amber" />
+            <Donut value={d.pctVentas} label="% s/ventas" sub="umbral recomendado 28%" tone="gold" />
+            <Donut value={d.pctCompletas} label="jornadas completas" sub="vs contratos parciales" tone="green" />
+            <Donut value={d.pctFinde} label="peso del finde" sub="sáb+dom sobre semana" tone="amber" />
           </div>
         </Card>
       </Grid>
@@ -69,7 +73,20 @@ export default function Coste() {
           <h3>Detalle por empleado</h3>
           <Badge tone="muted">semana actual</Badge>
         </div>
-        <DataTable columns={columnas} rows={filas} />
+        <DataTable
+          columns={[
+            { key: 'empleado', label: 'Empleado' },
+            { key: 'horas', label: 'Horas/sem', align: 'right' as const },
+            { key: 'costeHora', label: 'Coste/hora', align: 'right' as const },
+            { key: 'costeSem', label: 'Coste/sem', align: 'right' as const },
+          ]}
+          rows={d.perEmp.map((e) => ({
+            empleado: e.nombre,
+            horas: e.horas,
+            costeHora: fmt2(e.costeHora) + ' €',
+            costeSem: fmt2(e.costeSem) + ' €',
+          }))}
+        />
       </Card>
     </div>
   )

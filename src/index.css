@@ -1641,6 +1641,10 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .eb-field input:focus, .eb-field select:focus { border-color: var(--role); }
 .eb-field select { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .eb-field option { background: #14141a; color: #fff; }
+.eb-note { margin: 2px 0 0; font-size: var(--fs-3xs); line-height: 1.45; color: rgba(255,255,255,.42); }
+.eb-note b { color: rgba(255,255,255,.7); font-weight: 700; }
+[data-theme='light'] .eb-note { color: rgba(20,24,34,.5); }
+[data-theme='light'] .eb-note b { color: rgba(20,24,34,.78); }
 .eb-actions { display: flex; gap: 8px; padding: 8px 13px 10px; border-top: 1px solid rgba(255,255,255,.08); flex: none; }
 .eb-btn { flex: 1; padding: 9px; border-radius: 9px; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; border: 1px solid transparent; transition: transform .12s, background .16s; }
 .eb-btn:active { transform: scale(.97); }

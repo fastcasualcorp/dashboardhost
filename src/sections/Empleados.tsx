@@ -1,32 +1,13 @@
-import { useState, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { Card, SectionHeader, KpiTile, DataTable, Badge, Grid } from '../components/ui'
 import { play } from '../lib/sound'
+import { useEquipo, updateEmp, costeMes, ROLE_META, ROLE_KEYS, type Emp, type Role } from '../lib/equipo'
 
 /* Empleados — vista FICHAS (mismo lenguaje que la Carta): foto héroe como SILUETA (tipo "personaje sin
    desbloquear" de videojuego) + panel glossy con muesca + stat con glow + color por rol. Cada ficha FLIPa
-   en 3D para editar sus datos (sueldo, cargo, horario, jornada). Toggle a la TABLA clásica. Pedido Juan (24-jun).
-   Avatares genéricos por género (Nano Banana, persona única con pelo); en silueta no se distingue la cara. */
-
-type Role = 'encargado' | 'cocina' | 'sala' | 'reparto'
-const ROLE_META: Record<Role, { label: string; color: string; emoji: string; tone: 'gold' | 'amber' | 'blue' | 'green' }> = {
-  encargado: { label: 'Encargado/a', color: '#ffbf10', emoji: '👑', tone: 'gold' },
-  cocina: { label: 'Cocina', color: '#f5a524', emoji: '🍳', tone: 'amber' },
-  sala: { label: 'Sala', color: '#3a86ff', emoji: '🪑', tone: 'blue' },
-  reparto: { label: 'Reparto', color: '#34d399', emoji: '🛵', tone: 'green' },
-}
-const ROLE_KEYS = Object.keys(ROLE_META) as Role[]
-
-type Emp = { id: string; nombre: string; role: Role; jornada: 'Completa' | 'Parcial'; liquido: number; coste: number; antig: string; horario: string; sexo: 'h' | 'm' }
-const EMP0: Emp[] = [
-  { id: 'e1', nombre: 'Marta Fernández', role: 'encargado', jornada: 'Completa', liquido: 1420, coste: 1990, antig: '4 años', horario: 'L-V 9:00–17:00', sexo: 'm' },
-  { id: 'e2', nombre: 'Carlos Rodríguez', role: 'encargado', jornada: 'Completa', liquido: 1380, coste: 1930, antig: '3 años', horario: 'L-V 13:00–21:00', sexo: 'h' },
-  { id: 'e3', nombre: 'Lucía Gómez', role: 'cocina', jornada: 'Completa', liquido: 1140, coste: 1600, antig: '2 años', horario: 'M-S 12:00–20:00', sexo: 'm' },
-  { id: 'e4', nombre: 'Iván Martínez', role: 'cocina', jornada: 'Completa', liquido: 1140, coste: 1600, antig: '1 año', horario: 'M-S 16:00–00:00', sexo: 'h' },
-  { id: 'e5', nombre: 'Sofía Castro', role: 'sala', jornada: 'Completa', liquido: 1080, coste: 1520, antig: '2 años', horario: 'X-D 13:00–21:00', sexo: 'm' },
-  { id: 'e6', nombre: 'Diego López', role: 'sala', jornada: 'Parcial', liquido: 640, coste: 900, antig: '1 año', horario: 'V-D 19:00–00:00', sexo: 'h' },
-  { id: 'e7', nombre: 'Elena Sánchez', role: 'reparto', jornada: 'Parcial', liquido: 680, coste: 950, antig: '8 meses', horario: 'J-D 20:00–00:00', sexo: 'm' },
-  { id: 'e8', nombre: 'Pablo Vidal', role: 'reparto', jornada: 'Parcial', liquido: 640, coste: 910, antig: '6 meses', horario: 'V-D 13:00–17:00', sexo: 'h' },
-]
+   en 3D para editar sus datos (sueldo, cargo, jornada). Toggle a la TABLA clásica.
+   DATOS desde la FUENTE ÚNICA `lib/equipo` → el sueldo y el coste/mes que se editan aquí cambian a la vez
+   en Horarios y Coste personal. El coste/mes se DERIVA del horario real (no un número clavado). */
 
 const e0 = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 0 })
 const avatar = (e: Emp) => (e.sexo === 'h' ? '/img/staff-man.jpg' : '/img/staff-woman.jpg')
@@ -50,20 +31,28 @@ const Xmark = () => (
   </svg>
 )
 
-type Draft = { nombre: string; role: Role; liquido: string; horario: string; jornada: 'Completa' | 'Parcial' }
+type Draft = { nombre: string; role: Role; liquido: string; jornada: 'Completa' | 'Parcial' }
 
 export default function Empleados() {
+  const emps = useEquipo()
   const [vista, setVista] = useState<'fichas' | 'tabla'>('fichas')
-  const [emps, setEmps] = useState<Emp[]>(EMP0)
   const [editId, setEditId] = useState<string | null>(null)
-  const [draft, setDraft] = useState<Draft>({ nombre: '', role: 'sala', liquido: '', horario: '', jornada: 'Completa' })
+  const [draft, setDraft] = useState<Draft>({ nombre: '', role: 'sala', liquido: '', jornada: 'Completa' })
+
+  // KPIs DERIVADOS en vivo (antes eran números clavados que no se movían al editar).
+  const kpi = useMemo(() => {
+    const n = emps.length
+    const costeEmp = emps.reduce((s, e) => s + costeMes(e), 0)
+    const medio = n ? Math.round(emps.reduce((s, e) => s + e.liquidoMes, 0) / n) : 0
+    return { n, costeEmp, medio }
+  }, [emps])
 
   const filas = emps.map((e) => ({
     nombre: e.nombre,
     categoria: <Badge tone={ROLE_META[e.role].tone}>{ROLE_META[e.role].label}</Badge>,
     jornada: e.jornada,
-    liquido: `${e0(e.liquido)},00 €`,
-    coste: `${e0(e.coste)},00 €`,
+    liquido: `${e0(e.liquidoMes)},00 €`,
+    coste: `${e0(costeMes(e))} €`,
   }))
 
   function cambiarVista(v: 'fichas' | 'tabla') {
@@ -72,7 +61,7 @@ export default function Empleados() {
     play('tap', 0.45)
   }
   function openEdit(e: Emp) {
-    setDraft({ nombre: e.nombre, role: e.role, liquido: String(e.liquido), horario: e.horario, jornada: e.jornada })
+    setDraft({ nombre: e.nombre, role: e.role, liquido: String(e.liquidoMes), jornada: e.jornada })
     setEditId(e.id)
     play('tap', 0.45)
   }
@@ -82,19 +71,24 @@ export default function Empleados() {
   }
   function saveEdit(id: string) {
     const liq = parseInt(draft.liquido.replace(/[^\d]/g, ''), 10)
-    setEmps((list) => list.map((e) => (e.id === id ? { ...e, nombre: draft.nombre.trim() || e.nombre, role: draft.role, liquido: isNaN(liq) ? e.liquido : liq, horario: draft.horario.trim() || e.horario, jornada: draft.jornada } : e)))
+    updateEmp(id, {
+      nombre: draft.nombre.trim() || undefined,
+      role: draft.role,
+      liquidoMes: isNaN(liq) ? undefined : liq,
+      jornada: draft.jornada,
+    })
     setEditId(null)
     play('toggle', 0.5)
   }
 
   return (
     <div className="section">
-      <SectionHeader title="Empleados" subtitle="Plantilla" right={<Badge tone="muted">8 activos</Badge>} />
+      <SectionHeader title="Empleados" subtitle="Plantilla" right={<Badge tone="muted">{kpi.n} activos</Badge>} />
 
       <Grid cols={3} className="kpi-grid">
-        <KpiTile label="Empleados" value="8" unit="personas" delta="0" foot="plantilla actual" trend="flat" />
-        <KpiTile label="Coste empresa / mes" value="12.400,00" unit="€" delta="+1,6%" foot="vs mes anterior" trend="down" />
-        <KpiTile label="Salario medio neto" value="1.012,50" unit="€" delta="estable" foot="media plantilla" trend="flat" />
+        <KpiTile label="Empleados" value={String(kpi.n)} unit="personas" delta="0" foot="plantilla actual" trend="flat" />
+        <KpiTile label="Coste empresa / mes" value={kpi.costeEmp.toLocaleString('es-ES')} unit="€" delta="real" foot="horas × coste/hora" trend="flat" />
+        <KpiTile label="Salario medio neto" value={kpi.medio.toLocaleString('es-ES')} unit="€" delta="media" foot="líquido plantilla" trend="flat" />
       </Grid>
 
       <div className="emp-bar">
@@ -124,7 +118,7 @@ export default function Empleados() {
                   <button className="emp-edit" onClick={() => openEdit(e)} aria-label={`Editar ${e.nombre}`}><Pencil /></button>
                   <span className="emp-id">#{String(i + 1).padStart(2, '0')}</span>
                   <span className="emp-stat">
-                    <b className="emp-stat-num">{e0(e.liquido)}€</b>
+                    <b className="emp-stat-num">{e0(e.liquidoMes)}€</b>
                     <small>Líquido / mes</small>
                   </span>
                   <span className="emp-panel">
@@ -134,7 +128,7 @@ export default function Empleados() {
                       <span className="emp-notch" aria-hidden="true" />
                     </span>
                     <span className="emp-foot">
-                      <span className="emp-f"><b>{e0(e.coste)} €</b><i>Coste empresa</i></span>
+                      <span className="emp-f"><b>{e0(costeMes(e))} €</b><i>Coste empresa</i></span>
                       <span className="emp-f right"><b>{e.antig}</b><i>Antigüedad</i></span>
                     </span>
                   </span>
@@ -162,7 +156,7 @@ export default function Empleados() {
                         </select>
                       </label>
                     </div>
-                    <label className="eb-field"><span>Horario</span><input value={draft.horario} onChange={(ev) => setDraft({ ...draft, horario: ev.target.value })} /></label>
+                    <p className="eb-note">El horario y el coste real se ajustan en <b>Horarios</b> y <b>Coste personal</b>.</p>
                   </div>
                   <div className="eb-actions">
                     <button className="eb-btn ghost" onClick={cancelEdit}>Cancelar</button>
