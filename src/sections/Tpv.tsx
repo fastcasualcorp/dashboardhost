@@ -9,6 +9,7 @@ import { loadSalonLive, loadSalon, allLibre, saveSalon, mesaRemaining, cobroAmou
 import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro, registrarCierre, type Metodo } from '../lib/wallet'
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
+import { registrarAcceso } from '../lib/acceso'
 import { pushComanda } from '../lib/comandas'
 import { cuentaTotal, cuentaItems, addToCuenta, seedCuenta, clearCuenta, clearAllCuentas, useCuentas } from '../lib/cuentas'
 import { appendVenta } from '../lib/ventas'
@@ -408,10 +409,12 @@ export default function Tpv() {
       if (cajaModal === 'abrir') {
         setCaja(abrirCaja())
         resetWallet() // turno nuevo → la cartera del día arranca de 0 y acumula hasta el cierre
+        void registrarAcceso('abrir_caja') // registro de seguridad (quién abrió, desde dónde)
         play('success', 0.5, 1.15)
       } else {
         setReward({ total: walletTotal(), tickets: ticketsHoy() }) // dispara la recompensa de cierre (caja del día)
         registrarCierre(ticketsHoy()) // → libro de cierres AUDITABLE en Supabase (A3/5.7) antes de resetear
+        void registrarAcceso('cerrar_caja') // registro de seguridad (quién cerró, desde dónde)
         setCaja(cerrarCaja())
       }
       setCajaModal(null)

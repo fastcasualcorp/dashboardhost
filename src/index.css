@@ -2717,6 +2717,17 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .vtpv-z-print:hover { filter: brightness(1.12); }
 .vtpv-z-print:active { transform: scale(.97); }
 
+/* ── Accesos (registro de seguridad) ── */
+.acc-when { display: inline-flex; flex-direction: column; line-height: 1.25; }
+.acc-when b { font-weight: 700; }
+.acc-date { font-size: var(--fs-2xs); color: var(--muted); }
+.acc-user { font-weight: 600; }
+.acc-ip { color: var(--muted); letter-spacing: .01em; }
+.acc-disp { color: var(--muted); font-size: var(--fs-sm); }
+.acc-legend { gap: 10px; }
+.acc-legend-row { display: flex; }
+.acc-foot { margin-top: 14px; font-size: var(--fs-2xs); color: var(--faint); text-align: center; }
+
 @media (max-width: 760px) {
   .vtpv-hero { flex-direction: column; }
   .vtpv-hero-chart { width: 100%; }

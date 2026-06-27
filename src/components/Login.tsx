@@ -4,6 +4,7 @@ import { play, playBeast, preloadSfx } from '../lib/sound'
 import { beastById } from '../lib/beasts'
 import { reduceMotion } from '../lib/data'
 import { supabase, hasSupabase } from '../lib/supabase'
+import { registrarAcceso } from '../lib/acceso'
 
 // Fondos de cocina que rotan en bucle (pantalla de carga estilo videojuego),
 // con crossfade suave. El primero es el de siempre; el resto se generaron aparte.
@@ -136,6 +137,7 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
       play('error', 0.4)
       return
     }
+    void registrarAcceso('login') // registro de seguridad (la IP la pone el servidor)
     finish(p)
   }
   function finish(p: Profile) {

@@ -10,6 +10,7 @@ import Online from './Online'
 import Ventas from './Ventas'
 import VentasTpv from './VentasTpv'
 import Arqueos from './Arqueos'
+import Accesos from './Accesos'
 import MapaIncidencia from './MapaIncidencia'
 import Estadisticas from './Estadisticas'
 import Mensual from './Mensual'
@@ -35,6 +36,7 @@ const MAP: Record<string, ComponentType> = {
   ventas: Ventas,
   ventastpv: VentasTpv,
   arqueos: Arqueos,
+  accesos: Accesos,
   mapa: MapaIncidencia,
   estad: Estadisticas,
   mensual: Mensual,
