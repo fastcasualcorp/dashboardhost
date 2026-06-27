@@ -10,6 +10,7 @@ import { play, playBeast, playPowerup, preloadSfx, setAudio } from '../lib/sound
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import CommentLayer from './CommentLayer'
 import WalletHoy from './WalletHoy'
+import DeployBadge from './DeployBadge'
 import { beastById } from '../lib/beasts'
 import { renderSection } from '../sections/registry'
 import { applySavedDesign } from '../lib/designTokens'
@@ -334,6 +335,7 @@ export default function Shell() {
             </div>
           ))}
         </nav>
+        <DeployBadge />
       </aside>
       {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
