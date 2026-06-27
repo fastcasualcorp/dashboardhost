@@ -4,6 +4,7 @@ import { SectionHeader, Badge, Stat, StatRow } from '../components/ui'
 import { play } from '../lib/sound'
 import { type Mesa, type MesaForma, type MesaEstado, loadSalon, saveSalon, loadSalonDB, saveSalonDB, seatPositions, totalPlazas, seedStates, cobroAmount, ESTADO_COLOR, elePath } from '../lib/salon'
 import { fireCobro, logCobro, addWallet } from '../lib/wallet'
+import { cuentaTotal, clearCuenta } from '../lib/cuentas'
 import { MesaTile } from '../components/MesaTile'
 
 /* Editor de Salón — diseñas tu sala arrastrando mesas, ajustando tamaño/forma y
@@ -363,13 +364,14 @@ export default function Salon() {
     const ne = nextEstado(m.estado)
     // COBRO: cobrar → libre = se paga la mesa → moneditas vuelan a la cartera del día + apunte en el desglose
     if (m.estado === 'cobrar' && ne === 'libre') {
-      const amount = cobroAmount(m)
+      const amount = cuentaTotal(m.id) || cobroAmount(m) // importe REAL de la mesa (cuenta fijada) o la semilla estable
       const r = e?.currentTarget?.getBoundingClientRect()
       const x = r ? r.left + r.width / 2 : window.innerWidth / 2
       const y = r ? r.top + r.height / 2 : window.innerHeight / 2
       addWallet(amount) // EL DINERO SUBE EN ORIGEN (robusto, aunque la animación de monedas fallara)
       logCobro(amount, 'mesa', `Mesa ${m.nombre}`)
       fireCobro({ amount, x, y, coins: 9 }) // monedas = adorno hacia la cartera
+      clearCuenta(m.id) // la mesa queda saldada
       play('success', 0.5, 0.92)
     }
     patch(m.id, {

@@ -10,6 +10,7 @@ import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
 import { pushComanda } from '../lib/comandas'
+import { cuentaTotal, seedCuenta, clearCuenta } from '../lib/cuentas'
 import { supabase, localId } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
@@ -166,14 +167,25 @@ export default function Tpv() {
   }
   // Tocar una mesa POR COBRAR = cobrarla: las moneditas vuelan a la cartera del día (arriba-dcha), la mesa
   // queda LIBRE y el picker sigue abierto (ves cómo se pone verde y el € sube). No abre pedido. (Juan, 26-jun)
+  // Candado: ninguna operación de DINERO sin la caja abierta (antes el badge era decorativo). gap 1.5
+  function requireCaja(): boolean {
+    if (caja.abierta) return true
+    play('error', 0.4)
+    setPickOpen(false)
+    setCajaModal('abrir') // guía al usuario a abrir la caja (PIN del encargado)
+    return false
+  }
   function cobrarMesa(m: Mesa, e?: ReactMouseEvent<HTMLButtonElement>) {
-    const amount = cobroAmount(m)
+    if (!requireCaja()) return
+    // importe REAL de la mesa: su cuenta acumulada; si no tiene (mesa que pidió cuenta por tiempo), la semilla estable
+    const amount = cuentaTotal(m.id) || cobroAmount(m)
     const r = e?.currentTarget?.getBoundingClientRect()
     const x = r ? r.left + r.width / 2 : window.innerWidth / 2
     const y = r ? r.top + r.height / 2 : window.innerHeight / 2
     addWallet(amount) // EL DINERO SUBE EN ORIGEN (robusto, no depende de la animación de monedas)
     logCobro(amount, 'mesa', `Mesa ${m.nombre}`) // apunta el pedido en el desglose de la cartera
     fireCobro({ amount, x, y, coins: 9 }) // monedas = solo el adorno que vuela a la cartera
+    clearCuenta(m.id) // la mesa queda saldada
     setMesas((prev) => {
       const cobrada = prev.map((mm) => (mm.id === m.id ? { ...mm, estado: 'libre' as const, since: undefined, reservaFin: undefined } : mm))
       const next = avanzarServicio(cobrada, Date.now(), m.id)
@@ -212,6 +224,7 @@ export default function Tpv() {
   // "Cobrar" abre el panel de pago (elegir efectivo/tarjeta). El cobro real lo hace confirmCobro.
   function openPay() {
     if (!cart.length) return
+    if (!requireCaja()) return
     setMetodo(null)
     setCash('')
     setPayOpen(true)
@@ -228,6 +241,7 @@ export default function Tpv() {
     setPaid(true)
     setCart([])
     void persistVenta(total, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
+    if (mesa) clearCuenta(mesa.id) // el ticket salda la mesa → sin cuenta huérfana
     setMesa(null) // la mesa queda libre tras cobrar
     setTicket(null) // cerrado el ticket → el siguiente pedido toma un nº nuevo
     setPayOpen(false)
@@ -252,6 +266,7 @@ export default function Tpv() {
           const rem = mesaRemaining(m, t)
           if (m.estado === 'ocupada' && rem != null && rem <= 0) {
             changed = true
+            seedCuenta(m.id, cobroAmount(m)) // al pedir la cuenta, su importe queda FIJADO (estable, no recalculado)
             return { ...m, estado: 'cobrar' as const, reservaFin: undefined }
           }
           return m
