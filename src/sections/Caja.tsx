@@ -16,37 +16,39 @@ type Turn = { efectivo: number; tarjeta: number; domicilio: number }
 const NEGOCIO = 47280
 // Abreviaturas de día (tira de fechas, estilo week-strip).
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-// Mensajes que motivan y enganchan (estilo "estás en el top X" — alentadores, datos de demo).
-const MOTIV = [
-  'Estás en el top 5% de tu zona 🔥',
-  'Mejor semana en crecimiento del barrio 📈',
-  'Vas camino de tu récord de junio 🏆',
-  'Por encima de la media de tu zona ✨',
-  'Racha de 5 días cuadrando caja 💪',
-]
 
-/* Tarta (donut) de 3 quesos: efectivo / tarjeta / domicilio del día. */
+/* Tarta (donut) premium de 3 quesos (efectivo/tarjeta/domicilio): quesos con
+   extremos redondeados + hueco entre ellos, sobre una pista tenue, y en el centro
+   el % del método dominante del día. */
 function DayDonut({ efe, tar, dom }: { efe: number; tar: number; dom: number }) {
   const total = efe + tar + dom || 1
   const r = 30
   const c = 2 * Math.PI * r
+  const GAP = 14 // hueco premium entre quesos (incluye el redondeo del extremo)
   const segs = [
-    { v: efe, color: 'var(--cash)', k: 'e' },
-    { v: tar, color: 'var(--card)', k: 't' },
-    { v: dom, color: 'var(--home)', k: 'd' },
-  ]
+    { v: efe, color: 'var(--cash)', name: 'efectivo' },
+    { v: tar, color: 'var(--card)', name: 'tarjeta' },
+    { v: dom, color: 'var(--home)', name: 'domicilio' },
+  ].filter((s) => s.v > 0)
+  const top = segs.reduce((a, b) => (b.v > a.v ? b : a), segs[0] || { v: 0, name: '—' })
+  const topPct = Math.round((top.v / total) * 100)
   let acc = 0
   return (
     <div className="day-donut" aria-hidden="true">
       <svg viewBox="0 0 84 84">
-        <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="11" />
+        <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="9" />
         {segs.map((s) => {
-          const len = (s.v / total) * c
-          const off = -acc
-          acc += len
-          return <circle key={s.k} cx="42" cy="42" r={r} fill="none" stroke={s.color} strokeWidth="11" strokeLinecap="butt" strokeDasharray={`${len.toFixed(2)} ${(c - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" />
+          const seg = (s.v / total) * c
+          const len = Math.max(1, seg - GAP)
+          const off = -(acc + GAP / 2)
+          acc += seg
+          return <circle key={s.name} cx="42" cy="42" r={r} fill="none" stroke={s.color} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${len.toFixed(2)} ${(c - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" />
         })}
       </svg>
+      <div className="day-donut-c">
+        <b className="tnum">{topPct}<i>%</i></b>
+        <span>{top.name}</span>
+      </div>
     </div>
   )
 }
@@ -61,7 +63,6 @@ export default function Caja() {
 
   const [descuadre, setDescuadre] = useState(false)
   const [shine, setShine] = useState(false)
-  const [motivIdx, setMotivIdx] = useState(0) // mensaje motivador rotativo
 
   // ── Navegación por FECHA: el cierre de cualquier día (no solo hoy) ──
   const [fecha, setFecha] = useState<Date>(() => new Date(HOY))
@@ -130,12 +131,6 @@ export default function Caja() {
     fillBars()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dia])
-
-  // Mensajes que motivan al usuario (rotan despacio para mantenerlo enganchado).
-  useEffect(() => {
-    const iv = window.setInterval(() => setMotivIdx((i) => (i + 1) % MOTIV.length), 5500)
-    return () => clearInterval(iv)
-  }, [])
 
   // El número GIGANTE (facturación del negocio) se muestra SIEMPRE con su valor final, sin contador ni
   // desenfoque (pedido de Juan, 26-jun: fuera el efecto rodante, que el número esté ahí de entrada).
@@ -312,7 +307,6 @@ export default function Caja() {
                 </span>
                 <span className="u">€</span>
               </div>
-              <div className="ck-motiv" key={motivIdx}>{MOTIV[motivIdx]}</div>
               <div className={'ck-cuadre' + (descuadre ? ' warn' : '')} ref={balanceRef}>
                 <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
                 {descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}

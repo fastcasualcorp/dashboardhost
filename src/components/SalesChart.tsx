@@ -158,11 +158,13 @@ export default function SalesChart() {
             {/* área + línea NÍTIDA (sin glow borroso) */}
             <path className="dc-area" d={area} fill="url(#dca)" stroke="none" />
             <path className="dc-line" d={line} stroke="url(#dcl)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            {/* punto VIVO de hoy — anillos NÍTIDOS, cero halo sucio */}
-            <circle className="dc-dot-pulse" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
-            <circle className="dc-dot-ring2" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="10" fill="none" />
-            <circle className="dc-dot-ring" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
-            <circle className="dc-dot" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="4.2" />
+            {/* punto VIVO de hoy — se OCULTA al pasar por otro punto (si no, parecen 2 seleccionados). Juan */}
+            <g style={{ opacity: hover == null ? 1 : 0, transition: 'opacity .15s ease' }}>
+              <circle className="dc-dot-pulse" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
+              <circle className="dc-dot-ring2" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="10" fill="none" />
+              <circle className="dc-dot-ring" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
+              <circle className="dc-dot" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="4.2" />
+            </g>
           </svg>
         )}
 

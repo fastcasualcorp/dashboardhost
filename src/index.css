@@ -412,8 +412,12 @@ body {
 /* Tarta (donut) + filas lado a lado dentro del bloque Caja del día */
 .day-body { display: flex; align-items: center; gap: clamp(14px, 2.2vw, 26px); }
 .day-body .day-rows { flex: 1; min-width: 0; }
-.day-donut { flex: 0 0 auto; }
-.day-donut svg { width: clamp(86px, 9vw, 112px); height: clamp(86px, 9vw, 112px); display: block; }
+.day-donut { flex: 0 0 auto; position: relative; }
+.day-donut svg { width: clamp(96px, 9.5vw, 118px); height: clamp(96px, 9.5vw, 118px); display: block; }
+.day-donut-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; line-height: 1; }
+.day-donut-c b { font-family: var(--font-num); font-weight: 650; font-size: clamp(19px, 2vw, 23px); color: var(--ink); letter-spacing: var(--num-spacing); }
+.day-donut-c b i { font-style: normal; font-size: .5em; color: var(--muted); margin-left: 1px; }
+.day-donut-c span { font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin-top: 3px; font-weight: 700; }
 
 /* Gráfica de ventas + Caja del día LADO A LADO (desktop); apiladas en móvil */
 .ck-toprow { display: grid; grid-template-columns: 1fr; gap: 16px; }
