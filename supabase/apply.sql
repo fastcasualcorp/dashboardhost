@@ -126,6 +126,22 @@ do $$ begin
     then alter publication supabase_realtime add table public.mesas; end if;
 end $$;
 
+-- ── gastos fijos (por local, scoped) ──
+create table if not exists public.gastos (
+  id uuid primary key default gen_random_uuid(),
+  local_id uuid not null references public.locales(id) on delete cascade,
+  concepto text not null,
+  cat text not null default 'Otros',
+  base numeric(10,2) not null default 0,
+  iva int not null default 21,
+  creado_at timestamptz not null default now()
+);
+alter table public.gastos enable row level security;
+create index if not exists gastos_local_idx on public.gastos (local_id, creado_at);
+drop policy if exists "gastos: gestionar las de mi local" on public.gastos;
+create policy "gastos: gestionar las de mi local" on public.gastos for all to authenticated
+  using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
+
 -- ── Pedido online ATÓMICO y TRANSACCIONAL (lo llama la Edge Function) ──
 -- nº de comanda por local con lock (sin carrera) + comanda+venta en UNA transacción
 -- (o las dos o ninguna → nunca venta huérfana). SECURITY DEFINER, search_path fijo,
@@ -146,5 +162,23 @@ begin
 end $$;
 revoke all on function public.crear_pedido_online(text, text, jsonb, numeric, int) from public, anon, authenticated;
 grant execute on function public.crear_pedido_online(text, text, jsonb, numeric, int) to service_role;
+
+-- ── Guardar el plano del salón ATÓMICO (fix M4: delete+insert en UNA transacción) ──
+-- Corre como el usuario (SECURITY INVOKER): la RLS de `mesas` lo scopa a su local.
+-- Si algo falla, rollback → el local NUNCA se queda sin plano.
+create or replace function public.guardar_salon(p_mesas jsonb)
+returns void language plpgsql security invoker set search_path = '' as $$
+declare v_local uuid := public.jwt_local_id(); m jsonb; i int := 0;
+begin
+  if v_local is null then raise exception 'sin-local'; end if;
+  delete from public.mesas where local_id = v_local;
+  for m in select * from jsonb_array_elements(p_mesas) loop
+    insert into public.mesas (local_id, nombre, x, y, w, h, sillas, forma, rot, orden)
+    values (v_local, m->>'nombre', (m->>'x')::int, (m->>'y')::int, (m->>'w')::int, (m->>'h')::int,
+            (m->>'sillas')::int, m->>'forma', coalesce((m->>'rot')::int, 0), i);
+    i := i + 1;
+  end loop;
+end $$;
+grant execute on function public.guardar_salon(jsonb) to authenticated;
 
 -- Listo. Ahora Claude crea los locales + usuarios (service_role) y conecta la app.

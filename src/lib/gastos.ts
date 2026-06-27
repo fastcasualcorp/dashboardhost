@@ -7,6 +7,7 @@
    Patrón igual que lib/equipo.ts / lib/wallet.ts.
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
 
 export type Gasto = { id: string; concepto: string; cat: string; base: number; iva: number }
 
@@ -65,13 +66,38 @@ function emit() {
 
 export const getGastos = () => gastos
 
+/* ── Cableado Supabase (gastos por local), solo si hay sesión. Sin realtime
+   (un editor por local); hidrata + escribe. Siembra la demo la 1ª vez. ── */
+let _syncStarted = false
+let _live = false
+async function initSync() {
+  if (_syncStarted || !supabase) return
+  _syncStarted = true
+  const { data } = await supabase.auth.getSession()
+  const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
+  if (!lid) return // demo → localStorage
+  _live = true
+  let rows = (await supabase.from('gastos').select('*').eq('local_id', lid).order('creado_at')).data
+  if (!rows || !rows.length) {
+    await supabase.from('gastos').insert(SEED.map((g) => ({ local_id: lid, concepto: g.concepto, cat: g.cat, base: g.base, iva: g.iva })))
+    rows = (await supabase.from('gastos').select('*').eq('local_id', lid).order('creado_at')).data
+  }
+  if (rows) {
+    gastos = rows.map((r) => ({ id: r.id as string, concepto: r.concepto, cat: r.cat, base: Number(r.base), iva: r.iva }))
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:gastos'))
+  }
+}
+
 export function setGastoBase(id: string, base: number) {
-  gastos = gastos.map((g) => (g.id === id ? { ...g, base: Math.max(0, Math.round(base)) } : g))
+  const v = Math.max(0, Math.round(base))
+  gastos = gastos.map((g) => (g.id === id ? { ...g, base: v } : g))
   emit()
+  if (_live && supabase) supabase.from('gastos').update({ base: v }).eq('id', id).then(() => {})
 }
 export function setGastoIva(id: string, iva: number) {
   gastos = gastos.map((g) => (g.id === id ? { ...g, iva } : g))
   emit()
+  if (_live && supabase) supabase.from('gastos').update({ iva }).eq('id', id).then(() => {})
 }
 
 // Totales del mes (los que lee el Resumen → una sola cifra para "gastos fijos")
@@ -82,6 +108,7 @@ export const gastosMes = () => r2(gastos.reduce((s, g) => s + totalGasto(g), 0))
 export function useGastos(): Gasto[] {
   const [, force] = useState(0)
   useEffect(() => {
+    void initSync()
     const on = () => force((n) => n + 1)
     window.addEventListener('rebell:gastos', on)
     return () => window.removeEventListener('rebell:gastos', on)

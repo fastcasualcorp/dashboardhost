@@ -142,18 +142,16 @@ export async function loadSalonDB(): Promise<Mesa[] | null> {
   if (!lid) return null
   const { data, error } = await supabase.from('mesas').select('*').eq('local_id', lid).order('orden')
   if (error || !data || !data.length) return null
-  return data.map((r) => ({ id: r.id as string, nombre: r.nombre, x: r.x, y: r.y, w: r.w, h: r.h, sillas: r.sillas, forma: r.forma }))
+  return data.map((r) => ({ id: r.id as string, nombre: r.nombre, x: r.x, y: r.y, w: r.w, h: r.h, sillas: r.sillas, forma: r.forma, rot: r.rot ?? 0 }))
 }
 
-// Guarda el plano del local (reemplaza el suyo). Devuelve true si se guardó en BD.
+// Guarda el plano del local (reemplaza el suyo) de forma TRANSACCIONAL (RPC guardar_salon,
+// fix M4: delete+insert atómico → nunca deja el local sin plano). Devuelve true si OK.
 export async function saveSalonDB(mesas: Mesa[]): Promise<boolean> {
   if (!supabase) return false
   const lid = await resolveLocalId()
   if (!lid) return false
-  await supabase.from('mesas').delete().eq('local_id', lid)
-  if (!mesas.length) return true
-  const rows = mesas.map((m, i) => ({
-    local_id: lid,
+  const p_mesas = mesas.map((m) => ({
     nombre: m.nombre,
     x: Math.round(m.x),
     y: Math.round(m.y),
@@ -161,9 +159,9 @@ export async function saveSalonDB(mesas: Mesa[]): Promise<boolean> {
     h: Math.round(m.h),
     sillas: m.sillas,
     forma: m.forma,
-    orden: i,
+    rot: Math.round(m.rot ?? 0),
   }))
-  const { error } = await supabase.from('mesas').insert(rows)
+  const { error } = await supabase.rpc('guardar_salon', { p_mesas })
   return !error
 }
 
