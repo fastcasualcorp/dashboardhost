@@ -10,7 +10,7 @@ import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
 import { pushComanda } from '../lib/comandas'
-import { cuentaTotal, seedCuenta, clearCuenta, clearAllCuentas } from '../lib/cuentas'
+import { cuentaTotal, cuentaItems, addToCuenta, seedCuenta, clearCuenta, clearAllCuentas, useCuentas } from '../lib/cuentas'
 import { appendVenta } from '../lib/ventas'
 import { consumirVenta } from '../lib/almacen'
 import { supabase, localId } from '../lib/supabase'
@@ -140,11 +140,15 @@ export default function Tpv() {
   const inc = (id: string) => setCart((c) => c.map((l) => (l.id === id ? { ...l, qty: l.qty + 1 } : l)))
   const remove = (id: string) => setCart((c) => c.filter((l) => l.id !== id))
 
+  useCuentas() // open-tab: re-render al cambiar la cuenta de una mesa (rondas)
   const subtotal = cart.reduce((s, l) => s + l.price * l.qty, 0)
   const iva = subtotal * 0.1
   const total = subtotal + iva
   const items = cart.reduce((s, l) => s + l.qty, 0)
   const qtyOf = (id: string) => cart.find((l) => l.id === id)?.qty ?? 0
+  // CUENTA ABIERTA (multi-ronda): lo ya acumulado en la mesa + lo del carrito actual = lo que se cobra al cerrar.
+  const mesaTab = mesa ? cuentaTotal(mesa.id) : 0
+  const cobroTotal = Math.round((total + mesaTab) * 100) / 100
 
   // ── Mesa (del plano del Salón) ──
   function openPicker() {
@@ -222,11 +226,22 @@ export default function Tpv() {
     // → COCINA en vivo (KDS): la comanda aparece en el tablero al instante (store local)
     pushComanda({ n: ticketNum(tk), mesa: mesa?.nombre ?? null, items: cart.map((l) => ({ name: l.name, qty: l.qty })), src: 'Sala' })
     void persistComanda(cart, mesa?.nombre ?? null, tk) // + Supabase (trazabilidad), cuando haya backend
+    // CUENTA ABIERTA: si es una mesa, la ronda se SUMA a su cuenta y el carrito se vacía → listo para otra ronda.
+    if (mesa) {
+      addToCuenta(mesa.id, total, cart.map((l) => ({ name: l.name, qty: l.qty })))
+      setMesas((prev) => {
+        const next = prev.map((mm) => (mm.id === mesa.id ? { ...mm, estado: 'ocupada' as const, since: mm.since ?? Date.now() } : mm))
+        saveSalon(next)
+        return next
+      })
+      setCart([])
+      setTicket(null) // cada ronda lleva su propio nº de ticket de cocina
+    }
   }
 
   // "Cobrar" abre el panel de pago (elegir efectivo/tarjeta). El cobro real lo hace confirmCobro.
   function openPay() {
-    if (!cart.length) return
+    if (!cart.length && mesaTab <= 0) return // nada que cobrar (ni carrito ni cuenta abierta)
     if (!requireCaja()) return
     setMetodo(null)
     setCash('')
@@ -234,20 +249,26 @@ export default function Tpv() {
     play('tap', 0.45)
   }
   function confirmCobro(m: Metodo) {
-    if (!cart.length) return
-    const arts = cart.reduce((s, l) => s + l.qty, 0) // nº de artículos ANTES de vaciar el carrito (para el libro)
+    if (cobroTotal <= 0) return
+    // Se cobra TODO lo de la mesa: la cuenta acumulada (rondas ya enviadas) + lo que quede en el carrito.
+    const tabItems = mesa ? cuentaItems(mesa.id) : []
+    const allItems = [...tabItems, ...cart.map((l) => ({ name: l.name, qty: l.qty }))]
+    const arts = allItems.reduce((s, i) => s + i.qty, 0)
     // "Caja que suma": el ticket entra al MISMO bote que las moneditas (caja del día). La cartera "Hoy" y
     // "Ventas hoy" cuentan-arriba a la vez (mismo store + count-up del hook). + ka-ching escalado.
-    addWallet(total)
-    logCobro(total, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}`, m)
-    appendVenta({ id: ticket, tipo: 'ticket', arts, total, metodo: m, mesa: mesa?.nombre ?? null }) // → LIBRO de Ventas TPV (fuente única, en vivo)
-    consumirVenta(cart.map((l) => ({ name: l.name, qty: l.qty }))) // → ALMACÉN: baja el stock de los ingredientes vendidos
-    play('success', 0.5, total > 50 ? 0.84 : total > 25 ? 0.92 : 1)
+    addWallet(cobroTotal)
+    logCobro(cobroTotal, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}`, m)
+    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroTotal, metodo: m, mesa: mesa?.nombre ?? null }) // → LIBRO de Ventas TPV
+    consumirVenta(allItems) // → ALMACÉN: baja el stock de TODO lo vendido (cuenta + carrito)
+    play('success', 0.5, cobroTotal > 50 ? 0.84 : cobroTotal > 25 ? 0.92 : 1)
     setPulse((p) => p + 1)
     setPaid(true)
     setCart([])
-    void persistVenta(total, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
-    if (mesa) clearCuenta(mesa.id) // el ticket salda la mesa → sin cuenta huérfana
+    void persistVenta(cobroTotal, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
+    if (mesa) {
+      clearCuenta(mesa.id) // saldada la cuenta de la mesa
+      setMesas((prev) => { const next = prev.map((mm) => (mm.id === mesa.id ? { ...mm, estado: 'libre' as const, since: undefined, reservaFin: undefined } : mm)); saveSalon(next); return next })
+    }
     setMesa(null) // la mesa queda libre tras cobrar
     setTicket(null) // cerrado el ticket → el siguiente pedido toma un nº nuevo
     setPayOpen(false)
@@ -379,12 +400,12 @@ export default function Tpv() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prods, cart, total])
 
-  // Calculadora de cambio (pago en efectivo)
+  // Calculadora de cambio (pago en efectivo) — sobre el total a cobrar (cuenta + carrito)
   const cashNum = parseFloat(cash.replace(',', '.')) || 0
-  const cambio = Math.max(0, Math.round((cashNum - total) * 100) / 100)
+  const cambio = Math.max(0, Math.round((cashNum - cobroTotal) * 100) / 100)
   const payQuick = (() => {
-    const exact = Math.round(total * 100) / 100
-    const ups = [5, 10, 20, 50].map((s) => Math.ceil(total / s) * s).filter((v) => v > total + 0.001)
+    const exact = Math.round(cobroTotal * 100) / 100
+    const ups = [5, 10, 20, 50].map((s) => Math.ceil(cobroTotal / s) * s).filter((v) => v > cobroTotal + 0.001)
     return [exact, ...Array.from(new Set(ups))].slice(0, 5)
   })()
 
@@ -538,9 +559,15 @@ export default function Tpv() {
               <span>IVA 10%</span>
               <b className="tnum">{eur(iva)} €</b>
             </div>
+            {mesaTab > 0 && (
+              <div className="tk-row tk-tab">
+                <span>＋ Cuenta mesa {mesa?.nombre}</span>
+                <b className="tnum">{eur(mesaTab)} €</b>
+              </div>
+            )}
             <div className="tk-row big">
-              <span>Total</span>
-              <b className="tnum">{eur(total)} €</b>
+              <span>{mesaTab > 0 ? 'Total a cobrar' : 'Total'}</span>
+              <b className="tnum">{eur(mesaTab > 0 ? cobroTotal : total)} €</b>
             </div>
             <div className="tk-actions">
               <button className={'tk-comanda' + (sent ? ' ok' : '')} onClick={comanda} disabled={!cart.length}>
@@ -556,8 +583,8 @@ export default function Tpv() {
                   </>
                 )}
               </button>
-              <button className={'tpv-pay' + (cart.length ? '' : ' off')} onClick={openPay} disabled={!cart.length}>
-                Cobrar {eur(total)} €
+              <button className={'tpv-pay' + (cart.length || mesaTab > 0 ? '' : ' off')} onClick={openPay} disabled={!cart.length && mesaTab <= 0}>
+                Cobrar {eur(cobroTotal)} €
               </button>
             </div>
           </div>
@@ -703,7 +730,7 @@ export default function Tpv() {
             >
               <div className="pay-head">
                 <span className="pay-k">Cobrar {mesa ? '· Mesa ' + mesa.nombre : '· Para llevar'}</span>
-                <b className="pay-total tnum">{eur(total)} €</b>
+                <b className="pay-total tnum">{eur(cobroTotal)} €</b>
               </div>
               <div className="pay-methods">
                 <button className="pay-m card" onClick={() => confirmCobro('tarjeta')}>
@@ -729,8 +756,8 @@ export default function Tpv() {
                       <span>Cambio a devolver</span>
                       <b className="tnum">{eur(cambio)} €</b>
                     </div>
-                    <button className="pay-confirm" disabled={cashNum < total} onClick={() => confirmCobro('efectivo')}>
-                      {cashNum < total ? 'Elige el efectivo recibido' : `Cobrar · cambio ${eur(cambio)} €`}
+                    <button className="pay-confirm" disabled={cashNum < cobroTotal} onClick={() => confirmCobro('efectivo')}>
+                      {cashNum < cobroTotal ? 'Elige el efectivo recibido' : `Cobrar · cambio ${eur(cambio)} €`}
                     </button>
                   </motion.div>
                 )}
