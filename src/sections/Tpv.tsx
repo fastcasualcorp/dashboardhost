@@ -55,6 +55,7 @@ export default function Tpv() {
   const [cash, setCash] = useState('')
   const [split, setSplit] = useState(1) // dividir la cuenta entre N personas
   const [paidShares, setPaidShares] = useState(0) // partes ya cobradas
+  const [reciboPorPersona, setReciboPorPersona] = useState(false) // al dividir: imprimir el justificante de cada parte
   const [cat, setCat] = useState('Burgers')
   const [building, setBuilding] = useState<Producto | null>(null)
   const [picks, setPicks] = useState<Record<string, string>>({})
@@ -247,6 +248,39 @@ export default function Tpv() {
   }
 
   // "Cobrar" abre el panel de pago (elegir efectivo/tarjeta). El cobro real lo hace confirmCobro.
+  // Justificante (recibo) de una PARTE al dividir la cuenta → cada persona se lleva el suyo.
+  function printRecibo(amount: number, parteLabel: string, m: Metodo) {
+    const f = new Date()
+    const dd = `${f.getDate()}/${f.getMonth() + 1}/${f.getFullYear()} ${String(f.getHours()).padStart(2, '0')}:${String(f.getMinutes()).padStart(2, '0')}`
+    const dest = mesa ? `Mesa ${mesa.nombre}` : 'Para llevar'
+    const html = `<!doctype html><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        *{box-sizing:border-box} body{margin:0;background:#0d0d0f;color:#f5f5f7;font:13px/1.55 ui-monospace,Menlo,monospace;padding:22px}
+        .t{max-width:300px;margin:0 auto}
+        h1{font:800 16px/1.2 system-ui;letter-spacing:.14em;text-align:center;margin:0 0 2px}
+        .sub{text-align:center;color:#9a9aa2;font-size:11px;margin-bottom:14px}
+        .r{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-top:1px dashed #3a3a40}
+        .r:first-of-type{border-top:0}.r span{color:#9a9aa2}.r b{font-weight:700}
+        .tot{border-top:1px solid #ffbf10;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;align-items:baseline}
+        .tot span{font-weight:800}.tot b{font:800 26px/1 system-ui;color:#ffbf10}
+        .foot{text-align:center;color:#6a6a72;font-size:10px;margin-top:18px}
+      </style>
+      <div class="t">
+        <h1>REBELL</h1>
+        <div class="sub">Justificante de pago · ${dd}</div>
+        <div class="r"><span>Destino</span><b>${dest}</b></div>
+        <div class="r"><span>Concepto</span><b>${parteLabel}</b></div>
+        <div class="r"><span>Método</span><b>${m === 'efectivo' ? 'Efectivo' : 'Tarjeta'}</b></div>
+        <div class="tot"><span>PAGADO</span><b>${eur(amount)} €</b></div>
+        <div class="foot">¡Gracias! · Documento no fiscal · demo REBELL</div>
+      </div>
+      <script>window.onload=function(){setTimeout(function(){window.print()},120)}<\/script>`
+    const w = window.open('', '_blank', 'width=380,height=560')
+    if (!w) return
+    w.document.write(html)
+    w.document.close()
+  }
+
   function openPay() {
     if (!cart.length && mesaTab <= 0) return // nada que cobrar (ni carrito ni cuenta abierta)
     if (!requireCaja()) return
@@ -254,6 +288,7 @@ export default function Tpv() {
     setCash('')
     setSplit(1) // empieza sin dividir
     setPaidShares(0)
+    setReciboPorPersona(false)
     setPayOpen(true)
     play('tap', 0.45)
   }
@@ -263,6 +298,7 @@ export default function Tpv() {
     if (split > 1 && !isLastShare) {
       addWallet(payAmount)
       logCobro(payAmount, 'mesa', `${mesa ? 'Mesa ' + mesa.nombre : 'Cuenta'} · parte ${paidShares + 1}/${split}`, m)
+      if (reciboPorPersona) printRecibo(payAmount, `Parte ${paidShares + 1} de ${split}`, m)
       play('success', 0.45, 1.05)
       setPaidShares((p) => p + 1)
       setMetodo(null)
@@ -276,6 +312,7 @@ export default function Tpv() {
     // "Caja que suma": el ticket entra al MISMO bote que las moneditas (caja del día). + ka-ching escalado.
     addWallet(payAmount) // solo la última parte (las anteriores ya sumaron); si no se divide, = cobroTotal
     logCobro(payAmount, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}${split > 1 ? ` · parte ${split}/${split}` : ''}`, m)
+    if (split > 1 && reciboPorPersona) printRecibo(payAmount, `Parte ${split} de ${split}`, m) // justificante de la última persona
     appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroTotal, metodo: m, mesa: mesa?.nombre ?? null }) // venta = la cuenta COMPLETA, una vez
     consumirVenta(allItems) // → ALMACÉN: baja el stock de TODO lo vendido (una vez)
     play('success', 0.5, cobroTotal > 50 ? 0.84 : cobroTotal > 25 ? 0.92 : 1)
@@ -762,10 +799,16 @@ export default function Tpv() {
                 </div>
               </div>
               {split > 1 && (
-                <div className="pay-split-info">
-                  <span>Parte {Math.min(paidShares + 1, split)} de {split}{paidShares > 0 ? ` · ${paidShares} pagada${paidShares > 1 ? 's' : ''}` : ''}</span>
-                  <b className="tnum">{eur(payAmount)} € / persona</b>
-                </div>
+                <>
+                  <div className="pay-split-info">
+                    <span>Parte {Math.min(paidShares + 1, split)} de {split}{paidShares > 0 ? ` · ${paidShares} pagada${paidShares > 1 ? 's' : ''}` : ''}</span>
+                    <b className="tnum">{eur(payAmount)} € / persona</b>
+                  </div>
+                  <button className={'pay-recibo' + (reciboPorPersona ? ' on' : '')} onClick={() => { setReciboPorPersona((v) => !v); play('tap', 0.4) }}>
+                    <span className="pr-check">{reciboPorPersona ? '✓' : ''}</span>
+                    🧾 Imprimir recibo por persona
+                  </button>
+                </>
               )}
               <div className="pay-methods">
                 <button className="pay-m card" onClick={() => confirmCobro('tarjeta')}>

@@ -1695,6 +1695,11 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .pay-split-info { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding: 9px 12px; border-radius: 11px; background: rgba(var(--brand-rgb),.1); border: 1px solid rgba(var(--brand-rgb),.25); }
 .pay-split-info span { font-size: var(--fs-xs); color: var(--ink); font-weight: 600; }
 .pay-split-info b { font-family: var(--font-num); font-weight: 750; color: var(--gold); }
+.pay-recibo { display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 14px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); font-family: var(--font); font-weight: 600; font-size: var(--fs-xs); cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.pay-recibo:hover { color: var(--ink); }
+.pay-recibo.on { border-color: rgba(var(--brand-rgb),.5); color: var(--ink); background: rgba(var(--brand-rgb),.08); }
+.pay-recibo .pr-check { width: 16px; height: 16px; flex: none; display: grid; place-items: center; border-radius: 5px; border: 1px solid var(--line-strong); font-size: 11px; color: var(--accent-ink, #1a1404); }
+.pay-recibo.on .pr-check { background: var(--gold); border-color: transparent; }
 .pay-k { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.55); font-weight: 700; }
 .pay-total { font-family: var(--font-num); font-size: clamp(28px, 4vw, 38px); font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
 .pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
