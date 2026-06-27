@@ -59,7 +59,7 @@ async function initSync() {
   _live = true
   supabase.realtime.setAuth(data.session.access_token) // el socket realtime necesita el token del usuario (si no, la RLS bloquea los avisos)
   // 1) hidratar las comandas ACTIVAS (no servidas) de mi local
-  const { data: rows } = await supabase.from('comandas').select('*').neq('estado', 'servida').order('creado_at')
+  const { data: rows } = await supabase.from('comandas').select('*').eq('local_id', lid).neq('estado', 'servida').order('creado_at') // .eq además de la RLS (defensa en profundidad)
   comandas = (rows as Row[] | null)?.map(fromRow) ?? []
   emit()
   // 2) realtime: cualquier cambio en las comandas de MI local

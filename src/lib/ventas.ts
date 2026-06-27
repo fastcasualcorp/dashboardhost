@@ -72,7 +72,7 @@ async function initSync() {
   if (!lid || !data.session) return // demo → localStorage
   _live = true
   supabase.realtime.setAuth(data.session.access_token) // token del usuario al socket realtime (RLS)
-  const { data: rows } = await supabase.from('ventas').select('*').order('creado_at', { ascending: false }).limit(400)
+  const { data: rows } = await supabase.from('ventas').select('*').eq('local_id', lid).order('creado_at', { ascending: false }).limit(400) // .eq además de la RLS (defensa en profundidad)
   if (rows) { ventas = (rows as VRow[]).map(fromVRow); if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:ventas')) }
   supabase
     .channel('ventas-' + lid)
