@@ -1,15 +1,15 @@
 import { useMemo } from 'react'
 import { Card, SectionHeader, KpiTile, BarChart, DataTable, Badge, Donut, Grid } from '../components/ui'
 import { useEquipo, horasSemana, costeHora, costeSemana, costeMes, costeDia, DIAS_CORTO } from '../lib/equipo'
+import { VENTAS_MES } from '../lib/data'
 import FuelGauge from '../components/FuelGauge'
 
 /* Coste personal — TODO derivado de la FUENTE ÚNICA `lib/equipo`: coste REAL = horas trabajadas (turnos
    de Horarios) × coste/hora de cada empleado. Edita un sueldo en Empleados o un turno en Horarios y aquí
    cambia al instante. Antes era una tabla 100% estática con personas distintas. (cimiento 0.1, ask de Juan)
-   HERO = medidor de combustible: el % sobre ventas como aguja de coche, verde/ámbar/rojo. */
+   HERO = medidor de combustible: el % sobre ventas como aguja de coche, verde/ámbar/rojo.
+   El % usa VENTAS_MES (fuente única, misma que el Resumen → no se contradicen). */
 
-// Facturación del mes para el % sobre ventas. PENDIENTE (0.3): enchufar a la fuente única VENTAS real.
-const VENTAS_MES = 48250
 const G_VERDE = '#34d399'
 const G_AMBAR = '#f5a524'
 const G_ROJO = '#f8716a'

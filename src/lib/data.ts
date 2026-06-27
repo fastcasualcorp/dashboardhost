@@ -11,6 +11,11 @@ export const totalDia = subM + subT
 export const avgT = totalDia / CAJA.pedidos
 export const OBJ = 1492 // media objetivo (€) — referencia del "peso emocional"
 export const META_DIA = 2000 // meta de facturación del día (€) — la que mide el anillo
+// Facturación del MES — fuente ÚNICA compartida (Resumen P&L y Coste personal % s/ventas la usan IGUAL → no se contradicen).
+// PENDIENTE (0.3): cuando exista la fuente VENTAS real, derivar esto de las ventas reales del mes.
+export const VENTAS_MES = 42000
+export const FOOD_COST_PCT = 0.3 // food cost objetivo del mes (30% s/facturación)
+export const GASTOS_FIJOS_MES = 11000 // gastos fijos del mes (alquiler/luz/seguros…) — fuente única provisional
 
 /* desgloses por franjas (para las shift-cards) */
 export const FRANJAS_M: [string, number, number][] = [

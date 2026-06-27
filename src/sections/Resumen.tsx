@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Card, SectionHeader, Donut, CountValue, BarChart, BarRow, DataTable, Badge, Grid, KpiTile } from '../components/ui'
 import DatePicker, { rangeFor, type RangeSel } from '../components/DatePicker'
-import { eur, eur0 } from '../lib/data'
+import { eur, eur0, VENTAS_MES, FOOD_COST_PCT, GASTOS_FIJOS_MES } from '../lib/data'
+import { useEquipo, costeMes } from '../lib/equipo'
 import { imgFor } from '../lib/products'
+import WaterfallPL from '../components/WaterfallPL'
 
 const RANGE_DAYS: Record<string, number> = { hoy: 1, ayer: 1, semana: 5, semanaant: 7, mes: 22, mesant: 30, trimestre: 91, anio: 173, historico: 540 }
 
@@ -32,7 +34,8 @@ function seriesFor(key: string, ventas: number) {
 
 function dataFor(key: string) {
   const days = RANGE_DAYS[key] ?? 22
-  const ventas = key === 'hoy' ? 1787 : Math.round(1426 * days * (0.95 + (days % 4) * 0.012))
+  // 'mes' usa la facturación mensual ÚNICA (misma que el P&L y Coste → el héroe y el P&L ya NO se contradicen)
+  const ventas = key === 'hoy' ? 1787 : key === 'mes' || key === 'mesant' ? VENTAS_MES : Math.round(1426 * days * (0.95 + (days % 4) * 0.012))
   const pedidos = Math.round(ventas / 21.28)
   const ticket = ventas / pedidos
   const margen = Math.min(72, 60 + Math.round(Math.log2(days + 1)))
@@ -59,19 +62,26 @@ const columnasPL = [
   { key: 'importe', label: 'Importe (€)', align: 'right' as const },
   { key: 'pct', label: '% s/ventas', align: 'right' as const },
 ]
-const filasPL = [
-  { concepto: 'Facturación', importe: '48.250,00 €', pct: <Badge tone="gold">100%</Badge> },
-  { concepto: 'Compras (food cost)', importe: '14.957,50 €', pct: <Badge tone="amber">31%</Badge> },
-  { concepto: 'Coste de personal', importe: '12.400,00 €', pct: <Badge tone="blue">25,7%</Badge> },
-  { concepto: 'Gastos fijos', importe: '11.712,50 €', pct: <Badge tone="muted">24,3%</Badge> },
-  { concepto: 'Resultado neto', importe: '9.180,00 €', pct: <Badge tone="green">19%</Badge> },
-]
-
 export default function Resumen() {
   const init = rangeFor('mes')
   const [range, setRange] = useState<RangeSel>({ key: 'mes', label: 'Este mes', start: init.start, end: init.end })
   const d = dataFor(range.key)
   const f = d.ventas / 1787
+
+  // ── Cuenta de resultados del MES, DERIVADA y consistente (mismas cifras en héroe, KPIs, cascada y tabla) ──
+  const roster = useEquipo()
+  const plPersonal = roster.reduce((s, e) => s + costeMes(e), 0) // = Coste personal (fuente única equipo)
+  const plFood = Math.round(VENTAS_MES * FOOD_COST_PCT)
+  const plGastos = GASTOS_FIJOS_MES
+  const plNeto = VENTAS_MES - plPersonal - plFood - plGastos
+  const plPct = (n: number) => Math.round((n / VENTAS_MES) * 1000) / 10
+  const filasPL = [
+    { concepto: 'Facturación', importe: `${eur0(VENTAS_MES)},00 €`, pct: <Badge tone="gold">100%</Badge> },
+    { concepto: 'Coste de personal', importe: `${eur0(plPersonal)} €`, pct: <Badge tone="blue">{plPct(plPersonal)}%</Badge> },
+    { concepto: 'Compras (food cost)', importe: `${eur0(plFood)} €`, pct: <Badge tone="amber">{plPct(plFood)}%</Badge> },
+    { concepto: 'Gastos fijos', importe: `${eur0(plGastos)} €`, pct: <Badge tone="muted">{plPct(plGastos)}%</Badge> },
+    { concepto: 'Resultado neto', importe: `${eur0(plNeto)} €`, pct: <Badge tone="green">{plPct(plNeto)}%</Badge> },
+  ]
   const rangeLow = range.label.toLowerCase()
   // "Salud del negocio" (0-100): margen + ticket vs objetivo. Etiqueta y tono por tramo.
   const score = Math.max(20, Math.min(98, Math.round(d.margen * 0.9 + (d.ticket / 19.5) * 28)))
@@ -108,22 +118,31 @@ export default function Resumen() {
         <Badge tone="gold">Junio 2026</Badge>
       </div>
       <Grid cols={4} className="kpi-grid">
-        <KpiTile label="Facturación" value="48.250,00" unit="€" delta="+6,3%" foot="vs mes anterior" trend="up" />
-        <KpiTile label="Coste de personal" value="12.400,00" unit="€" delta="-1,2%" foot="vs mes anterior" trend="down" />
-        <KpiTile label="Food cost" value="31" unit="%" delta="-0,8 pts" foot="vs media" trend="up" />
-        <KpiTile label="Resultado neto" value="9.180,00" unit="€" delta="+18,4%" foot="vs mes anterior" trend="up" />
+        <KpiTile label="Facturación" value={eur0(VENTAS_MES)} unit="€" delta="+6,3%" foot="vs mes anterior" trend="up" />
+        <KpiTile label="Coste de personal" value={eur0(plPersonal)} unit="€" delta={plPct(plPersonal) + '%'} foot="s/ventas" trend="flat" />
+        <KpiTile label="Food cost" value={String(Math.round(FOOD_COST_PCT * 100))} unit="%" delta="-0,8 pts" foot="vs media" trend="up" />
+        <KpiTile label="Resultado neto" value={eur0(plNeto)} unit="€" delta={plPct(plNeto) + '%'} foot="margen del mes" trend="up" />
       </Grid>
+
+      {/* CASCADA: cómo la facturación se convierte en beneficio (la estrella del Resumen) */}
+      <Card>
+        <div className="card-head">
+          <h3>De la facturación al beneficio</h3>
+          <Badge tone="green">{plPct(plNeto)}% margen neto</Badge>
+        </div>
+        <WaterfallPL facturacion={VENTAS_MES} personal={plPersonal} foodCost={plFood} gastos={plGastos} />
+      </Card>
 
       <Grid cols={2}>
         <Card>
           <div className="card-head">
             <h3>Margen neto</h3>
-            <Badge tone="green">19% s/facturación</Badge>
+            <Badge tone="green">{plPct(plNeto)}% s/facturación</Badge>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.4rem', padding: '0.5rem 0.25rem', flexWrap: 'wrap' }}>
-            <Donut value={19} label="margen neto" sub="sobre facturación" tone="green" />
+            <Donut value={Math.round((plNeto / VENTAS_MES) * 100)} label="margen neto" sub="sobre facturación" tone="green" />
             <p className="muted-s" style={{ flex: '1 1 160px', lineHeight: 1.5, margin: 0 }}>
-              Por cada 100 € facturados, <strong style={{ color: 'var(--brand)' }}>19 € son beneficio real</strong> tras costes y gastos.
+              Por cada 100 € facturados, <strong style={{ color: 'var(--brand)' }}>{plPct(plNeto)} € son beneficio real</strong> tras costes y gastos.
               Meta mensual: 20%.
             </p>
           </div>
@@ -131,25 +150,12 @@ export default function Resumen() {
 
         <Card>
           <div className="card-head">
-            <h3>Estructura del mes</h3>
-            <span className="muted-s">sobre 48.250 €</span>
+            <h3>Cuenta de resultados — detalle</h3>
+            <Badge tone="muted">Junio 2026</Badge>
           </div>
-          <div className="bar-rows">
-            <BarRow label="Facturación" value={48250} max={48250} color="gold" amount="48.250,00 €" />
-            <BarRow label="Compras / food cost" value={14957} max={48250} color="amber" amount="14.957,50 €" />
-            <BarRow label="Coste de personal" value={12400} max={48250} color="blue" amount="12.400,00 €" />
-            <BarRow label="Gastos fijos" value={11712} max={48250} color="green" amount="11.712,50 €" />
-          </div>
+          <DataTable columns={columnasPL} rows={filasPL} />
         </Card>
       </Grid>
-
-      <Card>
-        <div className="card-head">
-          <h3>Cuenta de resultados — detalle</h3>
-          <Badge tone="muted">Junio 2026</Badge>
-        </div>
-        <DataTable columns={columnasPL} rows={filasPL} />
-      </Card>
 
       {/* VENTAS por periodo + reparto por canal (dinámicos según el selector) */}
       <Grid cols={2}>

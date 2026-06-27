@@ -1698,6 +1698,19 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 [data-theme='light'] .pay-panel { background: #fff; border-color: rgba(20,24,34,.1); }
 [data-theme='light'] .pay-k, [data-theme='light'] .pay-change { color: rgba(20,24,34,.55); }
 [data-theme='light'] .pay-m, [data-theme='light'] .pay-q { background: rgba(20,24,34,.03); border-color: rgba(20,24,34,.12); }
+
+/* ── Cascada del P&L (Resumen): de la facturación al beneficio ── */
+.wf { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 14px; padding: 28px 4px 0; }
+.wf-col { display: flex; flex-direction: column; }
+.wf-plot { position: relative; height: 210px; }
+.wf-bar { position: absolute; left: 13%; right: 13%; min-height: 3px; border-radius: 7px 7px 4px 4px; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+.wf-cap { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--font-num); font-size: var(--fs-2xs); font-weight: 800; color: var(--ink); white-space: nowrap; }
+.wf-lab { text-align: center; padding-top: 12px; display: flex; flex-direction: column; gap: 2px; }
+.wf-lab span { font-size: var(--fs-2xs); color: rgba(255,255,255,.62); font-weight: 600; line-height: 1.2; }
+.wf-lab small { font-family: var(--font-num); font-size: var(--fs-3xs); color: rgba(255,255,255,.4); }
+.wf-col.total .wf-lab span { color: var(--ink); font-weight: 800; }
+[data-theme='light'] .wf-lab span { color: rgba(20,24,34,.6); }
+[data-theme='light'] .wf-lab small { color: rgba(20,24,34,.42); }
 .eb-actions { display: flex; gap: 8px; padding: 8px 13px 10px; border-top: 1px solid rgba(255,255,255,.08); flex: none; }
 .eb-btn { flex: 1; padding: 9px; border-radius: 9px; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; border: 1px solid transparent; transition: transform .12s, background .16s; }
 .eb-btn:active { transform: scale(.97); }
