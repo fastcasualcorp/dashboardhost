@@ -6,7 +6,7 @@ import { eur, eur0, reduceMotion } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
 import { loadSalonLive, loadSalon, allLibre, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, type Mesa } from '../lib/salon'
-import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro, type Metodo } from '../lib/wallet'
+import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro, registrarCierre, type Metodo } from '../lib/wallet'
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
 import { pushComanda } from '../lib/comandas'
@@ -411,6 +411,7 @@ export default function Tpv() {
         play('success', 0.5, 1.15)
       } else {
         setReward({ total: walletTotal(), tickets: ticketsHoy() }) // dispara la recompensa de cierre (caja del día)
+        registrarCierre(ticketsHoy()) // → libro de cierres AUDITABLE en Supabase (A3/5.7) antes de resetear
         setCaja(cerrarCaja())
       }
       setCajaModal(null)

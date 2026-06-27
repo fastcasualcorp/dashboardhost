@@ -163,6 +163,34 @@ create policy "empleados: gerencia de mi local" on public.empleados for all to a
   using ( local_id = public.jwt_local_id() and public.jwt_rol() in ('admin','encargado','central') )
   with check ( local_id = public.jwt_local_id() and public.jwt_rol() in ('admin','encargado','central') );
 
+-- ── cierres de caja (libro de cierres Z, auditable; A3/5.7) ──
+create table if not exists public.cierres (
+  id uuid primary key default gen_random_uuid(),
+  local_id uuid not null references public.locales(id) on delete cascade,
+  fecha date not null default current_date,
+  total numeric(10,2) not null default 0,
+  efectivo numeric(10,2) not null default 0,
+  tarjeta numeric(10,2) not null default 0,
+  tickets int not null default 0,
+  creado_at timestamptz not null default now()
+);
+alter table public.cierres enable row level security;
+create index if not exists cierres_local_idx on public.cierres (local_id, creado_at desc);
+drop policy if exists "cierres: los de mi local" on public.cierres;
+create policy "cierres: los de mi local" on public.cierres for all to authenticated
+  using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
+
+-- ── inventario / almacén (1 fila por local, estado como jsonb) ──
+create table if not exists public.inventario (
+  local_id uuid primary key references public.locales(id) on delete cascade,
+  data jsonb not null default '[]',
+  updated_at timestamptz not null default now()
+);
+alter table public.inventario enable row level security;
+drop policy if exists "inventario: el de mi local" on public.inventario;
+create policy "inventario: el de mi local" on public.inventario for all to authenticated
+  using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
+
 -- ── compras / albaranes (por local, scoped) ──
 create table if not exists public.compras (
   id uuid primary key default gen_random_uuid(),

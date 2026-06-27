@@ -5,8 +5,12 @@
    sus ingredientes (receta) → las barras del almacén drenan AL VENDER de verdad.
    En memoria (se re-siembra al recargar, como antes) + evento `rebell:almacen`.
    Patrón igual que wallet/equipo/ventas. (audit · Almacén: stock real)
+   CABLEADO A SUPABASE (Fase 1): si hay sesión, el stock del local se persiste
+   como un blob jsonb (tabla `inventario`, 1 fila/local) con escritura DEBOUNCED
+   (para no spamear por el drenaje ambiente). Sin sesión, demo en memoria.
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
 
 export type Tipo = 'obrador' | 'refrigerado' | 'congelado' | 'seco'
 export type Item = { pid: string; nivel: number; actual: string; umbral: string; cad?: number }
@@ -80,12 +84,42 @@ function emit() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:almacen'))
 }
 
+/* ── Cableado Supabase (stock por local como blob jsonb; escritura DEBOUNCED) ── */
+let _syncStarted = false
+let _live = false
+let _lid: string | null = null
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+function persistDebounced() {
+  if (!_live || !supabase || !_lid) return
+  if (_saveTimer) clearTimeout(_saveTimer)
+  const sb = supabase
+  const lid = _lid
+  _saveTimer = setTimeout(() => { void sb.from('inventario').upsert({ local_id: lid, data: almacenes, updated_at: new Date().toISOString() }) }, 3000)
+}
+async function initSync() {
+  if (_syncStarted || !supabase) return
+  _syncStarted = true
+  const { data } = await supabase.auth.getSession()
+  const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
+  if (!lid) return // demo → memoria
+  _live = true
+  _lid = lid
+  const { data: row } = await supabase.from('inventario').select('data').eq('local_id', lid).maybeSingle()
+  if (row?.data && Array.isArray(row.data) && (row.data as unknown[]).length) {
+    almacenes = row.data as Almacen[]
+    emit()
+  } else {
+    void supabase.from('inventario').upsert({ local_id: lid, data: almacenes }) // 1ª vez: sembrar
+  }
+}
+
 export const getAlmacenes = (): Almacen[] => almacenes
 
 // Mutador genérico (lo usan las ediciones de la sección: alta, borrar, renombrar, cargar, drenaje ambiente).
 export function updateAlmacenes(fn: (list: Almacen[]) => Almacen[]) {
   almacenes = fn(almacenes)
   emit()
+  persistDebounced()
 }
 
 // EL TPV cobra → baja el stock de los ingredientes vendidos (receta). Devuelve qué ingredientes se tocaron.
@@ -110,13 +144,17 @@ export function consumirVenta(items: { name: string; qty: number }[]): string[] 
     })
     return changed ? { ...a, items: nuevos } : a
   })
-  if (tocados.size) emit()
+  if (tocados.size) {
+    emit()
+    persistDebounced()
+  }
   return Array.from(tocados)
 }
 
 export function useAlmacen(): Almacen[] {
   const [, force] = useState(0)
   useEffect(() => {
+    void initSync()
     const on = () => force((n) => n + 1)
     window.addEventListener('rebell:almacen', on)
     return () => window.removeEventListener('rebell:almacen', on)
