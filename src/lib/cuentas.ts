@@ -67,6 +67,13 @@ export function clearCuenta(mesaId: string | number) {
   emit()
 }
 
+/* Cierra TODAS las cuentas (al cerrar caja: el local queda vacío, nadie debe nada). */
+export function clearAllCuentas() {
+  if (!Object.keys(cuentas).length) return
+  cuentas = {}
+  emit()
+}
+
 export function useCuentas(): Record<string, Cuenta> {
   const [, force] = useState(0)
   useEffect(() => {

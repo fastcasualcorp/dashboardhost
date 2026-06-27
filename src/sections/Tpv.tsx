@@ -5,12 +5,12 @@ import { SectionHeader, Badge } from '../components/ui'
 import { eur, eur0, reduceMotion } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
-import { loadSalonLive, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, type Mesa } from '../lib/salon'
+import { loadSalonLive, loadSalon, allLibre, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, type Mesa } from '../lib/salon'
 import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro, type Metodo } from '../lib/wallet'
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
 import { pushComanda } from '../lib/comandas'
-import { cuentaTotal, seedCuenta, clearCuenta } from '../lib/cuentas'
+import { cuentaTotal, seedCuenta, clearCuenta, clearAllCuentas } from '../lib/cuentas'
 import { supabase, localId } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
@@ -58,7 +58,8 @@ export default function Tpv() {
   const [mesa, setMesa] = useState<Mesa | null>(null)
   const [pickOpen, setPickOpen] = useState(true) // se abre AL ENTRAR: primero hay que decir a qué mesa va
   const [mesaChosen, setMesaChosen] = useState(false) // hasta elegir mesa/llevar, no se puede tocar el menú
-  const [mesas, setMesas] = useState<Mesa[]>(() => loadSalonLive()) // plano VIVO (mismo que el Salón: estado + reservas)
+  // Plano: si la caja está CERRADA, el local está vacío → todas libres; si está abierta, mesas vivas (estado + reservas).
+  const [mesas, setMesas] = useState<Mesa[]>(() => (loadCaja().abierta ? loadSalonLive() : allLibre(loadSalon())))
   const [now, setNow] = useState(() => Date.now()) // reloj 1s → la cuenta atrás de las reservas avanza
   const [ticket, setTicket] = useState<string | null>(null) // nº de ticket del pedido en curso (T-013)
   // ── Caja (abrir/cerrar con PIN del encargado) ──
@@ -249,14 +250,24 @@ export default function Tpv() {
     setCash('')
   }
 
-  // Al entrar al TPV: refresca el plano VIVO del salón → mesas SIEMPRE al momento, con su estado y reserva.
-  useEffect(() => { setMesas(loadSalonLive()) }, [])
+  // Coherencia caja↔salón: con caja ABIERTA el plano cobra vida; con caja CERRADA (local vacío) todas las mesas
+  // quedan LIBRES y se saldan las cuentas. Reacciona al abrir/cerrar caja. (Juan, 27-jun)
+  useEffect(() => {
+    if (caja.abierta) {
+      setMesas(loadSalonLive())
+    } else {
+      const libre = allLibre(loadSalon())
+      saveSalon(libre)
+      clearAllCuentas()
+      setMesas(libre)
+    }
+  }, [caja.abierta])
 
   // Reloj a 1s SOLO mientras el selector está abierto (ahorra batería): la cuenta atrás de cada reserva avanza.
   // Y cuando una mesa AGOTA su tiempo, pide la cuenta SOLA → pasa a "por cobrar" (natural; jamás se toca una mesa
   // con tiempo de sobra). Así siempre van apareciendo mesas que cobrar, pero sin el bug de saltos raros. (Juan)
   useEffect(() => {
-    if (!pickOpen) return
+    if (!pickOpen || !caja.abierta) return // sin servicio (caja cerrada) no hay vida en las mesas
     const id = window.setInterval(() => {
       const t = Date.now()
       setNow(t)
@@ -276,7 +287,7 @@ export default function Tpv() {
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [pickOpen])
+  }, [pickOpen, caja.abierta])
 
   // ── PIN del encargado (abrir/cerrar caja) ──
   function pinKey(d: string) {

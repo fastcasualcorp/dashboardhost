@@ -121,6 +121,12 @@ export function loadSalonLive(): Mesa[] {
   return seeded
 }
 
+// Todas las mesas LIBRES (local CERRADO): sin ocupación ni reservas. La caja cerrada ⟹ no hay nadie en el
+// local (la caja se cierra cuando ya no queda cliente) → no puede haber mesas ocupadas/por cobrar. (Juan, 27-jun)
+export function allLibre(list: Mesa[]): Mesa[] {
+  return list.map((m) => ({ ...m, estado: 'libre' as MesaEstado, since: undefined, reservaFin: undefined }))
+}
+
 // ── Persistencia en Supabase (por local, vía RLS) ──
 async function resolveLocalId(): Promise<string | null> {
   if (localId()) return localId()

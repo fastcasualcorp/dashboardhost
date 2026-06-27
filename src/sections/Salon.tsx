@@ -2,9 +2,13 @@ import { useEffect, useRef, useState, type PointerEvent as RPE, type CSSProperti
 import { motion, AnimatePresence } from 'motion/react'
 import { SectionHeader, Badge, Stat, StatRow } from '../components/ui'
 import { play } from '../lib/sound'
-import { type Mesa, type MesaForma, type MesaEstado, loadSalon, saveSalon, loadSalonDB, saveSalonDB, seatPositions, totalPlazas, seedStates, cobroAmount, ESTADO_COLOR, elePath } from '../lib/salon'
+import { type Mesa, type MesaForma, type MesaEstado, loadSalon, saveSalon, loadSalonDB, saveSalonDB, seatPositions, totalPlazas, seedStates, allLibre, cobroAmount, ESTADO_COLOR, elePath } from '../lib/salon'
 import { fireCobro, logCobro, addWallet } from '../lib/wallet'
 import { cuentaTotal, clearCuenta } from '../lib/cuentas'
+import { loadCaja } from '../lib/caja'
+
+// Caja cerrada ⟹ local vacío → todas las mesas libres (no hay servicio). Solo cobran vida con la caja abierta.
+const planoSegunCaja = (list: Mesa[]) => (loadCaja().abierta ? seedStates(list) : allLibre(list))
 import { MesaTile } from '../components/MesaTile'
 
 /* Editor de Salón — diseñas tu sala arrastrando mesas, ajustando tamaño/forma y
@@ -102,7 +106,7 @@ function freeSpot(list: Mesa[], w: number, h: number): { x: number; y: number } 
 }
 
 export default function Salon() {
-  const [mesas, setMesas] = useState<Mesa[]>(() => seedStates(loadSalon()))
+  const [mesas, setMesas] = useState<Mesa[]>(() => planoSegunCaja(loadSalon()))
   const [sel, setSel] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -181,7 +185,7 @@ export default function Salon() {
   useEffect(() => {
     let alive = true
     loadSalonDB().then((rows) => {
-      if (alive && rows) setMesas(seedStates(rows))
+      if (alive && rows) setMesas(planoSegunCaja(rows))
     })
     return () => {
       alive = false
