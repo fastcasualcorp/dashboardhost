@@ -18,7 +18,8 @@ const today = () => {
 
 // Cada cobro deja una ENTRADA (el "pedido" que hizo posible la cifra) → la cartera se puede abrir y ver el
 // desglose, estilo videojuego. tipo: mesa (moneditas) o ticket (TPV). (Juan, 26-jun)
-export type CajaEntry = { id: number; ts: number; amount: number; tipo: 'mesa' | 'ticket'; label: string }
+export type Metodo = 'efectivo' | 'tarjeta'
+export type CajaEntry = { id: number; ts: number; amount: number; tipo: 'mesa' | 'ticket'; label: string; metodo?: Metodo }
 type State = { fecha: string; total: number; entries: CajaEntry[] }
 
 function load(): State {
@@ -67,13 +68,16 @@ export function addWallet(amount: number): number {
 }
 
 // Apunta un cobro en el desglose (NO toca el total: el valor lo suma addWallet —directo en ticket, por moneda en mesa).
-export function logCobro(amount: number, tipo: 'mesa' | 'ticket', label: string) {
+export function logCobro(amount: number, tipo: 'mesa' | 'ticket', label: string, metodo?: Metodo) {
   if (state.fecha !== today()) state = { fecha: today(), total: 0, entries: [] }
-  const e: CajaEntry = { id: ++entrySeq, ts: Date.now(), amount: Math.round(amount * 100) / 100, tipo, label }
+  const e: CajaEntry = { id: ++entrySeq, ts: Date.now(), amount: Math.round(amount * 100) / 100, tipo, label, metodo }
   state = { ...state, entries: [e, ...state.entries].slice(0, 60) }
   persist()
   emit()
 }
+
+// Sumas por método de pago de los cobros itemizados de hoy (para el desglose de Caja efectivo/tarjeta).
+export const walletPorMetodo = (m: Metodo) => Math.round(state.entries.filter((e) => e.metodo === m).reduce((s, e) => s + e.amount, 0) * 100) / 100
 
 // Reinicia la caja del día (turno nuevo) → se llama al ABRIR caja: arranca de 0 y acumula hasta el cierre.
 export function resetWallet(): number {

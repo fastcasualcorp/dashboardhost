@@ -1669,6 +1669,35 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 [data-theme='light'] .fg-track { stroke: rgba(20,24,34,.1); }
 [data-theme='light'] .fg-lbl, [data-theme='light'] .che-stat span { color: rgba(20,24,34,.55); }
 [data-theme='light'] .che-zones li { color: rgba(20,24,34,.7); }
+
+/* ── Panel de pago del TPV (efectivo / tarjeta + cambio) ── */
+.pay-scrim { position: fixed; inset: 0; z-index: 240; background: rgba(0,0,0,.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 20px; }
+.pay-panel { width: min(420px, 94vw); background: var(--surface-2, #16161b); border: 1px solid rgba(255,255,255,.1); border-radius: 22px; padding: 22px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+.pay-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.pay-k { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.55); font-weight: 700; }
+.pay-total { font-family: var(--font-num); font-size: clamp(28px, 4vw, 38px); font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pay-m { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px; border-radius: 16px; border: 1.5px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: var(--ink); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; transition: transform .12s, border-color .16s, background .16s; }
+.pay-m svg { width: 26px; height: 26px; }
+.pay-m:hover { border-color: rgba(255,255,255,.24); background: rgba(255,255,255,.07); }
+.pay-m:active { transform: scale(.97); }
+.pay-m.card:hover { border-color: var(--gold); }
+.pay-m.cash.on { border-color: #34d399; background: rgba(52,211,153,.12); }
+.pay-cash { overflow: hidden; }
+.pay-quick { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 14px; }
+.pay-q { flex: 1; min-width: 64px; padding: 11px 8px; border-radius: 11px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: var(--ink); font-weight: 700; font-size: var(--fs-xs); font-family: var(--font-num); cursor: pointer; transition: transform .1s, border-color .15s; }
+.pay-q:active { transform: scale(.96); }
+.pay-q.on { border-color: #34d399; background: rgba(52,211,153,.14); color: #34d399; }
+.pay-change { display: flex; align-items: center; justify-content: space-between; margin: 14px 2px 12px; font-size: var(--fs-sm); color: rgba(255,255,255,.6); }
+.pay-change b { font-family: var(--font-num); font-size: clamp(22px, 3vw, 28px); font-weight: 800; color: #34d399; }
+.pay-confirm { width: 100%; padding: 14px; border-radius: 14px; border: none; background: linear-gradient(135deg, #1fae7c, #34d399); color: #04130d; font-weight: 800; font-size: var(--fs-sm); cursor: pointer; transition: transform .12s, opacity .16s; }
+.pay-confirm:active { transform: scale(.98); }
+.pay-confirm:disabled { opacity: .45; cursor: not-allowed; }
+.pay-cancel { width: 100%; margin-top: 12px; padding: 11px; border-radius: 12px; border: none; background: transparent; color: rgba(255,255,255,.5); font-weight: 600; font-size: var(--fs-xs); cursor: pointer; }
+.pay-cancel:hover { color: var(--ink); }
+[data-theme='light'] .pay-panel { background: #fff; border-color: rgba(20,24,34,.1); }
+[data-theme='light'] .pay-k, [data-theme='light'] .pay-change { color: rgba(20,24,34,.55); }
+[data-theme='light'] .pay-m, [data-theme='light'] .pay-q { background: rgba(20,24,34,.03); border-color: rgba(20,24,34,.12); }
 .eb-actions { display: flex; gap: 8px; padding: 8px 13px 10px; border-top: 1px solid rgba(255,255,255,.08); flex: none; }
 .eb-btn { flex: 1; padding: 9px; border-radius: 9px; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; border: 1px solid transparent; transition: transform .12s, background .16s; }
 .eb-btn:active { transform: scale(.97); }

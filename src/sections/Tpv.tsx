@@ -6,7 +6,7 @@ import { eur, eur0, reduceMotion } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
 import { loadSalonLive, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, type Mesa } from '../lib/salon'
-import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro } from '../lib/wallet'
+import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro, type Metodo } from '../lib/wallet'
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
 import { pushComanda } from '../lib/comandas'
@@ -22,11 +22,11 @@ const ticketNum = (t: string | null) => (t ? parseInt(t.replace(/\D/g, ''), 10) 
 
 // Persistencia en Supabase (por local, vía RLS). Fire-and-forget: no bloquea la caja.
 // El nº de ticket viaja a venta Y comanda → trazabilidad (si se pierde una comanda y el cliente llama).
-async function persistVenta(total: number, mesaNombre: string | null, ticket: string | null) {
+async function persistVenta(total: number, mesaNombre: string | null, ticket: string | null, metodo: Metodo) {
   const lid = localId()
   if (!supabase || !lid) return
   try {
-    await supabase.from('ventas').insert({ local_id: lid, total: Math.round(total * 100) / 100, metodo: 'tarjeta', mesa: mesaNombre, doc: 'ticket', numero: ticketNum(ticket) })
+    await supabase.from('ventas').insert({ local_id: lid, total: Math.round(total * 100) / 100, metodo, mesa: mesaNombre, doc: 'ticket', numero: ticketNum(ticket) })
   } catch {
     /* sin conexión: la venta se ve igual en caja */
   }
@@ -46,6 +46,10 @@ export default function Tpv() {
   const shownVentas = useCajaDelDia() // "Ventas hoy" = MISMA fuente que la cartera "Hoy" → nunca divergen
   const [pulse, setPulse] = useState(0)
   const [paid, setPaid] = useState(false)
+  // ── Pago (efectivo / tarjeta + calculadora de cambio) ──
+  const [payOpen, setPayOpen] = useState(false)
+  const [metodo, setMetodo] = useState<Metodo | null>(null)
+  const [cash, setCash] = useState('')
   const [cat, setCat] = useState('Burgers')
   const [building, setBuilding] = useState<Producto | null>(null)
   const [picks, setPicks] = useState<Record<string, string>>({})
@@ -205,19 +209,30 @@ export default function Tpv() {
     void persistComanda(cart, mesa?.nombre ?? null, tk) // + Supabase (trazabilidad), cuando haya backend
   }
 
-  const cobrar = () => {
+  // "Cobrar" abre el panel de pago (elegir efectivo/tarjeta). El cobro real lo hace confirmCobro.
+  function openPay() {
+    if (!cart.length) return
+    setMetodo(null)
+    setCash('')
+    setPayOpen(true)
+    play('tap', 0.45)
+  }
+  function confirmCobro(m: Metodo) {
     if (!cart.length) return
     // "Caja que suma": el ticket entra al MISMO bote que las moneditas (caja del día). La cartera "Hoy" y
     // "Ventas hoy" cuentan-arriba a la vez (mismo store + count-up del hook). + ka-ching escalado.
     addWallet(total)
-    logCobro(total, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}`)
+    logCobro(total, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}`, m)
     play('success', 0.5, total > 50 ? 0.84 : total > 25 ? 0.92 : 1)
     setPulse((p) => p + 1)
     setPaid(true)
     setCart([])
-    void persistVenta(total, mesa?.nombre ?? null, ticket) // → libro de ventas (con su nº de ticket)
+    void persistVenta(total, mesa?.nombre ?? null, ticket, m) // → libro de ventas (con su nº de ticket y método)
     setMesa(null) // la mesa queda libre tras cobrar
     setTicket(null) // cerrado el ticket → el siguiente pedido toma un nº nuevo
+    setPayOpen(false)
+    setMetodo(null)
+    setCash('')
   }
 
   // Al entrar al TPV: refresca el plano VIVO del salón → mesas SIEMPRE al momento, con su estado y reserva.
@@ -321,7 +336,7 @@ export default function Tpv() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Enter') { e.preventDefault(); cobrar(); return }
+      if (e.key === 'Enter') { e.preventDefault(); openPay(); return }
       if (e.key === 'Backspace') { e.preventDefault(); setPaid(false); setCart((c) => c.slice(0, -1)); return }
       if (e.key === 'ArrowRight') { e.preventDefault(); setCat((c) => CAT_ORDER[(CAT_ORDER.indexOf(c) + 1) % CAT_ORDER.length]); return }
       if (e.key === 'ArrowLeft') { e.preventDefault(); setCat((c) => CAT_ORDER[(CAT_ORDER.indexOf(c) - 1 + CAT_ORDER.length) % CAT_ORDER.length]); return }
@@ -332,6 +347,15 @@ export default function Tpv() {
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prods, cart, total])
+
+  // Calculadora de cambio (pago en efectivo)
+  const cashNum = parseFloat(cash.replace(',', '.')) || 0
+  const cambio = Math.max(0, Math.round((cashNum - total) * 100) / 100)
+  const payQuick = (() => {
+    const exact = Math.round(total * 100) / 100
+    const ups = [5, 10, 20, 50].map((s) => Math.ceil(total / s) * s).filter((v) => v > total + 0.001)
+    return [exact, ...Array.from(new Set(ups))].slice(0, 5)
+  })()
 
   return (
     <div className="section tpv-section">
@@ -501,7 +525,7 @@ export default function Tpv() {
                   </>
                 )}
               </button>
-              <button className={'tpv-pay' + (cart.length ? '' : ' off')} onClick={cobrar} disabled={!cart.length}>
+              <button className={'tpv-pay' + (cart.length ? '' : ' off')} onClick={openPay} disabled={!cart.length}>
                 Cobrar {eur(total)} €
               </button>
             </div>
@@ -630,6 +654,60 @@ export default function Tpv() {
       {createPortal(
       <AnimatePresence>
         {reward && <CierreReward total={reward.total} tickets={reward.tickets} onClose={() => setReward(null)} />}
+      </AnimatePresence>,
+      overlayRoot)}
+
+      {/* ── Panel de PAGO: efectivo / tarjeta + calculadora de cambio ── */}
+      {createPortal(
+      <AnimatePresence>
+        {payOpen && (
+          <motion.div className="pay-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPayOpen(false)}>
+            <motion.div
+              className="pay-panel"
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="pay-head">
+                <span className="pay-k">Cobrar {mesa ? '· Mesa ' + mesa.nombre : '· Para llevar'}</span>
+                <b className="pay-total tnum">{eur(total)} €</b>
+              </div>
+              <div className="pay-methods">
+                <button className="pay-m card" onClick={() => confirmCobro('tarjeta')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /></svg>
+                  <span>Tarjeta</span>
+                </button>
+                <button className={'pay-m cash' + (metodo === 'efectivo' ? ' on' : '')} onClick={() => { setMetodo('efectivo'); setCash(''); play('tap', 0.4) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></svg>
+                  <span>Efectivo</span>
+                </button>
+              </div>
+              <AnimatePresence>
+                {metodo === 'efectivo' && (
+                  <motion.div className="pay-cash" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
+                    <div className="pay-quick">
+                      {payQuick.map((q, i) => (
+                        <button key={i} className={'pay-q' + (cash === String(q) ? ' on' : '')} onClick={() => setCash(String(q))}>
+                          {i === 0 ? 'Exacto' : eur(q) + ' €'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="pay-change">
+                      <span>Cambio a devolver</span>
+                      <b className="tnum">{eur(cambio)} €</b>
+                    </div>
+                    <button className="pay-confirm" disabled={cashNum < total} onClick={() => confirmCobro('efectivo')}>
+                      {cashNum < total ? 'Elige el efectivo recibido' : `Cobrar · cambio ${eur(cambio)} €`}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button className="pay-cancel" onClick={() => setPayOpen(false)}>Cancelar</button>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>,
       overlayRoot)}
 
