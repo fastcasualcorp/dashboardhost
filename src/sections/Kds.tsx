@@ -2,37 +2,14 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { SectionHeader, Badge } from '../components/ui'
 import { play, playReward } from '../lib/sound'
+import { useComandas, advanceComanda, type Comanda, type CStatus } from '../lib/comandas'
 
-/* KDS — tablero de cocina en vivo. Las comandas entran solas (simulación de
-   pedidos en tiempo real), envejecen con un gradiente CONTINUO verde→ámbar→rojo
-   que se intensifica, y avanzan de estado: Nuevas → En preparación → Listas.
-   El cocinero/admin configura los TIEMPOS (cuándo pasa a ámbar y a rojo) con
-   sliders; se guardan por dispositivo. */
+/* KDS — tablero de cocina en vivo. Las comandas vienen del TPV (fuente única `lib/comandas`):
+   al pulsar "Comanda" en el TPV aparecen aquí al instante. Envejecen con un gradiente CONTINUO
+   verde→ámbar→rojo y avanzan: Nuevas → En preparación → Listas. Los TIEMPOS (cuándo vira a ámbar
+   y a rojo) se configuran con sliders y se guardan por dispositivo. */
 
-type Status = 'nueva' | 'prep' | 'lista'
-type Item = { name: string; qty: number }
-type Ticket = { id: number; n: number; src: string; color: string; items: Item[]; born: number; status: Status }
-
-const SOURCES = [
-  { src: 'Sala', color: '#ffbf10' },
-  { src: 'Glovo', color: '#ffc244' },
-  { src: 'Uber Eats', color: '#06c167' },
-  { src: 'Just Eat', color: '#ff8000' },
-]
-const DISHES = ['REBELL Classic', 'Doble Bacon', 'Crispy Chicken', 'Veggie Deluxe', 'Patatas Rebell', 'Nuggets x6', 'Aros de cebolla', 'Refresco', 'Cerveza', 'Brownie']
-
-// Generador determinista por índice (sin Math.random global para el seed inicial).
-function makeItems(seed: number): Item[] {
-  const k = 2 + (seed % 3)
-  const out: Item[] = []
-  for (let i = 0; i < k; i++) {
-    const name = DISHES[(seed * 3 + i * 5) % DISHES.length]
-    out.push({ name, qty: 1 + ((seed + i) % 2) })
-  }
-  return out
-}
-
-const COLS: { key: Status; label: string }[] = [
+const COLS: { key: CStatus; label: string }[] = [
   { key: 'nueva', label: 'Nuevas' },
   { key: 'prep', label: 'En preparación' },
   { key: 'lista', label: 'Listas' },
@@ -75,25 +52,11 @@ function loadCfg(): Cfg {
 }
 
 export default function Kds() {
-  const seq = useRef(40)
+  const tickets = useComandas() // fuente única: lo que manda el TPV
   const [now, setNow] = useState(() => Date.now())
   const [cfg, setCfg] = useState<Cfg>(loadCfg)
   const [cfgOpen, setCfgOpen] = useState(false)
-  const [tickets, setTickets] = useState<Ticket[]>(() => {
-    const t0 = Date.now()
-    // semilla: algunas comandas ya envejecidas para ver los colores al entrar
-    const ages = [12 * 60000, 6 * 60000, 2 * 60000, 40000, 9 * 60000]
-    const statuses: Status[] = ['prep', 'prep', 'nueva', 'nueva', 'lista']
-    return ages.map((a, i) => ({
-      id: i + 1,
-      n: 34 + i,
-      src: SOURCES[i % SOURCES.length].src,
-      color: SOURCES[i % SOURCES.length].color,
-      items: makeItems(i + 1),
-      born: t0 - a,
-      status: statuses[i],
-    }))
-  })
+  const prevLen = useRef(tickets.length)
 
   // persistir la configuración de tiempos
   useEffect(() => {
@@ -110,29 +73,19 @@ export default function Kds() {
     return () => clearInterval(id)
   }, [])
 
-  // comandas entrando en vivo cada ~8s (máx 6 en "nuevas" para no saturar)
+  // "ding" crispy cuando ENTRA una comanda nueva (del TPV)
   useEffect(() => {
-    const id = setInterval(() => {
-      setTickets((ts) => {
-        if (ts.filter((t) => t.status === 'nueva').length >= 6) return ts
-        seq.current += 1
-        const s = SOURCES[seq.current % SOURCES.length]
-        play('pop', 0.5, 1.16)
-        return [...ts, { id: seq.current + 1000, n: seq.current, src: s.src, color: s.color, items: makeItems(seq.current), born: Date.now(), status: 'nueva' as Status }]
-      })
-    }, 8000)
-    return () => clearInterval(id)
-  }, [])
+    if (tickets.length > prevLen.current) play('pop', 0.5, 1.16)
+    prevLen.current = tickets.length
+  }, [tickets.length])
 
-  function advance(t: Ticket) {
-    if (t.status === 'lista') {
-      setTickets((ts) => ts.filter((x) => x.id !== t.id))
+  function advance(t: Comanda) {
+    const r = advanceComanda(t.id)
+    if (r === 'served') {
       playReward(0.55) // servida = recompensa crispy
       return
     }
-    const next: Status = t.status === 'nueva' ? 'prep' : 'lista'
-    setTickets((ts) => ts.map((x) => (x.id === t.id ? { ...x, status: next } : x)))
-    play(next === 'lista' ? 'success' : 'tap', 0.5, next === 'lista' ? 1 : 1.12)
+    play(r === 'lista' ? 'success' : 'tap', 0.5, r === 'lista' ? 1 : 1.12)
   }
 
   const ageClass = (age: number) => (age >= cfg.late ? 'late' : age >= cfg.warn ? 'warn' : 'ok')
@@ -242,7 +195,7 @@ export default function Kds() {
                       >
                         <div className="kt-head">
                           <span className="kt-n">#{t.n}</span>
-                          <span className="kt-src">{t.src}</span>
+                          <span className="kt-src">{t.mesa ? 'Mesa ' + t.mesa : t.src}</span>
                           <span className="kt-time tnum">{mmss(now - t.born)}</span>
                         </div>
                         <div className="kt-items">

@@ -9,6 +9,7 @@ import { loadSalonLive, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, typ
 import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro } from '../lib/wallet'
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
+import { pushComanda } from '../lib/comandas'
 import { supabase, localId } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
@@ -199,7 +200,9 @@ export default function Tpv() {
     play('success', 0.4, 1.28)
     setSent(true)
     window.setTimeout(() => setSent(false), 1700)
-    void persistComanda(cart, mesa?.nombre ?? null, tk) // → KDS (cocina), con nº de ticket para trazabilidad
+    // → COCINA en vivo (KDS): la comanda aparece en el tablero al instante (store local)
+    pushComanda({ n: ticketNum(tk), mesa: mesa?.nombre ?? null, items: cart.map((l) => ({ name: l.name, qty: l.qty })), src: 'Sala' })
+    void persistComanda(cart, mesa?.nombre ?? null, tk) // + Supabase (trazabilidad), cuando haya backend
   }
 
   const cobrar = () => {
