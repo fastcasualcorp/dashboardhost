@@ -49,10 +49,12 @@ export default function Tpv() {
   const shownVentas = useCajaDelDia() // "Ventas hoy" = MISMA fuente que la cartera "Hoy" → nunca divergen
   const [pulse, setPulse] = useState(0)
   const [paid, setPaid] = useState(false)
-  // ── Pago (efectivo / tarjeta + calculadora de cambio) ──
+  // ── Pago (efectivo / tarjeta + calculadora de cambio + dividir cuenta) ──
   const [payOpen, setPayOpen] = useState(false)
   const [metodo, setMetodo] = useState<Metodo | null>(null)
   const [cash, setCash] = useState('')
+  const [split, setSplit] = useState(1) // dividir la cuenta entre N personas
+  const [paidShares, setPaidShares] = useState(0) // partes ya cobradas
   const [cat, setCat] = useState('Burgers')
   const [building, setBuilding] = useState<Producto | null>(null)
   const [picks, setPicks] = useState<Record<string, string>>({})
@@ -149,6 +151,11 @@ export default function Tpv() {
   // CUENTA ABIERTA (multi-ronda): lo ya acumulado en la mesa + lo del carrito actual = lo que se cobra al cerrar.
   const mesaTab = mesa ? cuentaTotal(mesa.id) : 0
   const cobroTotal = Math.round((total + mesaTab) * 100) / 100
+  // DIVIDIR CUENTA: importe de la parte actual (la última parte ajusta los céntimos para cuadrar el total).
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  const shareAmount = split > 1 ? r2(cobroTotal / split) : cobroTotal
+  const isLastShare = paidShares >= split - 1
+  const payAmount = split > 1 ? (isLastShare ? r2(cobroTotal - shareAmount * (split - 1)) : shareAmount) : cobroTotal
 
   // ── Mesa (del plano del Salón) ──
   function openPicker() {
@@ -245,21 +252,32 @@ export default function Tpv() {
     if (!requireCaja()) return
     setMetodo(null)
     setCash('')
+    setSplit(1) // empieza sin dividir
+    setPaidShares(0)
     setPayOpen(true)
     play('tap', 0.45)
   }
   function confirmCobro(m: Metodo) {
     if (cobroTotal <= 0) return
-    // Se cobra TODO lo de la mesa: la cuenta acumulada (rondas ya enviadas) + lo que quede en el carrito.
+    // ── DIVIDIR: si quedan partes por cobrar, esta es una parte intermedia (la caja suma, pero NO se salda aún) ──
+    if (split > 1 && !isLastShare) {
+      addWallet(payAmount)
+      logCobro(payAmount, 'mesa', `${mesa ? 'Mesa ' + mesa.nombre : 'Cuenta'} · parte ${paidShares + 1}/${split}`, m)
+      play('success', 0.45, 1.05)
+      setPaidShares((p) => p + 1)
+      setMetodo(null)
+      setCash('')
+      return // el panel sigue abierto para la siguiente parte
+    }
+    // ── ÚLTIMA parte (o pago completo): se salda toda la cuenta y se registra la venta UNA vez ──
     const tabItems = mesa ? cuentaItems(mesa.id) : []
     const allItems = [...tabItems, ...cart.map((l) => ({ name: l.name, qty: l.qty }))]
     const arts = allItems.reduce((s, i) => s + i.qty, 0)
-    // "Caja que suma": el ticket entra al MISMO bote que las moneditas (caja del día). La cartera "Hoy" y
-    // "Ventas hoy" cuentan-arriba a la vez (mismo store + count-up del hook). + ka-ching escalado.
-    addWallet(cobroTotal)
-    logCobro(cobroTotal, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}`, m)
-    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroTotal, metodo: m, mesa: mesa?.nombre ?? null }) // → LIBRO de Ventas TPV
-    consumirVenta(allItems) // → ALMACÉN: baja el stock de TODO lo vendido (cuenta + carrito)
+    // "Caja que suma": el ticket entra al MISMO bote que las moneditas (caja del día). + ka-ching escalado.
+    addWallet(payAmount) // solo la última parte (las anteriores ya sumaron); si no se divide, = cobroTotal
+    logCobro(payAmount, 'ticket', `${ticket ?? 'Ticket'} · ${mesa ? 'Mesa ' + mesa.nombre : 'Para llevar'}${split > 1 ? ` · parte ${split}/${split}` : ''}`, m)
+    appendVenta({ id: ticket, tipo: 'ticket', arts, total: cobroTotal, metodo: m, mesa: mesa?.nombre ?? null }) // venta = la cuenta COMPLETA, una vez
+    consumirVenta(allItems) // → ALMACÉN: baja el stock de TODO lo vendido (una vez)
     play('success', 0.5, cobroTotal > 50 ? 0.84 : cobroTotal > 25 ? 0.92 : 1)
     setPulse((p) => p + 1)
     setPaid(true)
@@ -269,6 +287,8 @@ export default function Tpv() {
       clearCuenta(mesa.id) // saldada la cuenta de la mesa
       setMesas((prev) => { const next = prev.map((mm) => (mm.id === mesa.id ? { ...mm, estado: 'libre' as const, since: undefined, reservaFin: undefined } : mm)); saveSalon(next); return next })
     }
+    setSplit(1)
+    setPaidShares(0)
     setMesa(null) // la mesa queda libre tras cobrar
     setTicket(null) // cerrado el ticket → el siguiente pedido toma un nº nuevo
     setPayOpen(false)
@@ -400,12 +420,12 @@ export default function Tpv() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prods, cart, total])
 
-  // Calculadora de cambio (pago en efectivo) — sobre el total a cobrar (cuenta + carrito)
+  // Calculadora de cambio (pago en efectivo) — sobre el importe de la PARTE actual (o el total si no se divide)
   const cashNum = parseFloat(cash.replace(',', '.')) || 0
-  const cambio = Math.max(0, Math.round((cashNum - cobroTotal) * 100) / 100)
+  const cambio = Math.max(0, Math.round((cashNum - payAmount) * 100) / 100)
   const payQuick = (() => {
-    const exact = Math.round(cobroTotal * 100) / 100
-    const ups = [5, 10, 20, 50].map((s) => Math.ceil(cobroTotal / s) * s).filter((v) => v > cobroTotal + 0.001)
+    const exact = Math.round(payAmount * 100) / 100
+    const ups = [5, 10, 20, 50].map((s) => Math.ceil(payAmount / s) * s).filter((v) => v > payAmount + 0.001)
     return [exact, ...Array.from(new Set(ups))].slice(0, 5)
   })()
 
@@ -732,6 +752,21 @@ export default function Tpv() {
                 <span className="pay-k">Cobrar {mesa ? '· Mesa ' + mesa.nombre : '· Para llevar'}</span>
                 <b className="pay-total tnum">{eur(cobroTotal)} €</b>
               </div>
+              {/* Dividir la cuenta entre N personas (partes iguales). Bloqueado una vez se cobra la 1ª parte. */}
+              <div className="pay-split">
+                <span className="pay-split-lab">Dividir</span>
+                <div className="pay-split-steps">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <button key={n} className={'pay-split-n' + (split === n ? ' on' : '')} disabled={paidShares > 0} onClick={() => { setSplit(n); setMetodo(null); setCash(''); play('tap', 0.4, 0.9 + n * 0.04) }}>{n === 1 ? 'No' : n}</button>
+                  ))}
+                </div>
+              </div>
+              {split > 1 && (
+                <div className="pay-split-info">
+                  <span>Parte {Math.min(paidShares + 1, split)} de {split}{paidShares > 0 ? ` · ${paidShares} pagada${paidShares > 1 ? 's' : ''}` : ''}</span>
+                  <b className="tnum">{eur(payAmount)} € / persona</b>
+                </div>
+              )}
               <div className="pay-methods">
                 <button className="pay-m card" onClick={() => confirmCobro('tarjeta')}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /></svg>
@@ -756,8 +791,8 @@ export default function Tpv() {
                       <span>Cambio a devolver</span>
                       <b className="tnum">{eur(cambio)} €</b>
                     </div>
-                    <button className="pay-confirm" disabled={cashNum < cobroTotal} onClick={() => confirmCobro('efectivo')}>
-                      {cashNum < cobroTotal ? 'Elige el efectivo recibido' : `Cobrar · cambio ${eur(cambio)} €`}
+                    <button className="pay-confirm" disabled={cashNum < payAmount} onClick={() => confirmCobro('efectivo')}>
+                      {cashNum < payAmount ? 'Elige el efectivo recibido' : `Cobrar${split > 1 ? ` parte ${Math.min(paidShares + 1, split)}/${split}` : ''} · cambio ${eur(cambio)} €`}
                     </button>
                   </motion.div>
                 )}

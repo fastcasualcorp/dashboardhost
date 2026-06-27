@@ -1683,6 +1683,18 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .pay-scrim { position: fixed; inset: 0; z-index: 240; background: rgba(0,0,0,.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 20px; }
 .pay-panel { width: min(420px, 94vw); background: var(--surface-2, #16161b); border: 1px solid rgba(255,255,255,.1); border-radius: 22px; padding: 22px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
 .pay-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+/* Dividir cuenta */
+.pay-split { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.pay-split-lab { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.55); font-weight: 700; flex: none; }
+.pay-split-steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; flex: 1; }
+.pay-split-n { padding: 8px 0; border-radius: 9px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; transition: background .15s, border-color .15s, transform .12s var(--ease-spring); }
+.pay-split-n:hover:not(:disabled) { border-color: rgba(var(--brand-rgb),.5); }
+.pay-split-n:active:not(:disabled) { transform: scale(.94); }
+.pay-split-n.on { background: var(--gold); color: var(--accent-ink, #1a1404); border-color: transparent; }
+.pay-split-n:disabled { opacity: .4; cursor: not-allowed; }
+.pay-split-info { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding: 9px 12px; border-radius: 11px; background: rgba(var(--brand-rgb),.1); border: 1px solid rgba(var(--brand-rgb),.25); }
+.pay-split-info span { font-size: var(--fs-xs); color: var(--ink); font-weight: 600; }
+.pay-split-info b { font-family: var(--font-num); font-weight: 750; color: var(--gold); }
 .pay-k { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.55); font-weight: 700; }
 .pay-total { font-family: var(--font-num); font-size: clamp(28px, 4vw, 38px); font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
 .pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
