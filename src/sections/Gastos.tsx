@@ -1,48 +1,30 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import { Card, SectionHeader, Badge, CountValue } from '../components/ui'
+import { useGastos, setGastoBase, cuotaIva, totalGasto, gastosBaseMes, gastosIvaMes, gastosMes, CAT_META, CAT_ORDER } from '../lib/gastos'
 
-// Formato es-ES CON punto de millar también en 4 cifras (el locale no lo pone por defecto).
+/* Gastos fijos — CALCULADORA con IVA REAL (fuente única `lib/gastos`): cada gasto tiene base + tipo de IVA;
+   cuota y total se calculan. El total del mes lo lee el Resumen (P&L) → una sola cifra (gaps 3.1/3.2).
+   Editar un importe recalcula tarta + barras + KPIs en vivo (count-up). */
+
 const e0 = (n: number) => n.toLocaleString('es-ES', { useGrouping: true, maximumFractionDigits: 0 })
-
-// Una sola fuente de color por categoría (la comparten tarta, barras y conceptos).
-const CAT_META: Record<string, { color: string }> = {
-  Alquiler: { color: '#ffbf10' },
-  Suministros: { color: '#ff7a45' },
-  Otros: { color: '#b58bf0' },
-  Seguros: { color: '#4aa3ff' },
-  Software: { color: '#34d399' },
-}
-const CAT_ORDER = Object.keys(CAT_META)
-
-type Concepto = { concepto: string; cat: keyof typeof CAT_META | string; importe: number; iva: string }
-
-const CONCEPTOS_INIT: Concepto[] = [
-  { concepto: 'Alquiler local', cat: 'Alquiler', importe: 1200, iva: '0 %' },
-  { concepto: 'Luz (Endesa)', cat: 'Suministros', importe: 320, iva: '10 %' },
-  { concepto: 'Agua', cat: 'Suministros', importe: 90, iva: '10 %' },
-  { concepto: 'Gas natural', cat: 'Suministros', importe: 210, iva: '21 %' },
-  { concepto: 'Seguro RC / incendios', cat: 'Seguros', importe: 280, iva: '0 %' },
-  { concepto: 'Gestoría laboral', cat: 'Otros', importe: 180, iva: '21 %' },
-  { concepto: 'Software TPV (REBELL)', cat: 'Software', importe: 129, iva: '21 %' },
-  { concepto: 'Internet + teléfono', cat: 'Software', importe: 81, iva: '21 %' },
-  { concepto: 'Contenedor basura', cat: 'Otros', importe: 750, iva: '0 %' },
-]
+const e2 = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+// días naturales del MES en curso (prorrateo real, no /30 fijo)
+const DIM = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
 
 export default function Gastos() {
-  // Estado editable: tocar un importe recalcula tarta + barras + KPIs en vivo (count-up).
-  const [conceptos, setConceptos] = useState<Concepto[]>(CONCEPTOS_INIT)
-  const [editId, setEditId] = useState<number | null>(null)
+  const gastos = useGastos()
+  const [editId, setEditId] = useState<string | null>(null)
 
-  const { cats, total, maxCat } = useMemo(() => {
+  const { cats, total, totalBase, totalIva, maxCat } = useMemo(() => {
     const sums: Record<string, number> = {}
-    for (const c of conceptos) sums[c.cat] = (sums[c.cat] || 0) + c.importe
+    for (const g of gastos) sums[g.cat] = (sums[g.cat] || 0) + totalGasto(g)
     const cats = CAT_ORDER.map((name) => ({ name, value: sums[name] || 0, color: CAT_META[name].color })).filter((c) => c.value > 0)
-    const total = cats.reduce((s, c) => s + c.value, 0)
+    const total = gastosMes()
     const maxCat = Math.max(1, ...cats.map((c) => c.value))
-    return { cats, total, maxCat }
-  }, [conceptos])
+    return { cats, total, totalBase: gastosBaseMes(), totalIva: gastosIvaMes(), maxCat }
+  }, [gastos])
 
-  const prorrateo = total / 30
+  const prorrateo = total / DIM
 
   // conic-gradient de la tarta a partir de las categorías reales.
   let acc = 0
@@ -54,31 +36,28 @@ export default function Gastos() {
     })
     .join(', ')
 
-  function setImporte(idx: number, raw: string) {
-    const n = Math.max(0, Math.round(Number(raw.replace(/[^\d.,]/g, '').replace(',', '.')) || 0))
-    setConceptos((prev) => prev.map((c, i) => (i === idx ? { ...c, importe: n } : c)))
-  }
+  const lider = cats.slice().sort((a, b) => b.value - a.value)[0]
 
   return (
     <div className="section">
-      <SectionHeader title="Gastos fijos" subtitle="Costes recurrentes · toca un importe para editar" right={<Badge tone="muted">Junio 2026</Badge>} />
+      <SectionHeader title="Gastos fijos" subtitle="Calculadora con IVA · toca un importe para editar" right={<Badge tone="muted">Junio 2026</Badge>} />
 
       {/* KPIs vivos: recalculan con count-up al editar */}
       <div className="gx-kpis">
         <div className="gx-kpi">
-          <span className="gx-kpi-l">Total mensual</span>
+          <span className="gx-kpi-l">Total con IVA / mes</span>
           <b className="gx-kpi-v tnum"><CountValue value={e0(total)} /><i>€</i></b>
-          <span className="gx-kpi-f">{conceptos.length} conceptos activos</span>
+          <span className="gx-kpi-f">{gastos.length} conceptos · base {e0(totalBase)} €</span>
+        </div>
+        <div className="gx-kpi">
+          <span className="gx-kpi-l">IVA del mes</span>
+          <b className="gx-kpi-v tnum"><CountValue value={e0(totalIva)} /><i>€</i></b>
+          <span className="gx-kpi-f">cuota soportada</span>
         </div>
         <div className="gx-kpi">
           <span className="gx-kpi-l">Prorrateo diario</span>
           <b className="gx-kpi-v tnum"><CountValue value={e0(prorrateo)} /><i>€</i></b>
-          <span className="gx-kpi-f">30 días naturales</span>
-        </div>
-        <div className="gx-kpi">
-          <span className="gx-kpi-l">Categoría líder</span>
-          <b className="gx-kpi-v tnum" style={{ color: cats[0]?.color }}>{cats.slice().sort((a, b) => b.value - a.value)[0]?.name}</b>
-          <span className="gx-kpi-f">{Math.round(((cats.slice().sort((a, b) => b.value - a.value)[0]?.value || 0) / total) * 100)}% del total</span>
+          <span className="gx-kpi-f">{DIM} días naturales</span>
         </div>
       </div>
 
@@ -86,7 +65,7 @@ export default function Gastos() {
       <Card>
         <div className="card-head">
           <h3>Estructura de gastos</h3>
-          <Badge tone="muted">por categoría · mensual</Badge>
+          <Badge tone="muted">{lider?.name} lidera · {Math.round(((lider?.value || 0) / total) * 100)}%</Badge>
         </div>
         <div className="gx-hero">
           <div className="gx-pie-wrap">
@@ -113,29 +92,29 @@ export default function Gastos() {
         </div>
       </Card>
 
-      {/* Conceptos EDITABLES: cambiar un importe recalcula todo arriba */}
+      {/* Conceptos EDITABLES: cambiar la base recalcula IVA, total y todo arriba */}
       <Card>
         <div className="card-head">
           <h3>Conceptos</h3>
-          <Badge tone="muted">{conceptos.length} · {e0(total)} €/mes</Badge>
+          <Badge tone="muted">{gastos.length} · {e0(total)} €/mes con IVA</Badge>
         </div>
         <div className="gx-cons">
-          {conceptos.map((c, i) => (
-            <div className={'gx-con' + (editId === i ? ' editing' : '')} key={i}>
-              <span className="gx-con-dot" style={{ background: CAT_META[c.cat]?.color || 'var(--muted)' }} />
+          {gastos.map((g) => (
+            <div className={'gx-con' + (editId === g.id ? ' editing' : '')} key={g.id}>
+              <span className="gx-con-dot" style={{ background: CAT_META[g.cat]?.color || 'var(--muted)' }} />
               <div className="gx-con-main">
-                <b className="gx-con-name">{c.concepto}</b>
-                <span className="gx-con-sub">{c.cat} · IVA {c.iva} · {e0(c.importe / 30)} €/día</span>
+                <b className="gx-con-name">{g.concepto}</b>
+                <span className="gx-con-sub">{g.cat} · IVA {g.iva}% = {e2(cuotaIva(g))} € · total {e2(totalGasto(g))} € · {e0(totalGasto(g) / DIM)} €/día</span>
               </div>
-              <label className="gx-con-edit" title="Editar importe">
+              <label className="gx-con-edit" title="Editar base imponible">
                 <input
                   className="gx-con-input tnum"
                   inputMode="numeric"
-                  value={c.importe}
-                  onChange={(e) => setImporte(i, e.target.value)}
-                  onFocus={() => setEditId(i)}
+                  value={g.base}
+                  onChange={(e) => setGastoBase(g.id, Number(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0)}
+                  onFocus={() => setEditId(g.id)}
                   onBlur={() => setEditId(null)}
-                  aria-label={`Importe de ${c.concepto}`}
+                  aria-label={`Base de ${g.concepto}`}
                 />
                 <span className="gx-con-cur">€</span>
               </label>

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Card, SectionHeader, Donut, CountValue, BarChart, BarRow, DataTable, Badge, Grid, KpiTile } from '../components/ui'
 import DatePicker, { rangeFor, type RangeSel } from '../components/DatePicker'
-import { eur, eur0, VENTAS_MES, FOOD_COST_PCT, GASTOS_FIJOS_MES } from '../lib/data'
+import { eur, eur0, VENTAS_MES, FOOD_COST_PCT } from '../lib/data'
 import { useEquipo, costeMes } from '../lib/equipo'
+import { useGastos, gastosMes } from '../lib/gastos'
 import { imgFor } from '../lib/products'
 import WaterfallPL from '../components/WaterfallPL'
 
@@ -70,9 +71,10 @@ export default function Resumen() {
 
   // ── Cuenta de resultados del MES, DERIVADA y consistente (mismas cifras en héroe, KPIs, cascada y tabla) ──
   const roster = useEquipo()
+  useGastos() // suscribe: editar un gasto recalcula el P&L
   const plPersonal = roster.reduce((s, e) => s + costeMes(e), 0) // = Coste personal (fuente única equipo)
   const plFood = Math.round(VENTAS_MES * FOOD_COST_PCT)
-  const plGastos = GASTOS_FIJOS_MES
+  const plGastos = gastosMes() // = Gastos fijos (fuente única gastos, total con IVA)
   const plNeto = VENTAS_MES - plPersonal - plFood - plGastos
   const plPct = (n: number) => Math.round((n / VENTAS_MES) * 1000) / 10
   const filasPL = [

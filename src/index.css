@@ -3239,7 +3239,7 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .gx-pie-wrap { display: grid; place-items: center; }
 .gx-pie { position: relative; width: clamp(240px, 32vw, 340px); aspect-ratio: 1; animation: gxPieIn .8s var(--ease-spring) both; }
 .gx-pie::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--pie); -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%); mask: radial-gradient(circle, transparent 56%, #000 57%); box-shadow: 0 24px 60px -30px rgba(0,0,0,.8); }
-.gx-pie::after { content: ''; position: absolute; inset: 0; border-radius: 50%; -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%, #000 100%); mask: radial-gradient(circle, transparent 56%, #000 57%, #000 100%); background: conic-gradient(from -90deg, rgba(255,255,255,.14), transparent 30%); opacity: .5; animation: gxSweep 3.4s linear infinite; }
+.gx-pie::after { content: ''; position: absolute; inset: 0; border-radius: 50%; -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%, #000 100%); mask: radial-gradient(circle, transparent 56%, #000 57%, #000 100%); background: conic-gradient(from -90deg, rgba(255,255,255,.14), transparent 30%); opacity: .5; animation: gxSweep 1.8s linear .25s both; }
 @keyframes gxPieIn { from { transform: scale(.72) rotate(-30deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes gxSweep { to { transform: rotate(360deg); } }
 .gx-pie-hole { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
