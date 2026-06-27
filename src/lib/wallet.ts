@@ -4,7 +4,7 @@
    reinicia al ABRIR caja (turno apertura→cierre). (Juan, 26-jun) */
 import { useEffect, useRef, useState } from 'react'
 import { reduceMotion } from './data'
-import { supabase, localId } from './supabase'
+import { appendCierre } from './cierres'
 
 const KEY = 'rebell-caja-dia-v1'
 const SEED = 1787.4 // demo: "ya vendido hoy" → ambos marcadores arrancan poblados e IGUALES
@@ -80,14 +80,12 @@ export function logCobro(amount: number, tipo: 'mesa' | 'ticket', label: string,
 // Sumas por método de pago de los cobros itemizados de hoy (para el desglose de Caja efectivo/tarjeta).
 export const walletPorMetodo = (m: Metodo) => Math.round(state.entries.filter((e) => e.metodo === m).reduce((s, e) => s + e.amount, 0) * 100) / 100
 
-// CIERRE Z → libro de cierres AUDITABLE en Supabase (A3/5.7). Se registra al CERRAR
-// caja, con los totales del día por método. Si no hay sesión (demo), no hace nada.
+// CIERRE Z → libro de cierres AUDITABLE (A3/5.7). Se registra al CERRAR caja, con
+// los totales del día por método. Delega en el store `cierres` (única fuente): si hay
+// sesión va a Supabase (+realtime cross-device); en demo, al libro local. Así el
+// arqueo SIEMPRE aparece en "Arqueos", con o sin backend.
 export function registrarCierre(tickets: number) {
-  if (!supabase) return
-  const lid = localId()
-  if (!lid) return
-  void supabase.from('cierres').insert({
-    local_id: lid,
+  appendCierre({
     total: state.total,
     efectivo: walletPorMetodo('efectivo'),
     tarjeta: walletPorMetodo('tarjeta'),

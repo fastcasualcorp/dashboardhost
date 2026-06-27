@@ -31,6 +31,7 @@ export const NAV: NavGroup[] = [
       { id: 'gastos', t: 'Gastos fijos', s: 'Costes recurrentes', desc: 'Alquiler, luz, seguros… todos tus gastos fijos con IVA, prorrateados al día para un cuadro de mando exacto.' },
       { id: 'ventas', t: 'Ventas', s: 'Calendario por día', desc: 'El año entero de un vistazo: 12 meses en calendario, cada día con su venta y el total de efectivo, tarjeta y mes.' },
       { id: 'ventastpv', t: 'Ventas TPV', s: 'Libro de ventas', desc: 'El libro de cada venta del TPV (ticket o factura): base, IVA, total, con buscador, filtro por periodo y exportación a Excel.' },
+      { id: 'arqueos', t: 'Arqueos', s: 'Libro de cierres', desc: 'El libro auditable de cada cierre de caja (arqueo): fecha, total y desglose de efectivo, tarjeta y tickets de cada turno cerrado en el TPV. Exportable e imprimible.' },
     ],
   },
   {
@@ -69,6 +70,7 @@ const PATHS: Record<string, ReactNode> = {
   mensual: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></>,
   ventas: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /><circle cx="8" cy="14" r="1" /><circle cx="12" cy="14" r="1" /><circle cx="16" cy="14" r="1" /></>,
   ventastpv: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></>,
+  arqueos: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="11" cy="12" r="3" /><path d="M11 12h6M16 12h.01" /></>,
   mapa: <><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" /></>,
   gastos: <><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20M17 15h.01" /></>,
   empleados: <><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 6a3 3 0 0 1 0 5M21 20a5 5 0 0 0-4-4.9" /></>,
