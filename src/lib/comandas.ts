@@ -9,6 +9,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase, localId } from './supabase'
+import { consumirVenta, ensureAlmacenSync } from './almacen'
 
 export type CItem = { name: string; qty: number }
 export type CStatus = 'nueva' | 'prep' | 'lista'
@@ -57,6 +58,7 @@ async function initSync() {
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
   if (!lid || !data.session) return // demo → store en memoria
   _live = true
+  void ensureAlmacenSync() // el stock debe estar "vivo" para que el descuento del pedido online PERSISTA aunque nadie abra Almacén
   supabase.realtime.setAuth(data.session.access_token) // el socket realtime necesita el token del usuario (si no, la RLS bloquea los avisos)
   // 1) hidratar las comandas ACTIVAS (no servidas) de mi local
   const { data: rows } = await supabase.from('comandas').select('*').eq('local_id', lid).neq('estado', 'servida').order('creado_at') // .eq además de la RLS (defensa en profundidad)
@@ -71,7 +73,16 @@ async function initSync() {
       const oldId = (payload.old as { id?: string }).id
       if (ev === 'INSERT') {
         if (row.estado === 'servida') return
-        if (!comandas.some((c) => c.dbId === row.id)) comandas = [...comandas, fromRow(row)]
+        if (!comandas.some((c) => c.dbId === row.id)) {
+          comandas = [...comandas, fromRow(row)]
+          // Pedido ONLINE (lo crea el cliente anónimo por la Edge Function) → al ENTRAR en vivo
+          // baja su stock con la MISMA receta que el TPV (fuente única RECETAS en lib/almacen).
+          // Solo 'Online': el TPV ya descuenta al cobrar → tocar el resto lo DOBLARÍA. Una vez por
+          // INSERT (no en la hidratación) → no re-descuenta al recargar.
+          // [lanzamiento] mover a decremento ATÓMICO server-side (recetas en BD) para que no dependa
+          // de que un dispositivo del local esté abierto.
+          if (row.fuente === 'Online') consumirVenta(row.items || [])
+        }
       } else if (ev === 'UPDATE') {
         if (row.estado === 'servida') comandas = comandas.filter((c) => c.dbId !== row.id)
         else comandas = comandas.map((c) => (c.dbId === row.id ? { ...c, status: row.estado as CStatus } : c))

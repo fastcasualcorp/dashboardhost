@@ -94,7 +94,16 @@ function persistDebounced() {
   if (_saveTimer) clearTimeout(_saveTimer)
   const sb = supabase
   const lid = _lid
-  _saveTimer = setTimeout(() => { void sb.from('inventario').upsert({ local_id: lid, data: almacenes, updated_at: new Date().toISOString() }) }, 3000)
+  // OJO: el query-builder de supabase-js es LAZY — solo lanza la petición al hacer await/.then().
+  // Sin el .then() la escritura NO se enviaba (el stock nunca persistía). (bug pre-existente)
+  _saveTimer = setTimeout(() => {
+    void sb.from('inventario').upsert({ local_id: lid, data: almacenes, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) console.warn('[almacen] persist:', error.message) })
+  }, 3000)
+}
+// Exportada para que el KDS (lib/comandas) arranque la sync del stock aunque NADIE
+// abra la sección Almacén → el pedido online persiste su descuento server-side igualmente.
+export async function ensureAlmacenSync() {
+  await initSync()
 }
 async function initSync() {
   if (_syncStarted || !supabase) return
@@ -109,7 +118,8 @@ async function initSync() {
     almacenes = row.data as Almacen[]
     emit()
   } else {
-    void supabase.from('inventario').upsert({ local_id: lid, data: almacenes }) // 1ª vez: sembrar
+    // .then() obligatorio: sin él el builder lazy NO envía la petición (el blob no se sembraba).
+    void supabase.from('inventario').upsert({ local_id: lid, data: almacenes }).then(({ error }) => { if (error) console.warn('[almacen] seed:', error.message) }) // 1ª vez: sembrar
   }
 }
 
