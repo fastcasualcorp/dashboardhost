@@ -71,6 +71,23 @@ export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; me
   return venta
 }
 
+/* Clave de día local (año-mes-día) para cruzar con el calendario de Ventas. */
+export const dayKey = (y: number, m: number, d: number) => `${y}-${m}-${d}`
+
+/* Agrega las ventas REALES (TPV + online) por día → el calendario las suma sobre
+   su base. Efectivo vs tarjeta por método; "domicilio" no aplica a estas. */
+export function ventasPorDia(list: Venta[] = ventas): Map<string, { e: number; t: number; total: number }> {
+  const map = new Map<string, { e: number; t: number; total: number }>()
+  for (const v of list) {
+    const dt = new Date(v.ts)
+    const k = dayKey(dt.getFullYear(), dt.getMonth(), dt.getDate())
+    const cur = map.get(k) || { e: 0, t: 0, total: 0 }
+    const ef = v.metodo === 'efectivo' ? v.total : 0 // tarjeta o sin método → cuenta como tarjeta
+    map.set(k, { e: cur.e + ef, t: cur.t + (v.total - ef), total: cur.total + v.total })
+  }
+  return map
+}
+
 export function useVentas(): Venta[] {
   const [, force] = useState(0)
   useEffect(() => {

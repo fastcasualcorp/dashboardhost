@@ -6,6 +6,7 @@ import Pedidos from './Pedidos'
 import Tpv from './Tpv'
 import Salon from './Salon'
 import Kds from './Kds'
+import Online from './Online'
 import Ventas from './Ventas'
 import VentasTpv from './VentasTpv'
 import MapaIncidencia from './MapaIncidencia'
@@ -28,6 +29,7 @@ const MAP: Record<string, ComponentType> = {
   tpv: Tpv,
   salon: Salon,
   kds: Kds,
+  online: Online,
   cuadro: Resumen, // "Cuadro de mando" fusionado dentro de Resumen → cualquier enlace antiguo cae en el merge
   ventas: Ventas,
   ventastpv: VentasTpv,

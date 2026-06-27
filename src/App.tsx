@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import Shell from './components/Shell'
 import Login, { type Profile, PROFILES } from './components/Login'
 import BootIntro from './components/BootIntro'
 import { beastById } from './lib/beasts'
 import { reduceMotion } from './lib/data'
 import { supabase, hasSupabase } from './lib/supabase'
+
+// Página PÚBLICA de pedido por QR (cliente final, sin login). Va en su propio
+// chunk (lazy) para no engordar el bundle del panel. Se resuelve por la URL del
+// QR (/pedir?l=local&m=mesa) antes de montar nada del dashboard.
+const Pedir = lazy(() => import('./sections/Pedir'))
+const IS_PEDIR = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/pedir'
 
 function readProfile(): string | null {
   try {
@@ -48,6 +54,15 @@ function shouldBoot(): boolean {
 }
 
 export default function App() {
+  // Ruta pública del QR: el cliente final entra aquí SIN login ni intro. Se decide
+  // por la URL (constante durante la vida de la página) → no rompe el orden de hooks.
+  if (IS_PEDIR) {
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
+        <Pedir />
+      </Suspense>
+    )
+  }
   // Con Supabase, el acceso depende de la SESIÓN real (no de localStorage). Sin
   // backend (modo demo) caemos al perfil guardado.
   const [profile, setProfile] = useState<string | null>(() => (hasSupabase ? null : readProfile()))

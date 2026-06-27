@@ -255,7 +255,10 @@ export default function Tpv() {
   // "Cobrar" abre el panel de pago (elegir efectivo/tarjeta). El cobro real lo hace confirmCobro.
   // URL del QR del recibo → futura carta/pedido online de ESTA mesa (self-order por QR). Hoy lleva a pedir/valorar.
   function ordenUrl(): string {
-    const base = 'https://rebell.app/pedir'
+    // QR DINÁMICO: apunta a la página REAL de pedido de ESTA app (mismo origen que
+    // sirve el panel → funciona en localhost y en prod sin tocar nada). Lleva el
+    // local + la mesa, así el cliente cae directo en su carta. (self-order por QR)
+    const base = typeof window !== 'undefined' ? `${window.location.origin}/pedir` : '/pedir'
     const params = `l=bertamirans${mesa ? `&m=${encodeURIComponent(mesa.nombre)}` : ''}`
     return `${base}?${params}`
   }

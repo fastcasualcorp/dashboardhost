@@ -13,6 +13,7 @@ export const NAV: NavGroup[] = [
       { id: 'salon', t: 'Salón', s: 'Plano de sala', desc: 'Diseña tu sala: coloca las mesas, ajusta su tamaño y plazas. Luego en el TPV eliges a qué mesa va cada comanda.' },
       { id: 'pedidos', t: 'Pedidos', s: 'Delivery · últimos', tag: '12', alert: 'gold', desc: 'Todos los pedidos de delivery (Glovo, Uber Eats, Just Eat) en una cola viva con su estado.' },
       { id: 'kds', t: 'Comandas', s: 'Cocina en vivo', alert: 'gold', desc: 'El tablero de cocina (KDS): comandas entrando en vivo, con su tiempo y estado, listas para preparar y servir.' },
+      { id: 'online', t: 'Canal online', s: 'Pedido por QR', tag: 'NEW', alert: 'gold', desc: 'La carta que ven tus clientes al escanear el QR de su mesa: pide y paga sin camarero. Aquí la previsualizas en un móvil y generas el QR de cada mesa para imprimir.' },
     ],
   },
   {
@@ -62,6 +63,7 @@ const PATHS: Record<string, ReactNode> = {
   tpv: <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>,
   salon: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="2" /><circle cx="15.5" cy="15.5" r="2" /></>,
   kds: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 4v5M16 4v5M7 14h4" /></>,
+  online: <><rect x="7" y="2" width="10" height="20" rx="2.5" /><path d="M11 18h2" /><path d="M9.5 6.5h5M9.5 9.5h5M9.5 12.5h3" /></>,
   cuadro: <><path d="M21 12a9 9 0 1 1-9-9v9Z" /><path d="M21 12a9 9 0 0 0-9-9" /></>,
   estad: <><path d="M3 3v18h18" /><rect x="7" y="11" width="3" height="6" /><rect x="12" y="7" width="3" height="10" /><rect x="17" y="13" width="3" height="4" /></>,
   mensual: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></>,
