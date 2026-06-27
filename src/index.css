@@ -1645,6 +1645,30 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .eb-note b { color: rgba(255,255,255,.7); font-weight: 700; }
 [data-theme='light'] .eb-note { color: rgba(20,24,34,.5); }
 [data-theme='light'] .eb-note b { color: rgba(20,24,34,.78); }
+
+/* ── Medidor de combustible (Coste personal) — clases fg-* para NO chocar con el .gauge circular existente ── */
+.coste-hero { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; padding: 10px 4px 6px; }
+.fg { position: relative; flex: 1; min-width: 240px; text-align: center; }
+.fg-svg { display: inline-block; width: 100%; max-width: 330px; height: auto; overflow: visible; }
+.fg-track { fill: none; stroke: rgba(255,255,255,.09); stroke-width: 13; stroke-linecap: round; }
+.fg-zone { fill: none; stroke-width: 13; stroke-linecap: butt; }
+.fg-needle { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 3px 5px rgba(0,0,0,.45)); }
+.fg-hub { fill: var(--ink); }
+.fg-read { width: 100%; text-align: center; margin-top: -8px; }
+.fg-val { display: block; font-family: var(--font-num); font-size: clamp(40px, 5.2vw, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+.fg-val i { font-size: .46em; font-weight: 700; opacity: .6; margin-left: 2px; font-style: normal; }
+.fg-lbl { display: block; font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.5); margin-top: 5px; }
+.fg-status { display: inline-block; margin-top: 9px; font-weight: 800; font-size: var(--fs-sm); }
+.coste-hero-side { display: flex; flex-direction: column; gap: 14px; min-width: 190px; }
+.che-stat { display: flex; flex-direction: column; gap: 2px; }
+.che-stat b { font-size: clamp(22px, 2.4vw, 30px); font-weight: 800; letter-spacing: -.01em; color: var(--ink); }
+.che-stat span { font-size: var(--fs-2xs); color: rgba(255,255,255,.5); }
+.che-zones { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.che-zones li { display: flex; align-items: center; gap: 9px; font-size: var(--fs-2xs); color: rgba(255,255,255,.66); font-weight: 600; }
+.che-zones i { width: 11px; height: 11px; border-radius: 4px; flex: none; }
+[data-theme='light'] .fg-track { stroke: rgba(20,24,34,.1); }
+[data-theme='light'] .fg-lbl, [data-theme='light'] .che-stat span { color: rgba(20,24,34,.55); }
+[data-theme='light'] .che-zones li { color: rgba(20,24,34,.7); }
 .eb-actions { display: flex; gap: 8px; padding: 8px 13px 10px; border-top: 1px solid rgba(255,255,255,.08); flex: none; }
 .eb-btn { flex: 1; padding: 9px; border-radius: 9px; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; border: 1px solid transparent; transition: transform .12s, background .16s; }
 .eb-btn:active { transform: scale(.97); }
