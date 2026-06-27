@@ -62,6 +62,11 @@ Deno.serve(async (req) => {
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
+  // ── rate-limit por IP (anti-spam del endpoint público): 8 pedidos / minuto ──
+  const ip = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'x').split(',')[0].trim()
+  const { data: rateOk } = await admin.rpc('check_rate', { p_key: 'pedido:' + ip, p_max: 8, p_secs: 60 })
+  if (rateOk === false) return json({ error: 'demasiados-pedidos' }, 429)
+
   // ── pedido atómico y transaccional (comanda + venta + nº por local) ──
   const { data: numero, error } = await admin.rpc('crear_pedido_online', {
     p_slug: local.toLowerCase(),

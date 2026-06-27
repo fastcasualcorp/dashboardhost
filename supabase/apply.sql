@@ -209,6 +209,22 @@ drop policy if exists "compras: gestionar las de mi local" on public.compras;
 create policy "compras: gestionar las de mi local" on public.compras for all to authenticated
   using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
 
+-- ── Rate-limit (anti-spam del endpoint público de pedidos) ──
+create table if not exists public.rate_hits ( k text not null, ts timestamptz not null default now() );
+create index if not exists rate_hits_idx on public.rate_hits (k, ts);
+-- Registra un hit y devuelve true si la clave sigue bajo el límite (ventana deslizante).
+create or replace function public.check_rate(p_key text, p_max int, p_secs int)
+returns boolean language plpgsql security definer set search_path = '' as $$
+declare n int;
+begin
+  delete from public.rate_hits where ts < now() - make_interval(secs => p_secs);
+  insert into public.rate_hits (k) values (p_key);
+  select count(*) into n from public.rate_hits where k = p_key and ts > now() - make_interval(secs => p_secs);
+  return n <= p_max;
+end $$;
+revoke all on function public.check_rate(text, int, int) from public, anon, authenticated;
+grant execute on function public.check_rate(text, int, int) to service_role;
+
 -- ── Pedido online ATÓMICO y TRANSACCIONAL (lo llama la Edge Function) ──
 -- nº de comanda por local con lock (sin carrera) + comanda+venta en UNA transacción
 -- (o las dos o ninguna → nunca venta huérfana). SECURITY DEFINER, search_path fijo,
