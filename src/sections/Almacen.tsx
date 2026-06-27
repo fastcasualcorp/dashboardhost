@@ -2,13 +2,13 @@ import { useState, useEffect, type CSSProperties } from 'react'
 import { Card, SectionHeader, KpiTile, DataTable, Badge, Grid } from '../components/ui'
 import { play } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
+import { useAlmacen, updateAlmacenes, FOTO, type Tipo, type Almacen } from '../lib/almacen'
 
 /* Almacén (antes "Stock"). Varios almacenes como FICHAS (foto Nano Banana). Al pulsar uno, su stock se ve como
    un GRID DE PRODUCTOS estilo videojuego: foto de estudio sobre negro + % gigante (verde/ámbar/rojo) + nombre +
-   barra HUD que SANGRA EN VIVO (drena con el consumo, parpadea roja al cruzar umbral). Añadir productos = CATÁLOGO
-   de cards con foto. Pedido de Juan (24-jun): preview "97% High Potato". Fotos en /img/prod (Nano Banana Pro). */
+   barra HUD que SANGRA EN VIVO. El stock es FUENTE ÚNICA (`lib/almacen`): cuando el TPV COBRA, baja AL VENDER.
+   Añadir productos = CATÁLOGO de cards con foto. Pedido de Juan (24-jun): preview "97% High Potato". */
 
-type Tipo = 'obrador' | 'refrigerado' | 'congelado' | 'seco'
 const TIPO_META: Record<Tipo, { label: string; color: string; emoji: string; tone: 'gold' | 'blue' | 'green' }> = {
   obrador: { label: 'Obrador', color: '#ffbf10', emoji: '🍳', tone: 'gold' },
   refrigerado: { label: 'Refrigerado', color: '#3a86ff', emoji: '❄️', tone: 'blue' },
@@ -16,12 +16,6 @@ const TIPO_META: Record<Tipo, { label: string; color: string; emoji: string; ton
   seco: { label: 'Seco / Bebidas', color: '#34d399', emoji: '📦', tone: 'green' },
 }
 const TIPO_KEYS = Object.keys(TIPO_META) as Tipo[]
-const FOTO: Record<Tipo, string> = {
-  obrador: '/img/almacen-obrador.jpg',
-  refrigerado: '/img/almacen-refrigerados.jpg',
-  congelado: '/img/almacen-congelados.jpg',
-  seco: '/img/almacen-seco.jpg',
-}
 
 // ── Catálogo de PRODUCTOS (ingredientes de la Carta) con su foto de estudio Nano Banana Pro ──
 type Prod = { id: string; name: string; unit: string; foto: string; cad: number }
@@ -45,46 +39,7 @@ const PROD: Prod[] = [
 ]
 const PROD_BY: Record<string, Prod> = Object.fromEntries(PROD.map((p) => [p.id, p]))
 
-type Item = { pid: string; nivel: number; actual: string; umbral: string; cad?: number }
-type Almacen = { id: string; nombre: string; tipo: Tipo; foto: string; valor: number; ocupacion: number; items: Item[] }
-
-const ALM0: Almacen[] = [
-  {
-    id: 'a1', nombre: 'Obrador central', tipo: 'obrador', foto: FOTO.obrador, valor: 1980, ocupacion: 72,
-    items: [
-      { pid: 'pan', nivel: 20, actual: '24 uds', umbral: '30 uds' },
-      { pid: 'carne', nivel: 46, actual: '18,5 kg', umbral: '10 kg' },
-      { pid: 'cheddar', nivel: 84, actual: '4,2 kg', umbral: '2 kg' },
-      { pid: 'bacon', nivel: 38, actual: '3,8 kg', umbral: '3 kg' },
-      { pid: 'salsa', nivel: 24, actual: '1,9 L', umbral: '2 L' },
-    ],
-  },
-  {
-    id: 'a2', nombre: 'Cámara refrigerada', tipo: 'refrigerado', foto: FOTO.refrigerado, valor: 1240, ocupacion: 64,
-    items: [
-      { pid: 'lechuga', nivel: 22, actual: '2,1 kg', umbral: '2 kg' },
-      { pid: 'tomate', nivel: 74, actual: '5,6 kg', umbral: '3 kg' },
-      { pid: 'cebolla', nivel: 70, actual: '4,0 kg', umbral: '2 kg' },
-      { pid: 'pepinillos', nivel: 66, actual: '3,2 kg', umbral: '1,5 kg' },
-    ],
-  },
-  {
-    id: 'a3', nombre: 'Congelados', tipo: 'congelado', foto: FOTO.congelado, valor: 430, ocupacion: 48,
-    items: [
-      { pid: 'patata', nivel: 80, actual: '28 kg', umbral: '15 kg' },
-      { pid: 'aros', nivel: 58, actual: '6,5 kg', umbral: '4 kg' },
-    ],
-  },
-  {
-    id: 'a4', nombre: 'Seco y bebidas', tipo: 'seco', foto: FOTO.seco, valor: 1200, ocupacion: 81,
-    items: [
-      { pid: 'cola', nivel: 67, actual: '96 uds', umbral: '48 uds' },
-      { pid: 'cola-zero', nivel: 60, actual: '72 uds', umbral: '48 uds' },
-      { pid: 'cerveza', nivel: 72, actual: '48 uds', umbral: '24 uds' },
-      { pid: 'agua', nivel: 78, actual: '120 uds', umbral: '60 uds' },
-    ],
-  },
-]
+type Item = Almacen['items'][number]
 
 const e0 = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 0 })
 const cadOf = (it: Item) => it.cad ?? PROD_BY[it.pid]?.cad ?? 30
@@ -113,8 +68,8 @@ const Xmark = () => (
 type Draft = { nombre: string; tipo: Tipo }
 
 export default function Almacen() {
-  const [alms, setAlms] = useState<Almacen[]>(ALM0)
-  const [selId, setSelId] = useState<string>(ALM0[0].id)
+  const alms = useAlmacen() // FUENTE ÚNICA: el TPV baja el stock al cobrar (consumirVenta)
+  const [selId, setSelId] = useState<string>(alms[0]?.id ?? 'a1')
   const [editId, setEditId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft>({ nombre: '', tipo: 'seco' })
   const [picker, setPicker] = useState(false) // catálogo de productos para cargar
@@ -127,14 +82,13 @@ export default function Almacen() {
   const totCaducar = alms.reduce((n, a) => n + porCaducarDe(a), 0)
   const totValor = alms.reduce((n, a) => n + a.valor, 0)
 
-  // ── BARRAS QUE SANGRAN EN VIVO: cada ~2,2s el stock del almacén abierto baja un poco (consumo del día).
-  //    La barra glidea (CSS) entre pasos → parece drenar de continuo; al cruzar umbral la card parpadea roja.
+  // ── BARRAS QUE SANGRAN EN VIVO: además del consumo REAL al vender (TPV → consumirVenta), un drenaje
+  //    ambiente lento (~0,18-0,38%/tick) en el almacén abierto da sensación de cocina en marcha. (escribe en el store)
   useEffect(() => {
     if (reduceMotion()) return
     const iv = window.setInterval(() => {
-      setAlms((list) => list.map((a) => (a.id !== selId ? a : {
+      updateAlmacenes((list) => list.map((a) => (a.id !== selId ? a : {
         ...a,
-        // drenaje LENTO y realista (~0,18-0,38%/tick): se ve la barra moverse sin vaciar el almacén en minutos
         items: a.items.map((it, i) => ({ ...it, nivel: Math.max(6, +(it.nivel - (0.18 + ((i * 7) % 9) / 40)).toFixed(2)) })),
       })))
     }, 2200)
@@ -150,22 +104,23 @@ export default function Almacen() {
   function openEdit(a: Almacen) { setDraft({ nombre: a.nombre, tipo: a.tipo }); setEditId(a.id); play('tap', 0.45) }
   function cancelEdit() { setEditId(null); play('tap', 0.4) }
   function saveEdit(id: string) {
-    setAlms((list) => list.map((a) => (a.id === id ? { ...a, nombre: draft.nombre.trim() || a.nombre, tipo: draft.tipo, foto: a.foto.startsWith('/img/almacen-') ? FOTO[draft.tipo] : a.foto } : a)))
+    updateAlmacenes((list) => list.map((a) => (a.id === id ? { ...a, nombre: draft.nombre.trim() || a.nombre, tipo: draft.tipo, foto: a.foto.startsWith('/img/almacen-') ? FOTO[draft.tipo] : a.foto } : a)))
     setEditId(null); play('toggle', 0.5)
   }
   function borrar(id: string) {
-    setAlms((list) => { const next = list.filter((a) => a.id !== id); if (id === selId && next[0]) setSelId(next[0].id); return next })
+    updateAlmacenes((list) => list.filter((a) => a.id !== id))
+    if (id === selId) { const next = alms.find((a) => a.id !== id); if (next) setSelId(next.id) }
     setEditId(null); play('toggle', 0.45)
   }
   function nuevo() {
     const id = 'a' + Date.now().toString(36)
-    setAlms((list) => [...list, { id, nombre: 'Nuevo almacén', tipo: 'seco', foto: FOTO.seco, valor: 0, ocupacion: 0, items: [] }])
+    updateAlmacenes((list) => [...list, { id, nombre: 'Nuevo almacén', tipo: 'seco', foto: FOTO.seco, valor: 0, ocupacion: 0, items: [] }])
     setSelId(id); setDraft({ nombre: 'Nuevo almacén', tipo: 'seco' }); setEditId(id); play('pop', 0.5, 1.2)
   }
   // Cargar un producto del catálogo en el almacén seleccionado (entra al 92%).
   function cargarProd(pid: string) {
     const p = PROD_BY[pid]
-    setAlms((list) => list.map((a) => (a.id === sel.id ? { ...a, items: [...a.items, { pid, nivel: 92, actual: `— ${p.unit}`, umbral: `— ${p.unit}` }] } : a)))
+    updateAlmacenes((list) => list.map((a) => (a.id === sel.id ? { ...a, items: [...a.items, { pid, nivel: 92, actual: `— ${p.unit}`, umbral: `— ${p.unit}` }] } : a)))
     play('success', 0.5)
   }
 
