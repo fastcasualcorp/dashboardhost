@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { CountValue } from '../components/ui'
 import { play, playBeast, playLock, playTick, playSweep, playGlitch, setCountMuted } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
+import { usePower } from '../lib/power'
 import { fetchRivalsCached, type PlaceReview, type PlaceRival } from '../lib/places'
 import { LOCAL } from '../lib/local'
 
@@ -168,6 +169,7 @@ function heatGeo(rivals: RivD[]) {
 }
 
 export default function MapaIncidencia() {
+  const { saver: powerSaver } = usePower() // Salón frío → mapa PLANO (satélite sin 3D) para ahorrar GPU/batería
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const loadedRef = useRef(false)
@@ -344,6 +346,21 @@ export default function MapaIncidencia() {
     obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] })
     return () => obs.disconnect()
   }, [])
+
+  // SALÓN FRÍO → mapa PLANO (satélite sin edificios 3D ni inclinación) = mucho menos GPU/batería.
+  // Reversible: al salir de ahorro vuelve el 3D. Aplica al togglear y también en cuanto el mapa esté listo.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const apply = () => {
+      try {
+        if (map.getLayer('rebell-3d-buildings')) map.setLayoutProperty('rebell-3d-buildings', 'visibility', powerSaver ? 'none' : 'visible')
+      } catch { /* capa fuera */ }
+      try { map.easeTo({ pitch: powerSaver ? 0 : 56, duration: 600, essential: true }) } catch { /* noop */ }
+    }
+    if (loadedRef.current) apply()
+    else map.once('idle', apply)
+  }, [powerSaver])
 
   // El sonido de "números cargando" no pega en el mapa. Lo muteamos SÍNCRONAMENTE en el cuerpo del componente
   // (corre antes de que monten los CountValue hijos, cuyo efecto disparaba el sonido) → al abrir el mapa NO
@@ -1261,6 +1278,8 @@ export default function MapaIncidencia() {
   const armCardLoop = () => {
     if (!comparadosRef.current.length || cardLoopRef.current) return
     const tick = () => {
+      // En segundo plano (pestaña oculta) NO repintamos: paramos el bucle, se re-arma al volver a mover el mapa.
+      if (document.hidden) { cardLoopRef.current = 0; return }
       const map = mapRef.current
       const moving = !!map && (map.isMoving() || map.isEasing() || map.isZooming() || map.isRotating())
       const more = moving ? false : positionRef.current() // si el mapa se mueve, ya dibuja el render; aquí solo asentar

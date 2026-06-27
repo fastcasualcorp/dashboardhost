@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
-import { SALES, salesMedian, eur, eur0, reduceMotion } from '../lib/data'
+import { SALES, salesMedian, eur, eur0, reduceMotion, SALES_RANGE } from '../lib/data'
 
 type Pt = { x: number; y: number }
 
@@ -125,7 +125,7 @@ export default function SalesChart() {
             </span>
             Ventas · últimos 10 días
           </div>
-          <div className="ch-sub">12–21 jun · Bertamiráns</div>
+          <div className="ch-sub">{SALES_RANGE} · Bertamiráns</div>
         </div>
         <div className="ch-stat">
           <b className="tnum">{eur0(salesMedian)} €</b>

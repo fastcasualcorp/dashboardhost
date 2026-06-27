@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { SectionHeader, Badge, Card, Stat, StatRow } from '../components/ui'
-import { eur0, salesForDay, HOY } from '../lib/data'
+import { eur0, eur, salesForDay, HOY } from '../lib/data'
 import { useVentas, ventasPorDia, dayKey } from '../lib/ventas'
+import { useEquipo } from '../lib/equipo'
 import { play } from '../lib/sound'
 
 /* Ventas — calendario de 12 meses (uno por tarjeta). Cada día con venta lleva un
@@ -40,7 +42,7 @@ function combinedMonth(y: number, m: number, real: Real): Dia & { dias: number }
   return { e, t, d, total, dias }
 }
 
-function MonthCard({ y, m, real }: { y: number; m: number; real: Real }) {
+function MonthCard({ y, m, real, onDay }: { y: number; m: number; real: Real; onDay: (day: number) => void }) {
   const offset = (new Date(y, m, 1).getDay() + 6) % 7 // lunes = 0
   const dim = new Date(y, m + 1, 0).getDate()
   const agg = combinedMonth(y, m, real)
@@ -74,7 +76,15 @@ function MonthCard({ y, m, real }: { y: number; m: number; real: Real }) {
           const today = y === HOY.getFullYear() && m === HOY.getMonth() && d === HOY.getDate()
           const intensity = s ? 0.34 + 0.66 * (s.total / maxDay) : 0
           return (
-            <span key={i} className={'vm-cell' + (s ? ' has' : ' none') + (today ? ' today' : '') + (real1 ? ' real' : '')} title={s ? `${d} · ${eur0(s.total)} €${real1 ? ' (incluye ventas reales)' : ''}` : ''}>
+            <span
+              key={i}
+              className={'vm-cell' + (s ? ' has' : ' none') + (today ? ' today' : '') + (real1 ? ' real' : '')}
+              title={s ? `${d} · ${eur0(s.total)} € · pulsa para ver el detalle` : ''}
+              role={s ? 'button' : undefined}
+              tabIndex={s ? 0 : undefined}
+              onClick={s ? () => onDay(d) : undefined}
+              style={s ? { cursor: 'pointer' } : undefined}
+            >
               <i>{d}</i>
               {s && <em className="vm-dot" style={{ opacity: intensity }} />}
             </span>
@@ -103,6 +113,8 @@ export default function Ventas() {
   const [year, setYear] = useState(2026)
   const ventas = useVentas() // re-render al registrarse una venta (TPV/online)
   const real = ventasPorDia(ventas)
+  const roster = useEquipo()
+  const [sel, setSel] = useState<{ m: number; day: number } | null>(null) // día abierto en el detalle
 
   // Agregado del año (efectivo/tarjeta/domicilio + total) con base + ventas reales.
   let yCash = 0, yCard = 0, yHome = 0, yearTotal = 0
@@ -167,9 +179,53 @@ export default function Ventas() {
 
       <div className="ventas-grid">
         {Array.from({ length: 12 }, (_, m) => (
-          <MonthCard key={m} y={year} m={m} real={real} />
+          <MonthCard key={m} y={year} m={m} real={real} onDay={(day) => { setSel({ m, day }); play('tap') }} />
         ))}
       </div>
+
+      {/* ── DETALLE DEL DÍA: turnos mañana/tarde + responsable (auto). Reusa el modal premium de Ventas TPV ── */}
+      <AnimatePresence>
+        {sel && (() => {
+          const dd = combinedDay(year, sel.m, sel.day, real)
+          if (!dd) return null
+          const split = (f: number) => ({ e: Math.round(dd.e * f), t: Math.round(dd.t * f), d: Math.round(dd.d * f), sub: Math.round(dd.total * f) })
+          const man = split(0.36), tar = split(0.64) // reparto mañana/tarde (mismo ritmo que la caja base)
+          const resp = roster.length ? roster[(sel.day + sel.m) % roster.length].nombre : '—'
+          const turno = (lbl: string, tone: string, x: { e: number; t: number; d: number; sub: number }) => (
+            <div className="vt-turno">
+              <div className={'vt-turno-h ' + tone}>{lbl}</div>
+              <div className="vtpv-dr-row"><span>💵 Efectivo</span><b className="tnum">{eur(x.e)} €</b></div>
+              <div className="vtpv-dr-row"><span>💳 Tarjeta</span><b className="tnum">{eur(x.t)} €</b></div>
+              <div className="vtpv-dr-row"><span>🛵 Domicilio</span><b className="tnum">{eur(x.d)} €</b></div>
+              <div className="vtpv-dr-row vt-sub"><span>Subtotal</span><b className="tnum">{eur(x.sub)} €</b></div>
+            </div>
+          )
+          return (
+            <>
+              <motion.div className="vtpv-scrim" onClick={() => setSel(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+              <div className="vtpv-center">
+              <motion.div className="vtpv-z vt-day" initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }} transition={{ type: 'spring', stiffness: 380, damping: 30 }}>
+                <div className="vtpv-z-head">
+                  <div className="vtpv-z-id">
+                    <span className="vtpv-z-kick">Detalle del día</span>
+                    <b>{sel.day} de {MESES[sel.m]} de {year}</b>
+                  </div>
+                  <button className="vtpv-dr-close" onClick={() => setSel(null)} aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                  </button>
+                </div>
+                <div className="vt-turnos">
+                  {turno('☀ Turno mañana', 'man', man)}
+                  {turno('☾ Turno tarde', 'tar', tar)}
+                </div>
+                <div className="vtpv-dr-row vt-resp"><span>Responsable</span><b>{resp}</b></div>
+                <div className="vtpv-dr-tot"><span>Total del día</span><b className="tnum">{eur(dd.total)} €</b></div>
+              </motion.div>
+              </div>
+            </>
+          )
+        })()}
+      </AnimatePresence>
     </div>
   )
 }

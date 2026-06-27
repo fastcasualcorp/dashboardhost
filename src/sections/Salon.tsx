@@ -577,7 +577,9 @@ export default function Salon() {
       const mx = e.clientX - rect.left
       const my = e.clientY - rect.top
       const t = viewRef.current ?? fit
-      const ns = clamp(t.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.3, 5)
+      // Zoom SUTIL (4%/tick) y ACOTADO al auto-fit: nunca por debajo del 85% del fit (no zoom-out infinito)
+      // ni por encima del 260% (Juan, 28-jun). El plano siempre se ve a un tamaño razonable.
+      const ns = clamp(t.s * (e.deltaY < 0 ? 1.04 : 1 / 1.04), fit.s * 0.85, fit.s * 2.6)
       const planeX = (mx - t.ox) / t.s
       const planeY = (my - t.oy) / t.s
       setView({ s: ns, ox: mx - planeX * ns, oy: my - planeY * ns })

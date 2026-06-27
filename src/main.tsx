@@ -1,6 +1,10 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { initPower } from './lib/power'
+
+// Gestor de energía: pausa todo en segundo plano y enciende "Salón frío" con batería (baja calor/batería).
+initPower()
 
 // Sin StrictMode: en desarrollo provocaba doble montaje (doble "recarga"
 // visible en las animaciones de entrada). El build de producción no lo usa.

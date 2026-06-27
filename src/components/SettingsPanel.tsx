@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'motion/react'
 import { BEASTS } from '../lib/beasts'
 import { supabase } from '../lib/supabase'
+import { usePower, setSaverManual } from '../lib/power'
 
 export type FontKey = 'clash' | 'inter' | 'roundo'
 export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
@@ -64,6 +65,7 @@ export default function SettingsPanel({
     { v: 1.15, name: 'Cómodo' },
   ]
   const [pwOpen, setPwOpen] = useState(false)
+  const { saver, manual: saverManual } = usePower()
 
   return (
     <motion.div
@@ -126,6 +128,38 @@ export default function SettingsPanel({
           <span className="spc-sw" aria-hidden="true">
             <span className="spc-knob" />
           </span>
+        </button>
+      </div>
+
+      <div className="sp-section">
+        <button className={'sp-comments' + (saver ? ' on' : '')} onClick={() => setSaverManual(!saver)}>
+          <span className="spc-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z" />
+            </svg>
+          </span>
+          <span className="spc-txt">
+            <b>Salón frío · ahorro</b>
+            <small>{saver ? 'Activo · menos calor y batería (decorados y vídeo en pausa)' : saverManual === null ? 'Auto · se enciende solo con batería' : 'Apagado · efectos al máximo'}</small>
+          </span>
+          <span className="spc-sw" aria-hidden="true">
+            <span className="spc-knob" />
+          </span>
+        </button>
+      </div>
+
+      <div className="sp-section">
+        <button className="sp-comments" onClick={() => window.dispatchEvent(new Event('rebell:play-intro'))}>
+          <span className="spc-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+            </svg>
+          </span>
+          <span className="spc-txt">
+            <b>Ver intro</b>
+            <small>Reproduce la animación de bienvenida sin cerrar sesión</small>
+          </span>
+          <span className="spc-go" aria-hidden="true">▶</span>
         </button>
       </div>
 

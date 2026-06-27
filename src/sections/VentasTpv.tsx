@@ -149,6 +149,50 @@ export default function VentasTpv() {
     play('success', 0.5, 1.05)
   }
 
+  // Imprime/DESCARGA el documento individual (ticket o factura) en una ventana limpia → "Guardar como PDF".
+  function printDoc(v: Venta) {
+    const d = new Date(v.ts)
+    const base = v.total / 1.1
+    const iva = v.total - base
+    const esFactura = v.tipo === 'factura'
+    const fecha = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} · ${fmtHora(d)}`
+    const ln = (a: string, b: string) => `<div class="r"><span>${a}</span><b>${b}</b></div>`
+    const fiscal = esFactura
+      ? `<div class="fiscal"><b>REBELL Bertamiráns S.L.</b><br>CIF B-70XXXXXX · Rúa do Sol 14, Bertamiráns (A Coruña)</div>`
+      : ''
+    const html = `<!doctype html><meta charset="utf-8"><title>${esFactura ? 'Factura' : 'Ticket'} ${v.id}</title>
+      <style>
+        *{box-sizing:border-box} body{margin:0;background:#0d0d0f;color:#f5f5f7;font:13px/1.5 ui-monospace,Menlo,monospace;padding:22px}
+        .t{max-width:360px;margin:0 auto}
+        h1{font:800 18px/1.1 system-ui;letter-spacing:.14em;text-align:center;margin:0 0 3px}
+        .doc{text-align:center;color:#ffbf10;font:800 12px/1 system-ui;letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
+        .sub{text-align:center;color:#9a9aa2;font-size:11px;margin-bottom:12px}
+        .fiscal{text-align:center;color:#c8c8d0;font-size:10px;line-height:1.5;border-top:1px dashed #3a3a40;border-bottom:1px dashed #3a3a40;padding:8px 0;margin-bottom:6px}
+        .sec{border-top:1px dashed #3a3a40;margin-top:10px;padding-top:9px}
+        .r{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+        .r span{color:#9a9aa2}.r b{font-weight:700}
+        .tot{border-top:1px solid #ffbf10;margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:baseline}
+        .tot span{font-weight:800}.tot b{font:800 26px/1 system-ui;color:#ffbf10}
+        .foot{text-align:center;color:#6a6a72;font-size:10px;margin-top:16px}
+      </style>
+      <div class="t">
+        <h1>REBELL</h1>
+        <div class="doc">${esFactura ? 'Factura' : 'Ticket'} · ${v.id}</div>
+        <div class="sub">${fecha}${v.mesa ? ' · ' + v.mesa : ''}</div>
+        ${fiscal}
+        <div class="sec">${ln('Artículos', String(v.arts) + ' ud')}${ln('Método de pago', v.metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta')}</div>
+        <div class="sec">${ln('Base imponible', e2(base) + ' €')}${ln('IVA (10%)', e2(iva) + ' €')}</div>
+        <div class="tot"><span>TOTAL</span><b>${e2(v.total)} €</b></div>
+        <div class="foot">${esFactura ? 'Factura simplificada' : 'Ticket de compra'} · Gracias por tu visita · REBELL</div>
+      </div>
+      <script>window.onload=function(){setTimeout(function(){window.print()},120)}<\/script>`
+    const w = window.open('', '_blank', 'width=420,height=720')
+    if (!w) return
+    w.document.write(html)
+    w.document.close()
+    play('success', 0.5, 1.05)
+  }
+
   function borrar(id: string) {
     setBorradas((b) => new Set(b).add(id))
     if (sel?.id === id) setSel(null)
@@ -329,6 +373,10 @@ export default function VentasTpv() {
                 <span>Total</span>
                 <b className="tnum"><CountValue value={eur(sel.total)} /> €</b>
               </div>
+              <button className="vtpv-z-print" onClick={() => printDoc(sel)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
+                Descargar {sel.tipo === 'factura' ? 'factura' : 'ticket'}
+              </button>
             </motion.aside>
           </>
         )}

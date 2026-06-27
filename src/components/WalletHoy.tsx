@@ -96,7 +96,6 @@ export default function WalletHoy() {
   return (
     <>
       <button className={'wallet-hoy' + (open ? ' open' : '')} ref={pillRef} onClick={toggle} title="Caja del día · ver pedidos" aria-expanded={open}>
-        <motion.span className="wh-coin" key={bump} initial={{ scale: 1 }} animate={{ scale: [1.35, 0.92, 1] }} transition={{ duration: 0.34, ease: 'easeOut' }} aria-hidden="true">€</motion.span>
         <span className="wh-txt">
           <span className="wh-lbl">Hoy</span>
           <motion.span className="wh-val tnum" key={'v' + bump} initial={{ y: 0 }} animate={{ y: [-2, 0] }} transition={{ duration: 0.22 }}>

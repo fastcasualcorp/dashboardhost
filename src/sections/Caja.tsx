@@ -12,42 +12,69 @@ gsap.registerPlugin(useGSAP)
 
 type Turn = { efectivo: number; tarjeta: number; domicilio: number }
 
-// Facturación del negocio (mes) → el número GIGANTE del hero. Con datos reales saldrá de Supabase.
-const NEGOCIO = 47280
 // Abreviaturas de día (tira de fechas, estilo week-strip).
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-/* Tarta (donut) premium de 3 quesos (efectivo/tarjeta/domicilio): quesos con
-   extremos redondeados + hueco entre ellos, sobre una pista tenue, y en el centro
-   el % del método dominante del día. */
-function DayDonut({ efe, tar, dom }: { efe: number; tar: number; dom: number }) {
+/* Tarta (donut) premium + INTERACTIVA de 3 quesos (efectivo/tarjeta/domicilio): al pasar por un quesito
+   (o por su fila), ESE método BRILLA y se eleva, los demás se atenúan, el centro muestra su % en su color
+   y su fila se resalta. Donut y leyenda comparten el mismo estado de hover (una sola fuente). (Juan, 27-jun) */
+function DayBreakdown({ efe, tar, dom }: { efe: number; tar: number; dom: number }) {
+  const segs = [
+    { key: 'efectivo', label: 'Efectivo', v: efe, color: 'var(--cash)', icon: 'i-cash' },
+    { key: 'tarjeta', label: 'Tarjeta', v: tar, color: 'var(--card)', icon: 'i-card' },
+    { key: 'domicilio', label: 'Domicilio', v: dom, color: 'var(--home)', icon: 'i-home' },
+  ]
   const total = efe + tar + dom || 1
+  const [hov, setHov] = useState<string | null>(null)
+  const dominant = segs.reduce((a, b) => (b.v > a.v ? b : a), segs[0])
+  const active = (hov && segs.find((s) => s.key === hov)) || dominant
+  const pct = Math.round((active.v / total) * 100)
+
   const r = 30
   const c = 2 * Math.PI * r
-  const GAP = 14 // hueco premium entre quesos (incluye el redondeo del extremo)
-  const segs = [
-    { v: efe, color: 'var(--cash)', name: 'efectivo' },
-    { v: tar, color: 'var(--card)', name: 'tarjeta' },
-    { v: dom, color: 'var(--home)', name: 'domicilio' },
-  ].filter((s) => s.v > 0)
-  const top = segs.reduce((a, b) => (b.v > a.v ? b : a), segs[0] || { v: 0, name: '—' })
-  const topPct = Math.round((top.v / total) * 100)
+  const GAP = 13 // hueco premium entre quesos
+  const draw = segs.filter((s) => s.v > 0)
   let acc = 0
   return (
-    <div className="day-donut" aria-hidden="true">
-      <svg viewBox="0 0 84 84">
-        <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="9" />
-        {segs.map((s) => {
-          const seg = (s.v / total) * c
-          const len = Math.max(1, seg - GAP)
-          const off = -(acc + GAP / 2)
-          acc += seg
-          return <circle key={s.name} cx="42" cy="42" r={r} fill="none" stroke={s.color} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${len.toFixed(2)} ${(c - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" />
-        })}
-      </svg>
-      <div className="day-donut-c">
-        <b className="tnum">{topPct}<i>%</i></b>
-        <span>{top.name}</span>
+    <div className="day-body" onPointerLeave={() => setHov(null)}>
+      <div className={'day-donut' + (hov ? ' hov' : '')}>
+        <svg viewBox="0 0 84 84">
+          <circle className="dd-track" cx="42" cy="42" r={r} fill="none" strokeWidth="9.5" />
+          {draw.map((s) => {
+            const seg = (s.v / total) * c
+            const len = Math.max(1, seg - GAP)
+            const off = -(acc + GAP / 2)
+            acc += seg
+            return (
+              <circle
+                key={s.key}
+                className={'dd-seg' + (hov === s.key ? ' on' : '')}
+                cx="42" cy="42" r={r} fill="none" stroke={s.color} strokeWidth="9.5" strokeLinecap="round"
+                strokeDasharray={`${len.toFixed(2)} ${(c - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)}
+                transform="rotate(-90 42 42)"
+                style={{ ['--seg' as string]: s.color }}
+                onPointerEnter={() => setHov(s.key)}
+              />
+            )
+          })}
+        </svg>
+        <div className="day-donut-c" style={{ ['--seg' as string]: active.color }}>
+          <b className={'tnum' + (hov ? ' on' : '')}>{pct}<i>%</i></b>
+          <span className={hov ? 'on' : ''}>{active.label}</span>
+        </div>
+      </div>
+      <div className="day-rows">
+        {segs.map((s) => (
+          <div
+            key={s.key}
+            className={'day-row' + (hov === s.key ? ' on' : '')}
+            style={{ ['--seg' as string]: s.color }}
+            onPointerEnter={() => setHov(s.key)}
+          >
+            <span className="lbl"><i className={s.icon} />{s.label}</span>
+            <b className="amt tnum">{eur(s.v)} €</b>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -73,6 +100,8 @@ export default function Caja() {
   // Caja CUADRA con el wallet y nunca diverge. Días PASADOS siguen con el cierre simulado intacto. (Juan, revisor)
   const hoyTotal = useCajaDelDia()
   const totalDia = esHoy ? hoyTotal : dia.total
+  // Número GIGANTE del hero = CAJA DEL DÍA (lo que importa en esta vista; la facturación del mes no pinta aquí — Juan 27-jun).
+  const heroNum = esHoy ? eur(totalDia) : eur0(totalDia)
   const kDia = esHoy && dia.total > 0 ? hoyTotal / dia.total : 1
   const sc = (v: number) => Math.round(v * kDia * 100) / 100
   const scTurn = (t: Turn): Turn => ({ efectivo: sc(t.efectivo), tarjeta: sc(t.tarjeta), domicilio: sc(t.domicilio) })
@@ -96,6 +125,8 @@ export default function Caja() {
   // Tira de días tipo ANILLO: 9 días CENTRADOS en el día seleccionado → el activo queda nítido en el centro
   // y los extremos se difuminan (mask horizontal, técnica de --sep en eje X). Las flechas rotan ±1 día.
   const RING = 9
+  // Día elegido SIEMPRE centrado; los futuros se renderizan como hueco vacío (no se ven, pero mantienen el
+  // centrado) → sin días por venir pero el seleccionado en el medio (Juan, 28-jun).
   const dias = useMemo(() => Array.from({ length: RING }, (_, i) => addDias(fecha, i - (RING >> 1))), [fecha])
   function stepDia(n: number) {
     const nx = addDias(fecha, n)
@@ -132,14 +163,13 @@ export default function Caja() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dia])
 
-  // El número GIGANTE (facturación del negocio) se muestra SIEMPRE con su valor final, sin contador ni
-  // desenfoque (pedido de Juan, 26-jun: fuera el efecto rodante, que el número esté ahí de entrada).
+  // El número GIGANTE (Caja del día) se muestra SIEMPRE con su valor final (lo renderiza el JSX, reactivo al
+  // cambiar de día); aquí solo limpiamos filtro/transform por si quedó algún resto del shine.
   function rollOdo() {
     const el = negRef.current
     if (!el) return
     el.style.filter = ''
     el.style.transform = ''
-    el.textContent = eur0(NEGOCIO)
   }
   function reshine() {
     setShine(false)
@@ -160,14 +190,9 @@ export default function Caja() {
     () => {
       // Total gigante cuenta sobre la cocina viva. Los stats (Caja del día/Tickets/…) cuentan
       // solos vía <Stat>/CountValue. Sin reveal escalonado.
-      rollOdo() // número gigante (facturación negocio)
+      rollOdo() // número gigante (Caja del día) — el valor lo pone el JSX
       fillBars()
       gsap.delayedCall(1.0, reshine)
-      // red de seguridad para el número gigante si el rAF se frena
-      gsap.delayedCall(2.0, () => {
-        const e = negRef.current
-        if (e && (e.textContent === '0' || e.textContent === '0,00')) e.textContent = eur0(NEGOCIO)
-      })
     },
     { scope: root },
   )
@@ -198,27 +223,6 @@ export default function Caja() {
   // (Las unidades de cada plato se muestran SIEMPRE con su valor final, sin contador — pedido de Juan, 26-jun.)
 
 
-  function showIsland(warn: boolean) {
-    const isl = islandRef.current
-    const t = islandTxt.current
-    if (!isl || !t) return
-    isl.className = 'island ' + (warn ? 'warn' : 'ok')
-    t.innerHTML = warn ? 'Descuadre detectado · <b>−12,40 €</b>' : 'Caja cuadrada ✓'
-    gsap.killTweensOf(isl)
-    if (reduceMotion()) {
-      gsap.set(isl, { opacity: warn ? 1 : 0 })
-      return
-    }
-    gsap.fromTo(isl, { xPercent: -50, y: -22, scale: 0.85, opacity: 0 }, { xPercent: -50, y: 0, scale: 1, opacity: 1, duration: 0.55, ease: 'back.out(1.7)' })
-    if (!warn) gsap.to(isl, { xPercent: -50, y: -22, scale: 0.85, opacity: 0, duration: 0.4, delay: 1.7, ease: 'power2.in' })
-  }
-  function toggleDescuadre() {
-    const next = !descuadre
-    setDescuadre(next)
-    play('toggle')
-    showIsland(next)
-    if (balanceRef.current) gsap.fromTo(balanceRef.current, { x: next ? -6 : 6 }, { x: 0, duration: 0.5, ease: 'elastic.out(1,.4)' })
-  }
   const warnIcon = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
@@ -280,8 +284,10 @@ export default function Caja() {
                   const selB = cmpOn && esMismoDia(d, fechaB)
                   const hoyD = esMismoDia(d, HOY)
                   const fut = d.getTime() > HOY.getTime()
+                  // Día futuro → hueco VACÍO (mantiene el ancho para que el seleccionado quede centrado, sin mostrar fechas por venir).
+                  if (fut) return <span key={d.getTime()} className="ckd-cell ckd-void" aria-hidden="true" />
                   return (
-                    <button key={d.getTime()} className={'ckd-cell' + (sel ? ' on' : '') + (selB ? ' onB' : '') + (hoyD ? ' today' : '') + (fut ? ' fut' : '')} onClick={() => elegirDia(d)} aria-pressed={sel || selB} disabled={fut}>
+                    <button key={d.getTime()} className={'ckd-cell' + (sel ? ' on' : '') + (selB ? ' onB' : '') + (hoyD ? ' today' : '')} onClick={() => elegirDia(d)} aria-pressed={sel || selB}>
                       <span className="ckd-dow">{DOW[d.getDay()]}</span>
                       <span className="ckd-dnum tnum">{String(d.getDate()).padStart(2, '0')}</span>
                     </button>
@@ -298,12 +304,12 @@ export default function Caja() {
             </div>
 
             <div className="ck-center">
-              <span className="ck-kick">◢ Facturación del negocio · junio</span>
+              <span className="ck-kick">{fmtDiaLargo(fecha, HOY)}</span>
               <div className="ck-total" data-ds="caja.heronum">
-                {/* el "ghost" reserva el ANCHO final → el count-up no reajusta la pantalla (sin bug de movimiento) */}
+                {/* el "ghost" reserva el ANCHO final → nada se reajusta al cambiar de día */}
                 <span className="odo-wrap">
-                  <span className="odo-ghost" aria-hidden="true">{eur0(NEGOCIO)}</span>
-                  <span className="odonum" ref={negRef}>0</span>
+                  <span className="odo-ghost" aria-hidden="true">{heroNum}</span>
+                  <span className="odonum" ref={negRef}>{heroNum}</span>
                 </span>
                 <span className="u">€</span>
               </div>
@@ -311,13 +317,12 @@ export default function Caja() {
                 <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
                 {descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}
               </div>
-              <div className="ck-cuadre-sub">💵 Efectivo {eur(efectivoDia)} € · 💳 Tarjeta {eur(tarjetaDia)} €</div>
+              <div className="ck-cuadre-sub"><span className="cs-emo">💵</span> <b className="tnum">{eur(efectivoDia)} €</b> <span className="cs-dot">·</span> <span className="cs-emo">💳</span> <b className="tnum">{eur(tarjetaDia)} €</b></div>
             </div>
 
             {/* UNA línea de diseño: el MISMO componente <Stat> para todos → valor grande + unidad
                 pequeña dorada + label. Imposible que se descuadre (criterio único del dashboard). */}
             <StatRow className="ck-statrow">
-              <Stat value={esHoy ? eur(totalDia) : eur0(totalDia)} unit="€" label="Caja del día" count={false} />
               <Stat value={String(dia.tickets)} label="Tickets" count={false} />
               <Stat value={eur(medioDia)} unit="€" label="Ticket medio" count={false} />
               <Stat value={(dia.deltaSemana >= 0 ? '+' : '') + dia.deltaSemana.toFixed(1)} unit="%" label="vs sem. pasada" tone={dia.deltaSemana >= 0 ? 'green' : 'gold'} count={false} />
@@ -358,14 +363,7 @@ export default function Caja() {
                   <div className="turno-name"><span className="badge sol">€</span>Caja del día</div>
                   <div className="turno-sub">{eur(subM + subT)}<span className="cur"> €</span></div>
                 </div>
-                <div className="day-body">
-                  <DayDonut efe={manana.efectivo + tarde.efectivo} tar={manana.tarjeta + tarde.tarjeta} dom={manana.domicilio + tarde.domicilio} />
-                  <div className="day-rows">
-                    <div className="day-row"><span className="lbl"><i className="i-cash" />Efectivo</span><b className="amt tnum">{eur(manana.efectivo + tarde.efectivo)} €</b></div>
-                    <div className="day-row"><span className="lbl"><i className="i-card" />Tarjeta</span><b className="amt tnum">{eur(manana.tarjeta + tarde.tarjeta)} €</b></div>
-                    <div className="day-row"><span className="lbl"><i className="i-home" />Domicilio</span><b className="amt tnum">{eur(manana.domicilio + tarde.domicilio)} €</b></div>
-                  </div>
-                </div>
+                <DayBreakdown efe={manana.efectivo + tarde.efectivo} tar={manana.tarjeta + tarde.tarjeta} dom={manana.domicilio + tarde.domicilio} />
                 <div className="day-split">
                   <span className="ds-seg">☀ Mañana <b className="tnum">{eur(subM)} €</b></span>
                   <span className="ds-dot">·</span>
@@ -381,7 +379,7 @@ export default function Caja() {
                   <div className="ck-plato-list">
                     {dia.topPlatos.map((p, i) => (
                       <div className={'ck-plato' + (i < 3 ? ' r' + (i + 1) : '')} key={p.name} style={{ ['--i' as string]: i }}>
-                        <span className="ck-plato-emo">{p.emoji}</span>
+                        <span className="ck-plato-img"><img src={p.img} alt="" loading="lazy" draggable={false} /></span>
                         <span className="ck-plato-nm">{p.name}</span>
                         <span className="ck-plato-uds tnum" data-val={p.uds}>{p.uds}</span>
                         <span className="ck-plato-bar"><i style={{ width: ((p.uds / maxUds) * 100).toFixed(1) + '%' }} /></span>
@@ -396,7 +394,7 @@ export default function Caja() {
                     <div className="ck-alert-list">
                       {dia.alertas.map((a, i) => (
                         <div className={'ck-alert ' + a.nivel} key={a.item} style={{ ['--i' as string]: i }}>
-                          <span className="ck-alert-emo">{a.emoji}</span>
+                          <span className="ck-alert-img"><img src={a.img} alt="" loading="lazy" draggable={false} /></span>
                           <span className="ck-alert-tx">
                             <b>{a.item} <span className="ck-alert-q">· {a.quedan} {a.unidad}</span></b>
                             <small>necesitas ~{a.necesita} {a.unidad}</small>
@@ -416,21 +414,13 @@ export default function Caja() {
         </section>
       </div>
 
-      <div className="actionbar">
-        <div className="action-inner">
-          {esHoy ? (
-            <>
-              <label className={'switch' + (descuadre ? ' on' : '')} onClick={toggleDescuadre}>
-                <span>Simular descuadre</span>
-                <span className="track" />
-              </label>
-              <div className="ck-pastnote">🔒 El cierre de caja se hace ahora en el <b>TPV</b></div>
-            </>
-          ) : (
+      {!esHoy && (
+        <div className="actionbar">
+          <div className="action-inner">
             <div className="ck-pastnote">📅 Cierre del {fmtDiaLargo(fecha, HOY).toLowerCase()} · ya cerrado</div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

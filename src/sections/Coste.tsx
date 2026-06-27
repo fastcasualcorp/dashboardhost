@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Card, SectionHeader, KpiTile, BarChart, DataTable, Badge, Donut, Grid } from '../components/ui'
 import { useEquipo, horasSemana, costeHora, costeSemana, costeMes, costeDia, DIAS_CORTO } from '../lib/equipo'
-import { VENTAS_MES } from '../lib/data'
+import { VENTAS_MES, salesForDay, HOY } from '../lib/data'
 import FuelGauge from '../components/FuelGauge'
 
 /* Coste personal — TODO derivado de la FUENTE ÚNICA `lib/equipo`: coste REAL = horas trabajadas (turnos
@@ -34,7 +34,37 @@ export default function Coste() {
     const pctCompletas = roster.length ? Math.round((completas / roster.length) * 100) : 0
     const costeFinde = costePorDia[5] + costePorDia[6]
     const pctFinde = semana > 0 ? Math.round((costeFinde / semana) * 100) : 0
-    return { perEmp, costePorDia, semana, mes, hoy, media, pctVentas, pctCompletas, pctFinde }
+
+    // ── COSTE vs VENTAS día a día (este mes): el cruce que avisa cuándo el equipo se come la venta ──
+    const DOW_L = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    const y = HOY.getFullYear(), m = HOY.getMonth()
+    const nDays = new Date(y, m + 1, 0).getDate()
+    type EstadoDia = 'sin' | 'optimo' | 'limite' | 'reducir' | 'perdida'
+    const porDia = Array.from({ length: nDays }, (_, i) => {
+      const day = i + 1
+      const dow = (new Date(y, m, day).getDay() + 6) % 7 // Lun=0
+      const coste = costePorDia[dow]
+      const sv = salesForDay(y, m, day)
+      const ventas = sv ? sv.total : 0
+      const pct = ventas > 0 ? Math.round((coste / ventas) * 100) : null
+      const staff = roster.filter((e) => costeDia(e, dow) > 0).map((e) => e.nombre)
+      const estado: EstadoDia =
+        ventas === 0 ? 'sin' : pct! >= 100 ? 'perdida' : pct! > 32 ? 'reducir' : pct! > 30 ? 'limite' : 'optimo'
+      return { day, dowL: DOW_L[dow], coste, ventas, pct, staff, estado }
+    })
+    const conV = porDia.filter((p) => p.estado !== 'sin')
+    const ventasPer = conV.reduce((s, p) => s + p.ventas, 0)
+    const costePer = conV.reduce((s, p) => s + p.coste, 0)
+    const resumen = {
+      optimo: conV.filter((p) => p.estado === 'optimo').length,
+      limite: conV.filter((p) => p.estado === 'limite').length,
+      reducir: conV.filter((p) => p.estado === 'reducir' || p.estado === 'perdida').length,
+      perdida: conV.filter((p) => p.estado === 'perdida').length,
+      ventasPer,
+      costePer,
+      pctPer: ventasPer > 0 ? Math.round((costePer / ventasPer) * 100) : 0,
+    }
+    return { perEmp, costePorDia, semana, mes, hoy, media, pctVentas, pctCompletas, pctFinde, porDia, resumen }
   }, [roster])
 
   const zona = d.pctVentas <= 28 ? { text: 'Coste sano', color: G_VERDE } : d.pctVentas <= 32 ? { text: 'Ajustado', color: G_AMBAR } : { text: 'Alto', color: G_ROJO }
@@ -93,6 +123,43 @@ export default function Coste() {
           </div>
         </Card>
       </Grid>
+
+      {/* ── COSTE vs VENTAS, DÍA A DÍA · el cruce que avisa cuándo el equipo se come la venta (Juan 27-jun) ── */}
+      <Card>
+        <div className="card-head">
+          <h3>Coste vs ventas · día a día</h3>
+          <Badge tone={d.resumen.pctPer > 32 ? 'red' : d.resumen.pctPer > 30 ? 'amber' : 'green'}>{d.resumen.pctPer}% del período</Badge>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 16px' }}>
+          <Badge tone="green">✓ {d.resumen.optimo} días óptimos</Badge>
+          {d.resumen.limite > 0 && <Badge tone="amber">⚠ {d.resumen.limite} al límite (30–32%)</Badge>}
+          {d.resumen.reducir > 0 && <Badge tone="red">▼ {d.resumen.reducir} días · sobra personal</Badge>}
+          {d.resumen.perdida > 0 && <Badge tone="red">🚨 {d.resumen.perdida} días · el coste SUPERÓ las ventas</Badge>}
+        </div>
+        <DataTable
+          columns={[
+            { key: 'dia', label: 'Día' },
+            { key: 'staff', label: 'Personal en turno' },
+            { key: 'coste', label: 'Coste', align: 'right' as const },
+            { key: 'ventas', label: 'Ventas', align: 'right' as const },
+            { key: 'pct', label: '% Personal', align: 'right' as const },
+            { key: 'estado', label: 'Estado', align: 'right' as const },
+          ]}
+          rows={d.porDia.map((p) => ({
+            dia: <b>{p.dowL} {p.day}</b>,
+            staff: <span className="coste-staff" title={p.staff.join(', ')}>{p.staff.length ? p.staff.map((n) => n.split(' ')[0]).join(', ') : '—'}</span>,
+            coste: fmt0(p.coste) + ' €',
+            ventas: p.ventas ? fmt0(p.ventas) + ' €' : '—',
+            pct: p.pct != null ? <b style={{ color: p.estado === 'perdida' || p.estado === 'reducir' ? G_ROJO : p.estado === 'limite' ? G_AMBAR : G_VERDE }}>{p.pct}%</b> : '—',
+            estado:
+              p.estado === 'sin' ? <Badge tone="muted">Sin ventas</Badge>
+              : p.estado === 'perdida' ? <Badge tone="red">Coste &gt; ventas</Badge>
+              : p.estado === 'reducir' ? <Badge tone="red">Reducir personal</Badge>
+              : p.estado === 'limite' ? <Badge tone="amber">Revisa turnos</Badge>
+              : <Badge tone="green">Óptimo</Badge>,
+          }))}
+        />
+      </Card>
 
       <Card>
         <div className="card-head">

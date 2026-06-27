@@ -27,45 +27,18 @@ export const FRANJAS_T: [string, number, number][] = [
   ['19–23h', 720.0, 100],
 ]
 
-/* ── Serie de ventas (últimos 10 días) — para la gráfica con protagonismo ──
-   Cada día lleva su desglose efectivo/tarjeta/domicilio (para el tooltip). */
+/* ── Serie de ventas (últimos 10 días, terminando HOY) ──
+   Se genera RELATIVA a HOY (abajo) con el mismo motor determinista del calendario → el último punto es
+   SIEMPRE hoy y la gráfica nunca se ve "vieja". Cada día lleva su desglose efectivo/tarjeta/domicilio. */
 export type SalesPoint = { day: number; wd: string; value: number; e: number; t: number; d: number; today?: boolean }
-const r2 = (n: number) => Math.round(n * 100) / 100
-type Raw = { day: number; wd: string; value: number; re: number; rt: number }
-const RAW: Raw[] = [
-  { day: 12, wd: 'Jue', value: 1180, re: 0.26, rt: 0.45 },
-  { day: 13, wd: 'Vie', value: 1520, re: 0.22, rt: 0.49 },
-  { day: 14, wd: 'Sáb', value: 1610, re: 0.25, rt: 0.46 },
-  { day: 15, wd: 'Dom', value: 1340, re: 0.28, rt: 0.43 },
-  { day: 16, wd: 'Lun', value: 980, re: 0.3, rt: 0.42 },
-  { day: 17, wd: 'Mar', value: 1120, re: 0.27, rt: 0.45 },
-  { day: 18, wd: 'Mié', value: 1245, re: 0.24, rt: 0.48 },
-  { day: 19, wd: 'Jue', value: 1290, re: 0.23, rt: 0.5 },
-  { day: 20, wd: 'Vie', value: 1655, re: 0.21, rt: 0.49 },
-]
-export const SALES: SalesPoint[] = [
-  ...RAW.map((r) => {
-    const e = r2(r.value * r.re),
-      t = r2(r.value * r.rt)
-    return { day: r.day, wd: r.wd, value: r.value, e, t, d: r2(r.value - e - t) }
-  }),
-  {
-    day: 21,
-    wd: 'Sáb',
-    value: totalDia,
-    today: true,
-    e: r2(CAJA.manana.efectivo + CAJA.tarde.efectivo),
-    t: r2(CAJA.manana.tarjeta + CAJA.tarde.tarjeta),
-    d: r2(CAJA.manana.domicilio + CAJA.tarde.domicilio),
-  },
-]
-export const salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
 
 /* ── Ventas diarias para el calendario (mock determinista) ──
-   "Hoy" del mundo demo = 21 jun 2026 (coincide con la barra superior y SALES).
-   Cada día devuelve su desglose efectivo/tarjeta/domicilio, o null si es futuro
-   (sin datos → gris). Determinista (sin Math.random) para no parpadear al re-render. */
-export const HOY = new Date(2026, 5, 21)
+   "Hoy" = el día REAL del sistema (a medianoche). Toda la demo navega relativa a HOY (la tira de fechas, el
+   calendario y la serie de ventas) → la app SIEMPRE se ve al día. Con datos reales esto seguirá siendo hoy.
+   Cada día devuelve su desglose efectivo/tarjeta/domicilio, o null si es futuro (sin datos → gris).
+   Determinista (sin Math.random) para no parpadear al re-render. */
+const _hoy = new Date()
+export const HOY = new Date(_hoy.getFullYear(), _hoy.getMonth(), _hoy.getDate())
 export type DiaVenta = { e: number; t: number; d: number; total: number }
 
 const frac = (seed: number) => {
@@ -74,7 +47,7 @@ const frac = (seed: number) => {
 }
 
 export function salesForDay(y: number, m: number, day: number): DiaVenta | null {
-  if (y !== 2026) return null
+  if (y !== HOY.getFullYear()) return null // la demo solo tiene datos del año en curso
   const date = new Date(y, m, day)
   if (date > HOY) return null
   const wd = date.getDay() // 0 dom … 6 sáb
@@ -108,9 +81,40 @@ export function salesForYear(y: number): number {
   return total
 }
 
-/* ── formato ── */
-export const eur = (n: number) =>
-  n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+/* ── Serie de los últimos 10 días terminando HOY (último punto = hoy) ── */
+const DOW_AB = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+const MES_AB = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+export const SALES: SalesPoint[] = Array.from({ length: 10 }, (_, k) => {
+  const off = 9 - k
+  const d = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() - off)
+  const s = salesForDay(d.getFullYear(), d.getMonth(), d.getDate())
+  return {
+    day: d.getDate(),
+    wd: DOW_AB[d.getDay()],
+    value: s ? s.total : 0,
+    e: s ? s.e : 0,
+    t: s ? s.t : 0,
+    d: s ? s.d : 0,
+    today: off === 0,
+  }
+})
+export const salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
+/* Rango legible de la serie para subtítulos ("18–27 jun"); contempla el cruce de mes. */
+const _d0 = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() - 9)
+export const SALES_RANGE =
+  _d0.getMonth() === HOY.getMonth()
+    ? `${_d0.getDate()}–${HOY.getDate()} ${MES_AB[HOY.getMonth()]}`
+    : `${_d0.getDate()} ${MES_AB[_d0.getMonth()]} – ${HOY.getDate()} ${MES_AB[HOY.getMonth()]}`
+
+/* ── formato ──
+   eur: ENTEROS sin decimales (722 €), con decimales solo cuando los hay (722,20 €) → más visual en TODO el
+   dashboard (Juan, 28-jun). Se redondea a 2 antes de decidir para evitar falsos decimales por float. */
+export const eur = (n: number) => {
+  const r = Math.round(n * 100) / 100
+  return Number.isInteger(r)
+    ? r.toLocaleString('es-ES', { maximumFractionDigits: 0 })
+    : r.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 export const eur0 = (n: number) =>
   n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 

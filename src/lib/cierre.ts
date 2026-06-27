@@ -9,10 +9,10 @@
 import { CAJA, FRANJAS_M, FRANJAS_T } from './data'
 
 export type DiaTurno = { efectivo: number; tarjeta: number; domicilio: number }
-export type Plato = { name: string; emoji: string; uds: number; eur: number }
+export type Plato = { name: string; emoji: string; img: string; uds: number; eur: number }
 // `unidad` = cómo se cuenta el producto (uds / kg / cajas…). Por ahora se fija aquí; en el futuro se
 // elegirá en Almacén al dar de alta el producto (pedido de Juan, 25-jun).
-export type Alerta = { item: string; emoji: string; nivel: 'alta' | 'media' | 'ok'; quedan: number; necesita: number; unidad: string }
+export type Alerta = { item: string; emoji: string; img: string; nivel: 'alta' | 'media' | 'ok'; quedan: number; necesita: number; unidad: string }
 export type Franja = [string, number, number]
 export type Cierre = {
   total: number
@@ -43,21 +43,22 @@ function factorFecha(d: Date, r: () => number) {
   return wk * (0.86 + r() * 0.3) // 0,86 … 1,16
 }
 
+// `img` = foto REAL de estudio del producto (la del catálogo) → nada de emojis en el hero (pedido de Juan, 27-jun).
 const PLATOS_BASE = [
-  { name: 'REBELL Classic', emoji: '🍔', peso: 23, precio: 11 },
-  { name: 'Doble Bacon', emoji: '🥓', peso: 20, precio: 13 },
-  { name: 'Crispy Chicken', emoji: '🍗', peso: 15, precio: 12 },
-  { name: 'Patatas Rebell', emoji: '🍟', peso: 18, precio: 4.5 },
-  { name: 'Veggie Deluxe', emoji: '🥬', peso: 9, precio: 12 },
-  { name: 'Alitas BBQ', emoji: '🔥', peso: 8, precio: 8 },
+  { name: 'REBELL Classic', emoji: '🍔', img: '/img/products/classic.jpg', peso: 23, precio: 11 },
+  { name: 'Doble Bacon', emoji: '🥓', img: '/img/products/doble.jpg', peso: 20, precio: 13 },
+  { name: 'Crispy Chicken', emoji: '🍗', img: '/img/products/crispy.jpg', peso: 15, precio: 12 },
+  { name: 'Patatas Rebell', emoji: '🍟', img: '/img/products/patatas.jpg', peso: 18, precio: 4.5 },
+  { name: 'Veggie Deluxe', emoji: '🥬', img: '/img/products/veggie.jpg', peso: 9, precio: 12 },
+  { name: 'Nuggets x6', emoji: '🍗', img: '/img/products/nuggets.jpg', peso: 8, precio: 5.5 },
 ]
-// Ingredientes y cuánto consume cada plato vendido (aprox) → cruce ventas×stock.
+// Ingredientes y cuánto consume cada plato vendido (aprox) → cruce ventas×stock. Foto real en /img/prod.
 const STOCK_BASE = [
-  { item: 'Pan brioche', emoji: '🍞', stock: 64, porPlato: 0.55, unidad: 'uds' },
-  { item: 'Bacon', emoji: '🥓', stock: 60, porPlato: 0.12, unidad: 'kg' }, // bien surtido → ejemplo en VERDE
-  { item: 'Pechuga de pollo', emoji: '🍗', stock: 42, porPlato: 0.3, unidad: 'kg' },
-  { item: 'Queso cheddar', emoji: '🧀', stock: 130, porPlato: 0.7, unidad: 'kg' },
-  { item: 'Patata', emoji: '🥔', stock: 28, porPlato: 0.22, unidad: 'kg' },
+  { item: 'Pan brioche', emoji: '🍞', img: '/img/prod/pan-brioche.jpg', stock: 64, porPlato: 0.55, unidad: 'uds' },
+  { item: 'Bacon', emoji: '🥓', img: '/img/prod/bacon.jpg', stock: 60, porPlato: 0.12, unidad: 'kg' }, // bien surtido → ejemplo en VERDE
+  { item: 'Pechuga de pollo', emoji: '🍗', img: '/img/prod/pollo.jpg', stock: 42, porPlato: 0.3, unidad: 'kg' },
+  { item: 'Queso cheddar', emoji: '🧀', img: '/img/prod/cheddar.jpg', stock: 130, porPlato: 0.7, unidad: 'kg' },
+  { item: 'Patata', emoji: '🥔', img: '/img/prod/patata.jpg', stock: 28, porPlato: 0.22, unidad: 'kg' },
 ]
 
 export function cierreDia(fecha: Date): Cierre {
@@ -89,7 +90,7 @@ export function cierreDia(fecha: Date): Cierre {
   const udsTotal = tickets * 1.7
   const topPlatos: Plato[] = PLATOS_BASE.map((p) => {
     const uds = Math.max(1, Math.round((p.peso / pesoTotal) * udsTotal * (0.82 + r() * 0.36)))
-    return { name: p.name, emoji: p.emoji, uds, eur: Math.round(uds * p.precio) }
+    return { name: p.name, emoji: p.emoji, img: p.img, uds, eur: Math.round(uds * p.precio) }
   }).sort((a, b) => b.uds - a.uds)
 
   // ALERTA STOCK MAÑANA: si mañana vendes parecido a hoy, ¿qué se acaba?
@@ -98,7 +99,7 @@ export function cierreDia(fecha: Date): Cierre {
     const necesita = Math.round(platosVendidos * s.porPlato)
     // alta = no llega; media = va justo (≥70% del stock); ok = vas sobrado (verde)
     const nivel: Alerta['nivel'] = necesita > s.stock ? 'alta' : necesita > s.stock * 0.7 ? 'media' : 'ok'
-    return { item: s.item, emoji: s.emoji, nivel, quedan: s.stock, necesita, unidad: s.unidad }
+    return { item: s.item, emoji: s.emoji, img: s.img, nivel, quedan: s.stock, necesita, unidad: s.unidad }
   })
   // Mostramos los 2 más justos (rojo/ámbar) + 1 BIEN SURTIDO (verde) como referencia de "voy sobrado".
   const justos = computadas

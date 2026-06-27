@@ -26,6 +26,12 @@ const NAV_EMOJI: Record<string, string> = {
 
 type Theme = 'dark' | 'light'
 
+// Reloj de la barra superior: fecha REAL + hora ("Sáb 27 jun · 23:46").
+const _DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+const _MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const fmtReloj = (d: Date) =>
+  `${_DOW[d.getDay()]} ${d.getDate()} ${_MES[d.getMonth()]} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
 export default function Shell() {
   const [active, setActive] = useState<string>(() => {
     try {
@@ -36,7 +42,7 @@ export default function Shell() {
     }
     return 'caja'
   })
-  const [font, setFont] = useState<FontKey>('clash')
+  const [font, setFont] = useState<FontKey>('inter') // Inter = fuente principal (Juan 28-jun)
   const [audioOn, setAudioOn] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [commentsOn, setCommentsOn] = useState(() => {
@@ -49,6 +55,12 @@ export default function Shell() {
   const [drawer, setDrawer] = useState(false)
   // Modo offline: avisamos cuando se cae la red (la app sigue con datos guardados).
   const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
+  // Reloj en vivo de la cabecera (fecha real + hora que avanza). Se refresca cada 30 s.
+  const [now, setNow] = useState<Date>(() => new Date())
+  useEffect(() => {
+    const iv = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(iv)
+  }, [])
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-theme') === 'light') return 'light'
     return 'dark'
@@ -90,14 +102,6 @@ export default function Shell() {
     }
     play('tap')
   }
-  const localName = (() => {
-    try {
-      return localStorage.getItem('rebell-profile-name') || 'Bertamiráns'
-    } catch {
-      return 'Bertamiráns'
-    }
-  })()
-
   useEffect(() => {
     preloadSfx()
     applySavedDesign() // re-aplica la escala tipográfica + botones guardados en el panel "Sistema de diseño"
@@ -296,6 +300,8 @@ export default function Shell() {
       </div>
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
+        {/* Logo del programa (FAT SMASH), bien visible encima del león (Juan 28-jun). Versión negativa para fondo oscuro. */}
+        <img className="side-logo" src="/img/logo.png" alt="FAT SMASH" draggable={false} />
         <button
           className={'side-brand' + (settingsOpen ? ' open' : '')}
           onClick={openSettings}
@@ -310,10 +316,7 @@ export default function Shell() {
               <video className="side-beast-vid" src={beastById(beast).video} muted loop playsInline preload="none" poster={beastById(beast).img} />
             )}
           </span>
-          <div className="sb-txt">
-            <b>REBELL</b>
-            <span>{localName}</span>
-          </div>
+          {/* Texto "REBELL · Bertamiráns" QUITADO: ya está en la cabecera de Caja, y el logo nuevo lo incluirá (Juan 28-jun). */}
         </button>
         <nav className="side-nav">
           {NAV.map((group) => (
@@ -367,7 +370,7 @@ export default function Shell() {
             </button>
             <span className="daypill only-wide">
               <span className="dot" />
-              Sáb 21 jun · 23:46
+              {fmtReloj(now)}
             </span>
           </div>
         </header>

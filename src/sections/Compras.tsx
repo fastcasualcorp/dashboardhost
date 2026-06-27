@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Card, SectionHeader, KpiTile, BarRow, DataTable, Badge, Grid, Donut } from '../components/ui'
 import { play } from '../lib/sound'
+import { useEquipo } from '../lib/equipo'
 import { useCompras, addAlbaran, toggleEstado, cuotaIva, totalAlbaran, comprasMes, pendienteMes, pagadoMes, proveedoresActivos, gastoPorProveedor } from '../lib/compras'
+
+const startOfDay = (ts: number) => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
+const fmtDiaLargo = (ts: number) => { const d = new Date(ts); const M = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']; return `${d.getDate()} de ${M[d.getMonth()]} de ${d.getFullYear()}` }
 
 /* Compras — fuente ÚNICA `lib/compras`: das de alta un albarán y entran a la vez la tabla,
    las barras por proveedor y los KPIs. Estado pagado/pendiente con un clic. (audit · Compras) */
@@ -14,7 +18,9 @@ const fmtDia = (ts: number) => { const d = new Date(ts); const M = ['ene', 'feb'
 
 export default function Compras() {
   const albaranes = useCompras()
+  const roster = useEquipo()
   const [alta, setAlta] = useState(false)
+  const [selDia, setSelDia] = useState<number | null>(null) // día abierto en el detalle (startOfDay ts)
   // formulario de alta
   const [prov, setProv] = useState('')
   const [conc, setConc] = useState('')
@@ -45,7 +51,7 @@ export default function Compras() {
   }
 
   const rows = albaranes.map((a) => ({
-    fecha: fmtDia(a.ts),
+    fecha: <button className="cmp-dialink" onClick={() => { setSelDia(startOfDay(a.ts)); play('tap') }} title="Ver el día completo">{fmtDia(a.ts)}</button>,
     proveedor: a.proveedor,
     concepto: <span className="cmp-conc">{a.concepto}</span>,
     base: <span className="tnum">{e2(a.base)}</span>,
@@ -173,6 +179,48 @@ export default function Compras() {
             </motion.div>
           </>
         )}
+      </AnimatePresence>
+
+      {/* ── DETALLE DEL DÍA: qué se compró ese día y QUIÉN lo hizo (Juan 27-jun) ── */}
+      <AnimatePresence>
+        {selDia != null && (() => {
+          const delDia = albaranes.filter((a) => startOfDay(a.ts) === selDia)
+          const subBase = delDia.reduce((s, a) => s + a.base, 0)
+          const subIva = delDia.reduce((s, a) => s + cuotaIva(a), 0)
+          const subTot = delDia.reduce((s, a) => s + totalAlbaran(a), 0)
+          const dd = new Date(selDia)
+          const resp = roster.length ? roster[(dd.getDate() + dd.getMonth()) % roster.length].nombre : '—'
+          return (
+            <>
+              <motion.div className="vtpv-scrim" onClick={() => setSelDia(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+              <div className="vtpv-center">
+              <motion.div className="vtpv-z vt-day" initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }} transition={{ type: 'spring', stiffness: 380, damping: 30 }}>
+                <div className="vtpv-z-head">
+                  <div className="vtpv-z-id">
+                    <span className="vtpv-z-kick">Compras del día</span>
+                    <b>{fmtDiaLargo(selDia)}</b>
+                  </div>
+                  <button className="vtpv-dr-close" onClick={() => setSelDia(null)} aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                  </button>
+                </div>
+                <div className="vt-lines">
+                  {delDia.map((a) => (
+                    <div className="vtpv-dr-row" key={a.id}>
+                      <span><b style={{ color: 'var(--ink)' }}>{a.proveedor}</b> <small style={{ opacity: 0.6 }}>· {a.concepto || '—'}</small></span>
+                      <b className="tnum">{e2(totalAlbaran(a))} €</b>
+                    </div>
+                  ))}
+                  {!delDia.length && <div className="vtpv-dr-row"><span style={{ opacity: 0.6 }}>Sin compras registradas este día</span></div>}
+                </div>
+                <div className="vtpv-dr-row vt-sub"><span>Base · IVA</span><b className="tnum">{e2(subBase)} € · {e2(subIva)} €</b></div>
+                <div className="vtpv-dr-row vt-resp"><span>Responsable</span><b>{resp}</b></div>
+                <div className="vtpv-dr-tot"><span>Total compras del día</span><b className="tnum">{e2(subTot)} €</b></div>
+              </motion.div>
+              </div>
+            </>
+          )
+        })()}
       </AnimatePresence>
     </div>
   )

@@ -697,6 +697,14 @@ export default function Tpv() {
                   <b>¿A qué mesa va?</b>
                   <small>{mesaChosen ? 'Pulsa una mesa del plano o elige “Para llevar”' : 'Elige el destino para empezar el pedido'}</small>
                 </div>
+                <button className={'tmp-llevar' + (!mesa ? ' on' : '')} onClick={() => chooseMesa(null)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6.5 3 4.5 7.2V19a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7.2L17.5 3H6.5Z" />
+                    <path d="M4.5 7.2h15" />
+                    <path d="M15 10.5a3 3 0 0 1-6 0" />
+                  </svg>
+                  Para llevar
+                </button>
                 <div className="tms-live">
                   <span className="tms-chip libre"><i />{libres} libres</span>
                   <span className="tms-chip ocupada"><i />{ocupadas} ocupadas</span>
@@ -734,18 +742,13 @@ export default function Tpv() {
                 {!mesas.length && <div className="salon-empty">Aún no hay salón · créalo en “Salón”</div>}
               </div>
 
-              <footer className="tpv-mesa-foot">
-                <span className="tms-legend">Verde = libre · Rojo = ocupada · Ámbar = por cobrar · el número es lo que queda de reserva</span>
-                <button className={'tmp-llevar' + (!mesa ? ' on' : '')} onClick={() => chooseMesa(null)}>
-                  {/* bolsa de delivery: lados rectos, solapa de papel plegada arriba, asa colgando (no bolsa de basura) */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6.5 3 4.5 7.2V19a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7.2L17.5 3H6.5Z" />
-                    <path d="M4.5 7.2h15" />
-                    <path d="M15 10.5a3 3 0 0 1-6 0" />
-                  </svg>
-                  Para llevar
-                </button>
-              </footer>
+
+              {/* Botón GRANDE de abrir/cerrar caja, full-width (= ancho del popup), debajo de "¿A qué mesa va?" (Juan 28-jun) */}
+              <button className={'tpv-mesa-caja' + (caja.abierta ? ' on' : '')} onClick={openCaja}>
+                <span className="tmc-dot" />
+                {caja.abierta ? 'Cerrar caja' : 'Abrir caja'}
+                <small>{caja.abierta ? `${eur(walletTotal())} € · ${ticketsHoy()} tickets` : 'PIN del encargado'}</small>
+              </button>
             </motion.div>
           </motion.div>
         )}

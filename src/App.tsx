@@ -93,6 +93,13 @@ export default function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  // "Ver intro" desde el perfil (Ajustes) → re-reproduce el reveal SIN cerrar sesión.
+  useEffect(() => {
+    const replay = () => setBooting(true)
+    window.addEventListener('rebell:play-intro', replay)
+    return () => window.removeEventListener('rebell:play-intro', replay)
+  }, [])
+
   const content = !profile ? (
     <Login
       onEnter={(p: Profile) => {

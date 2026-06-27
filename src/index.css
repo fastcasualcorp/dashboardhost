@@ -60,11 +60,15 @@
 }
 .app[data-type='inter'] {
   --font-display: 'Inter', sans-serif; --font: 'Inter', sans-serif; --font-num: 'Inter', sans-serif;
-  --num-spacing: -1.5px; --num-weight: 700;
+  /* Inter pesa ÓPTICAMENTE menos que Clash a igual número → bajo Inter subimos el grosor (800) y apretamos
+     el tracking para que el número gigante se vea grueso y premium tipo Apple/SF Pro (Juan, 27-jun). */
+  --num-spacing: -2px; --num-weight: 800;
+  --body-weight: 500;
 }
 .app[data-type='roundo'] {
   --font-display: 'Roundo', sans-serif; --font: 'Roundo', sans-serif; --font-num: 'Roundo', sans-serif;
   --num-spacing: -1px; --num-weight: 600;
+  --body-weight: 400;
 }
 
 
@@ -75,7 +79,7 @@ body {
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   overflow-x: hidden; min-height: 100dvh;
 }
-.app { font-family: var(--font); display: flex; min-height: 100dvh; --side-w: 264px; }
+.app { font-family: var(--font); font-weight: var(--body-weight, 400); display: flex; min-height: 100dvh; --side-w: 264px; }
 
 .bg-aura {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -143,16 +147,15 @@ body {
 }
 .wallet-hoy:active { transform: scale(.97); }
 .wallet-hoy:hover { border-color: rgba(var(--brand-rgb),.55); }
+/* € sin círculo: solo el símbolo, grande y dorado (Juan, 28-jun). */
 .wh-coin {
-  width: 26px; height: 26px; flex: none; display: grid; place-items: center; border-radius: 50%;
-  font-family: var(--font-num); font-weight: 800; font-size: 13px; color: #4a2e00;
-  background: radial-gradient(circle at 34% 28%, #ffe79a, #ffc31f 58%, #e09a00);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.7), inset 0 -2px 3px rgba(140,90,0,.5);
+  flex: none; display: grid; place-items: center; line-height: 1;
+  font-family: var(--font-num); font-weight: 800; font-size: 23px; color: var(--gold);
 }
 .wh-txt { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
 .wh-lbl { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-soft); font-weight: 700; }
-.wh-val { font-family: var(--font-num); font-weight: 700; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; gap: 1px; }
-.wh-val i { font-style: normal; font-size: .72em; color: var(--gold); }
+.wh-val { font-family: var(--font-num); font-weight: 700; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 1px; }
+.wh-val i { font-style: normal; font-size: .85em; color: var(--gold); margin-left: 1px; }
 .wh-pop { position: absolute; top: -4px; right: 10px; font-family: var(--font-num); font-weight: 800; font-size: 13px; color: var(--gold); text-shadow: 0 2px 12px rgba(0,0,0,.55); pointer-events: none; }
 .wallet-hoy { cursor: pointer; }
 .wallet-hoy.open { border-color: rgba(var(--brand-rgb),.6); background: linear-gradient(180deg, rgba(var(--brand-rgb),.24), rgba(var(--brand-rgb),.1)); }
@@ -170,7 +173,7 @@ body {
 .whp-htxt { display: flex; flex-direction: column; gap: 4px; }
 .whp-lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-soft); font-weight: 700; }
 .whp-total { font-family: var(--font-num); font-weight: 800; font-size: 26px; color: var(--ink); display: inline-flex; align-items: baseline; gap: 2px; font-variant-numeric: tabular-nums; }
-.whp-total i { font-style: normal; font-size: .52em; color: var(--gold); }
+.whp-total i { font-style: normal; font-size: .7em; color: var(--gold); }
 .whp-count { font-size: 12px; font-weight: 700; color: var(--muted); background: rgba(255,255,255,.06); padding: 5px 11px; border-radius: 100px; white-space: nowrap; }
 .whp-list { overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .whp-row { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 12px; }
@@ -400,24 +403,41 @@ body {
 .turno-day .turno-head { margin-bottom: 8px; }
 .turno-day .turno-name .badge.sol { font-family: var(--font-num); font-weight: 800; }
 .day-rows { display: flex; flex-direction: column; }
-.day-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.05); }
+.day-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 10px; border-radius: 11px;
+  border-top: 1px solid rgba(255,255,255,.05); cursor: pointer; transition: background-color .2s ease; }
 .day-row:first-child { border-top: 0; }
-.day-row .lbl { display: flex; align-items: center; gap: 11px; font-size: var(--fs-base); color: var(--muted); font-weight: 500; }
-.day-row .lbl i { width: 11px; height: 11px; border-radius: 3px; flex: none; }
-.day-row .amt { font-family: var(--font-num); font-weight: 650; font-size: var(--fs-lg); letter-spacing: var(--num-spacing); color: var(--ink); }
+.day-row .lbl { display: flex; align-items: center; gap: 10px; font-size: var(--fs-base); color: var(--muted); font-weight: 500; white-space: nowrap; transition: color .2s ease; }
+.day-row .lbl i { width: 11px; height: 11px; border-radius: 3px; flex: none; transition: box-shadow .2s ease; }
+.day-row .amt { font-family: var(--font-num); font-weight: 650; font-size: var(--fs-base); letter-spacing: var(--num-spacing); color: var(--ink); white-space: nowrap; flex: none; transition: color .2s ease; }
+/* fila resaltada (hover sincronizado con el quesito): tinte del método + cifra en su color + punto con glow */
+.day-row.on { background: color-mix(in srgb, var(--seg) 13%, transparent); border-top-color: transparent; }
+.day-row.on + .day-row { border-top-color: transparent; }
+.day-row.on .lbl { color: var(--ink); }
+.day-row.on .lbl i { box-shadow: 0 0 8px 1px color-mix(in srgb, var(--seg) 70%, transparent); }
+.day-row.on .amt { color: var(--seg); }
 .day-split { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--line-strong); font-size: var(--fs-sm); color: var(--muted); }
 .day-split .ds-seg b { color: var(--ink); font-weight: 650; margin-left: 5px; }
 .day-split .ds-dot { color: var(--faint); }
 [data-theme='light'] .day-row { border-top-color: rgba(15,20,35,.07); }
-/* Tarta (donut) + filas lado a lado dentro del bloque Caja del día */
-.day-body { display: flex; align-items: center; gap: clamp(14px, 2.2vw, 26px); }
+/* Tarta (donut) + filas lado a lado, GRANDE · premium · INTERACTIVA (Juan, 27-jun).
+   El % del centro es px fijo → al crecer el aro NO escala con él, así respira y no roza el número.
+   Hover en un quesito (o su fila) → ese método BRILLA y se eleva (stroke +), los demás se atenúan,
+   el centro toma su color y su fila se resalta. Estado de hover compartido donut↔leyenda. */
+.day-body { display: flex; align-items: center; gap: clamp(12px, 1.5vw, 17px); }
 .day-body .day-rows { flex: 1; min-width: 0; }
 .day-donut { flex: 0 0 auto; position: relative; }
-.day-donut svg { width: clamp(96px, 9.5vw, 118px); height: clamp(96px, 9.5vw, 118px); display: block; }
+.day-donut svg { width: clamp(144px, 12.6vw, 164px); height: clamp(144px, 12.6vw, 164px); display: block; overflow: visible; }
+.dd-track { stroke: rgba(255,255,255,.05); pointer-events: none; }
+[data-theme='light'] .dd-track { stroke: rgba(15,20,35,.08); }
+.dd-seg { cursor: pointer; transition: opacity .22s ease, stroke-width .22s ease, filter .22s ease; }
+.day-donut.hov .dd-seg { opacity: .22; }
+.day-donut.hov .dd-seg.on { opacity: 1; stroke-width: 11.5; filter: drop-shadow(0 0 7px color-mix(in srgb, var(--seg) 60%, transparent)); }
 .day-donut-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; line-height: 1; }
-.day-donut-c b { font-family: var(--font-num); font-weight: 650; font-size: clamp(19px, 2vw, 23px); color: var(--ink); letter-spacing: var(--num-spacing); }
-.day-donut-c b i { font-style: normal; font-size: .5em; color: var(--muted); margin-left: 1px; }
-.day-donut-c span { font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin-top: 3px; font-weight: 700; }
+.day-donut-c b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 33px); color: var(--ink); letter-spacing: var(--num-spacing); transition: color .2s ease, text-shadow .2s ease; }
+.day-donut-c b.on { color: var(--seg); text-shadow: 0 0 18px color-mix(in srgb, var(--seg) 45%, transparent); }
+.day-donut-c b i { font-style: normal; font-size: .6em; color: var(--muted); margin-left: 1px; }
+.day-donut-c span { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .08em; color: var(--faint); margin-top: 4px; font-weight: 700; transition: color .2s ease; }
+.day-donut-c span.on { color: color-mix(in srgb, var(--seg) 78%, #fff); }
 
 /* Gráfica de ventas + Caja del día LADO A LADO (desktop); apiladas en móvil */
 .ck-toprow { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -443,9 +463,9 @@ body {
 .ck-kick { font-size: var(--fs-2xs); letter-spacing: .2em; text-transform: uppercase; color: var(--gold-soft); font-weight: 700; }
 /* número GIGANTE (facturación negocio). El brillo SIGUE LA FORMA del texto (background-clip:text), no un
    rectángulo invisible. Pedido de Juan (24-jun). */
-.ck-total { font-family: var(--font-num); font-weight: 600; font-size: clamp(48px, 8.4vw, 104px); line-height: .86; letter-spacing: -.045em;
+.ck-total { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(48px, 8.4vw, 104px); line-height: .86; letter-spacing: -.045em;
   font-variant-numeric: tabular-nums; margin: 18px 0 6px; color: #fff;
-  display: inline-flex; align-items: flex-start; justify-content: center; }
+  display: inline-flex; align-items: center; justify-content: center; }
 /* ghost (oculto) reserva el ancho FINAL → el count-up no reajusta la pantalla. La cifra se superpone centrada. */
 .odo-wrap { position: relative; display: inline-block; }
 .odo-ghost { visibility: hidden; }
@@ -454,7 +474,7 @@ body {
 .caja.shine .ck-total .odonum { animation: numGlow 1.4s ease forwards; }
 @keyframes numGlow { 0%,100% { text-shadow: 0 0 32px rgba(255,255,255,.32), 0 0 90px rgba(var(--brand-rgb),.24); } 45% { text-shadow: 0 0 54px rgba(255,255,255,.62), 0 0 120px rgba(var(--brand-rgb),.45); } }
 /* € pequeño y limpio, como marca de moneda en superíndice (ya no gigante) */
-.ck-total .u { font-size: .19em; font-weight: 700; color: var(--gold); letter-spacing: 0; margin: .35em 0 0 .12em; }
+.ck-total .u { font-size: .82em; font-weight: var(--num-weight); color: var(--gold); letter-spacing: var(--num-spacing); margin: 0 0 0 .05em; }
 
 /* identidad arriba-izquierda; la bandera estira a la altura del bloque de texto (no descuadrada) */
 .ck-ident { position: absolute; top: 16px; left: clamp(16px, 3vw, 28px); z-index: 5; display: flex; align-items: stretch; gap: 13px; }
@@ -470,14 +490,17 @@ body {
 
 /* CAJA CUADRADA: grande, debajo del número */
 /* rectángulo con FUERZA alrededor del estado de cuadre (Juan): caja tintada + borde según cuadrada/descuadre */
-.ck-cuadre { display: inline-flex; align-items: center; gap: 9px; margin-top: 28px; padding: 9px 18px; border-radius: 14px;
-  font-family: var(--font-display); font-size: clamp(15px, 1.9vw, 20px); font-weight: 800; color: var(--ok); letter-spacing: -.01em;
+.ck-cuadre { display: inline-flex; align-items: center; gap: 7px; margin-top: 24px; padding: 6px 13px; border-radius: 11px;
+  font-family: var(--font-display); font-size: clamp(12px, 1.35vw, 15px); font-weight: 800; color: var(--ok); letter-spacing: -.01em;
   background: rgba(52,211,153,.12); border: 1.5px solid rgba(52,211,153,.5); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
-.ck-cuadre-ic { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(52,211,153,.16); border: 1px solid rgba(52,211,153,.42); }
+.ck-cuadre-ic { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; background: rgba(52,211,153,.16); border: 1px solid rgba(52,211,153,.42); }
 .ck-cuadre-ic svg { width: 15px; height: 15px; }
 .ck-cuadre.warn { color: var(--warn); background: rgba(245,179,65,.12); border-color: rgba(245,179,65,.55); }
 .ck-cuadre.warn .ck-cuadre-ic { background: rgba(245,179,65,.16); border-color: rgba(245,179,65,.45); }
-.ck-cuadre-sub { font-size: var(--fs-sm); color: rgba(255,255,255,.62); font-weight: 600; margin-top: 14px; }
+.ck-cuadre-sub { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-base); color: rgba(255,255,255,.62); font-weight: 650; margin-top: 14px; }
+.ck-cuadre-sub b, .ck-cuadre-sub .tnum { font-weight: var(--num-weight); color: rgba(255,255,255,.9); letter-spacing: var(--num-spacing); }
+.ck-cuadre-sub .cs-emo { font-size: 1.45em; line-height: 1; }
+.ck-cuadre-sub .cs-dot { color: var(--faint); margin: 0 4px; }
 
 /* ── Cierre por FECHA: stepper + balance de platos + alerta de stock ── */
 /* anillo de días: SIN cápsula; los extremos se difuminan (mask horizontal = técnica --sep en eje X) */
@@ -496,6 +519,7 @@ body {
 .ckd-strip { display: flex; align-items: stretch; -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
 /* Celdas de ANCHO IGUAL (equidistancia) → la seleccionada (central) queda perfectamente centrada. */
 .ckd-cell { position: relative; flex: 0 0 68px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 7px 6px 11px; border: 0; background: transparent; cursor: pointer; transition: transform .12s var(--ease-spring); }
+.ckd-void { visibility: hidden; pointer-events: none; cursor: default; } /* hueco de día futuro (mantiene el centrado) */
 .ckd-cell + .ckd-cell::before { content: ''; position: absolute; left: 0; top: 12%; bottom: 12%; width: 1px; background: var(--sep); }
 .ckd-cell:active:not(:disabled) { transform: scale(.93); }
 .ckd-dow { position: relative; z-index: 1; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); transition: color .16s; }
@@ -526,7 +550,7 @@ body {
 .ckc-day { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
 .ckc-col.b .ckc-day { color: #c4b5fd; }
 .ckc-hero { font-family: var(--font-num); font-weight: 600; font-size: clamp(30px, 4.4vw, 44px); line-height: 1; letter-spacing: -.025em; color: #fff; font-variant-numeric: tabular-nums; }
-.ckc-hero i { font-style: normal; font-size: .42em; font-weight: 600; margin-left: 2px; color: var(--gold); }
+.ckc-hero i { font-style: normal; font-size: .6em; font-weight: 600; margin-left: 2px; color: var(--gold); }
 .ckc-col.b .ckc-hero i { color: #c4b5fd; }
 .ckc-mini { font-size: var(--fs-xs); color: var(--muted); }
 .ckc-mini b { color: var(--ink); font-weight: 600; }
@@ -557,7 +581,12 @@ body {
 .ck-plato { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
   align-items: center; column-gap: 20px; row-gap: 18px; padding: 21px 24px 22px; border-radius: 17px;
   background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.07); }
-.ck-plato-emo { grid-area: 1 / 1; font-size: var(--fs-4xl); line-height: 1; }
+/* Miniatura de FOTO real del plato (no emoji) — cuadrado redondeado premium, sombra neutra (dark-safe). */
+.ck-plato-img { grid-area: 1 / 1; width: 58px; height: 58px; border-radius: 14px; overflow: hidden; flex: none;
+  background: #0b0b0e; border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 8px 20px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06); }
+.ck-plato-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ck-plato.r1 .ck-plato-img { border-color: rgba(var(--brand-rgb),.55); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.35), 0 8px 20px -10px rgba(0,0,0,.7); }
 .ck-plato-nm { grid-area: 1 / 2; font-size: var(--fs-2xl); font-weight: 750; color: #fff;
   letter-spacing: -.02em; white-space: nowrap; line-height: 1.03; }
 .ck-plato-uds { grid-area: 1 / 3; font-family: var(--font-num); font-weight: 800; font-size: var(--fs-2xl);
@@ -596,7 +625,12 @@ body {
 .ck-alert.alta { background: rgba(255,92,92,.09); border-color: rgba(255,92,92,.30); }
 .ck-alert.media { background: rgba(245,179,65,.07); border-color: rgba(245,179,65,.26); }
 .ck-alert.ok { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.28); }
-.ck-alert-emo { grid-area: 1 / 1; font-size: var(--fs-4xl); line-height: 1; }
+/* Miniatura de FOTO real del ingrediente (no emoji) — mismo lenguaje que los platos. */
+.ck-alert-img { grid-area: 1 / 1; width: 58px; height: 58px; border-radius: 14px; overflow: hidden; flex: none;
+  background: #0b0b0e; border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 8px 20px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06); }
+.ck-alert-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ck-alert.alta .ck-alert-img { border-color: rgba(255,92,92,.34); }
 .ck-alert-tx { grid-area: 1 / 2; display: flex; flex-direction: column; min-width: 0; gap: 7px; }
 .ck-alert-tx b { font-size: var(--fs-2xl); font-weight: 750; color: #fff; letter-spacing: -.02em; line-height: 1.03; white-space: nowrap; }
 .ck-alert-q { font-weight: 600; color: rgba(255,255,255,.6); }
@@ -632,8 +666,8 @@ body {
 /* SIN fondo/borde/radio a propósito: son cifras sueltas separadas por línea fina, NO recuadros. (Juan, 24-jun) */
 .rstat { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px clamp(24px, 3.4vw, 48px); position: relative; background: none; border: 0; }
 .rstat + .rstat::before { content: ''; position: absolute; left: 0; top: 4%; bottom: 4%; width: 1px; background: var(--sep); }
-.rstat-val { font-family: var(--font-num); font-weight: 600; font-size: clamp(42px, 4.8vw, 58px); color: #fff; line-height: 1; letter-spacing: -.025em; display: inline-flex; align-items: baseline; gap: 3px; font-variant-numeric: tabular-nums; }
-.rstat-val i { font-style: normal; font-size: .4em; font-weight: 600; color: var(--gold); }
+.rstat-val { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(42px, 4.8vw, 58px); color: #fff; line-height: 1; letter-spacing: var(--num-spacing); display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
+.rstat-val i { font-style: normal; font-size: .85em; font-weight: 700; color: var(--gold); }
 .rstat-val.g, .rstat-val.g i { color: var(--ok); }
 .rstat-lbl { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.66); }
 .ck-statrow { margin-top: 18px; }
@@ -658,7 +692,7 @@ body {
 .ck-panel + .ck-panel { border-left: 1px solid var(--line); }
 .ck-lbl { font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
 .ck-num { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 4vw, 42px); line-height: .95; letter-spacing: -.02em; color: #fff; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 5px; }
-.ck-num .u { font-size: .4em; font-weight: 600; color: var(--gold); }
+.ck-num .u { font-size: .6em; font-weight: 600; color: var(--gold); }
 .ck-panel.hi .ck-num { color: var(--gold-soft); }
 .ck-foot { font-size: var(--fs-2xs); color: var(--faint); font-weight: 500; }
 .ck-franja { display: flex; align-items: center; gap: 10px; }
@@ -708,7 +742,8 @@ body {
 .ch-title .ic svg { width: 18px; height: 18px; }
 .ch-sub { font-size: var(--fs-sm); color: var(--faint); font-weight: 500; margin-top: 4px; }
 .ch-stat { text-align: right; flex: none; }
-.ch-stat b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(36px, 3.6vw, 52px); line-height: 1; letter-spacing: var(--num-spacing); color: var(--ink); }
+/* "media diaria" y "Caja del día" al MISMO tamaño (medio entre las dos) para que casen visualmente (Juan 28-jun). */
+.ch-stat b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 38px); line-height: 1; letter-spacing: var(--num-spacing); color: var(--ink); }
 .ch-stat small { display: block; font-size: var(--fs-sm); color: var(--muted); font-weight: 600; margin-top: 5px; }
 .ch-stat .up { color: var(--ok); }
 .chart-area { position: relative; width: 100%; height: 240px; touch-action: none; }
@@ -754,7 +789,7 @@ body {
 .stat { background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--line); border-radius: 18px; padding: 16px 17px; will-change: transform; transform-style: preserve-3d; box-shadow: 0 2px 10px -4px rgba(0,0,0,.4); }
 .stat .k { color: var(--faint); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
 .stat .v { font-family: var(--font-num); font-weight: var(--num-weight); font-size: var(--fs-3xl); line-height: 1; margin-top: 8px; letter-spacing: var(--num-spacing); color: var(--ink); white-space: nowrap; }
-.stat .v small { font-size: .8em; color: var(--gold); font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
+.stat .v small { font-size: .92em; color: var(--gold); font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
 .kpi-body { display: flex; flex-direction: column; }
 .kpi-foot { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: clamp(12.5px, .95vw, 15px); font-weight: 700; color: var(--muted); }
 .kpi-foot svg { width: 13px; height: 13px; flex: none; }
@@ -783,7 +818,7 @@ body {
 .turno-name { display: flex; align-items: center; gap: 11px; font-family: var(--font-display); font-weight: 650; font-size: var(--title-size); letter-spacing: -.01em; }
 .turno-name .badge { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: var(--fs-sm); }
 .badge.sol { background: rgba(var(--brand-rgb),.14); color: var(--gold); } .badge.luna { background: rgba(74,163,255,.14); color: var(--card); }
-.turno-sub { font-family: var(--font-num); font-weight: var(--num-weight); font-size: var(--fs-xl); letter-spacing: var(--num-spacing); }
+.turno-sub { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 38px); letter-spacing: var(--num-spacing); }
 .turno-sub .cur { font-size: .7em; color: var(--muted); }
 .linea { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 14px; padding: 10px 0; }
 .linea .lbl { display: flex; align-items: center; gap: 9px; font-size: var(--fs-sm); color: var(--muted); font-weight: 500; }
@@ -864,6 +899,8 @@ body {
 }
 .sidebar.open { transform: translateX(0); box-shadow: 0 0 70px rgba(0,0,0,.6); }
 .scrim { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+/* Logo FAT SMASH del programa, encima del león, bien visible (Juan 28-jun). */
+.side-logo { display: block; width: clamp(150px, 82%, 196px); height: auto; margin: 2px auto 16px; }
 .side-brand { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; padding: 10px 12px 8px; margin-bottom: 0; border: 1px solid transparent; border-radius: 14px; background: transparent; cursor: pointer; text-align: left; transition: background .2s, border-color .2s; }
 .side-brand:hover { background: rgba(255,255,255,.05); }
 
@@ -992,7 +1029,8 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .panel-card { position: relative; background: color-mix(in srgb, var(--surface) 64%, transparent); border: 1px solid var(--line); border-radius: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 2px 10px -4px rgba(0,0,0,.4), 0 22px 48px -30px rgba(0,0,0,.7); }
 .panel-card.pad { padding: 18px 20px; }
 .panel-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), var(--gold-soft), rgba(var(--brand-rgb),0) 72%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity .4s var(--ease); pointer-events: none; }
-.panel-card:hover::after { opacity: .6; }
+/* TODAS las tarjetas iluminan el borde con el acento al hover, igual que en Caja (brillo pleno + pulso). Juan 28-jun */
+.panel-card:hover::after { opacity: 1; animation: borderBreath 2.6s ease-in-out infinite; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .card-head h3 { font-size: clamp(14px, 1.1vw, 19px); font-weight: 700; letter-spacing: .2px; }
 .muted-s { font-size: clamp(11.5px, .9vw, 14.5px); color: var(--faint); font-weight: 500; }
@@ -1021,7 +1059,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .kpi-tile .v { position: relative; font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(34px, calc(3.6vw * var(--den, 1)), calc(70px * var(--den, 1))); line-height: 1; margin-top: 14px; letter-spacing: var(--num-spacing); white-space: nowrap;
   background: linear-gradient(176deg, var(--ink) 8%, color-mix(in srgb, var(--ink) 60%, var(--surface-2)) 96%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
-.kpi-tile .v small { -webkit-text-fill-color: var(--gold); color: var(--gold); font-size: .78em; font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
+.kpi-tile .v small { -webkit-text-fill-color: var(--gold); color: var(--gold); font-size: .9em; font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) { .kpi-tile { animation: none; } }
 
 .p-grid { display: grid; gap: clamp(12px, calc(1.2vw * var(--den, 1)), calc(24px * var(--den, 1))); grid-template-columns: 1fr; }
@@ -1705,11 +1743,15 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .fg-svg { display: inline-block; width: 100%; max-width: 330px; height: auto; overflow: visible; }
 .fg-track { fill: none; stroke: rgba(255,255,255,.09); stroke-width: 13; stroke-linecap: round; }
 .fg-zone { fill: none; stroke-width: 13; stroke-linecap: butt; }
-.fg-needle { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 3px 5px rgba(0,0,0,.45)); }
-.fg-hub { fill: var(--ink); }
+/* Cuentakm moderno: arco de valor encendido + aguja con glow del color de la zona (Juan 28-jun). */
+.fg-value-arc { fill: none; stroke-width: 13; stroke-linecap: round; filter: drop-shadow(0 0 7px color-mix(in srgb, var(--gc, var(--gold)) 75%, transparent)); }
+.fg-needle { stroke: #fff; stroke-width: 4.5; stroke-linecap: round; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--gc, var(--gold)) 80%, transparent)) drop-shadow(0 3px 5px rgba(0,0,0,.45)); }
+.fg-needle-tip { fill: #fff; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--gc, var(--gold)) 90%, transparent)); }
+.fg-hub { fill: var(--ink); stroke: color-mix(in srgb, var(--gc, var(--gold)) 60%, transparent); stroke-width: 2; }
+.fg-hub-dot { fill: var(--gc, var(--gold)); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gc, var(--gold)) 80%, transparent)); }
 .fg-read { width: 100%; text-align: center; margin-top: -8px; }
 .fg-val { display: block; font-family: var(--font-num); font-size: clamp(40px, 5.2vw, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
-.fg-val i { font-size: .46em; font-weight: 700; opacity: .6; margin-left: 2px; font-style: normal; }
+.fg-val i { font-size: .62em; font-weight: 700; opacity: .6; margin-left: 2px; font-style: normal; }
 .fg-lbl { display: block; font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.5); margin-top: 5px; }
 .fg-status { display: inline-block; margin-top: 9px; font-weight: 800; font-size: var(--fs-sm); }
 .coste-hero-side { display: flex; flex-direction: column; gap: 14px; min-width: 190px; }
@@ -2236,40 +2278,29 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 
 /* ── Intro "arranque de cockpit" (HUD sci-fi, one-shot por sesión) ── */
 .boot { position: fixed; inset: 0; z-index: 1000; background: #06070a; overflow: hidden; display: grid; place-items: center; cursor: pointer; }
-.boot-hud { color: var(--gold); font-family: var(--font-num); }
-.boot-hud::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 47%, transparent 42%, rgba(4,5,8,.86) 100%); }
-.bh-grid { position: absolute; inset: 0; pointer-events: none;
-  background-image: linear-gradient(rgba(255,191,16,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,191,16,.05) 1px, transparent 1px);
-  background-size: 46px 46px;
-  -webkit-mask-image: radial-gradient(120% 90% at 50% 50%, #000 36%, transparent 86%); mask-image: radial-gradient(120% 90% at 50% 50%, #000 36%, transparent 86%); }
-.bh-scan { position: absolute; left: 0; right: 0; top: 0; height: 92px; pointer-events: none; mix-blend-mode: screen;
-  background: linear-gradient(180deg, transparent, rgba(255,191,16,.16) 50%, transparent); }
-.bh-corner { position: absolute; width: 42px; height: 42px; border: 2px solid rgba(255,191,16,.7); }
-.bh-corner.tl { top: 26px; left: 26px; border-right: 0; border-bottom: 0; border-top-left-radius: 5px; }
-.bh-corner.tr { top: 26px; right: 26px; border-left: 0; border-bottom: 0; border-top-right-radius: 5px; }
-.bh-corner.bl { bottom: 26px; left: 26px; border-right: 0; border-top: 0; border-bottom-left-radius: 5px; }
-.bh-corner.br { bottom: 26px; right: 26px; border-left: 0; border-top: 0; border-bottom-right-radius: 5px; }
-.bh-cross-h { position: absolute; left: 6%; right: 6%; top: 50%; height: 1px; transform-origin: 50% 50%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255,191,16,.26) 18%, rgba(255,191,16,.26) 82%, transparent); }
-.bh-cross-v { position: absolute; top: 10%; bottom: 10%; left: 50%; width: 1px; transform-origin: 50% 50%; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(255,191,16,.2) 18%, rgba(255,191,16,.2) 82%, transparent); }
-.bh-reticle { position: absolute; top: 50%; left: 50%; width: 116px; height: 116px; margin: -58px 0 0 -58px; pointer-events: none; }
-.bh-reticle span { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255,191,16,.42); }
-.bh-reticle span:nth-child(2) { inset: 26px; border-style: dashed; opacity: .8; }
-.bh-center { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 0 18px; }
-.bh-boot { font-size: var(--fs-xs); letter-spacing: .32em; text-transform: uppercase; color: color-mix(in srgb, var(--gold) 88%, #fff); white-space: pre-wrap; }
-/* logo REBELL: letra GRUESA con relleno de CRISTAL (gradiente glass) + filo dorado que se DIBUJA (trazo) */
-.bh-logo { width: clamp(300px, 66vw, 760px); height: auto; overflow: visible; will-change: transform, filter, opacity; }
-.bh-logo text { font-family: var(--font-display); font-weight: 800; font-size: 140px; letter-spacing: -4px; }
-.bh-fill { fill: url(#bhGlass); }
-.bh-trace { fill: none; stroke: url(#bhEdge); stroke-width: 1.6; stroke-linejoin: round; }
-.bh-shine { mix-blend-mode: screen; }
-.bh-rule { width: clamp(160px, 30vw, 320px); height: 2px; background: var(--sep-h); transform-origin: 50% 50%; }
-.bh-bar { width: clamp(200px, 34vw, 360px); height: 4px; border-radius: 100px; background: rgba(255,191,16,.12); overflow: hidden; }
-.bh-bar-fill { display: block; width: 100%; height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--gold-deep), var(--gold-soft)); transform-origin: 0 50%; }
-.bh-pct { font-size: var(--fs-3xs); letter-spacing: .26em; text-transform: uppercase; color: color-mix(in srgb, var(--gold) 72%, #fff); font-variant-numeric: tabular-nums; }
-.bh-pct-u { margin-right: .35em; }
-.bh-status { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); letter-spacing: .24em; text-transform: uppercase; color: #fff; }
-.bh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--ok) 65%, transparent); }
-.bh-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(255,247,224,.95), rgba(255,191,16,.5) 40%, transparent 72%); }
+/* ── Intro REVEAL minimalista (Apple): león + REBELL se materializan con luz sobre negro y se funden.
+   Sin HUD, sin texto de sistema, sin barra. Sombra NEUTRA (dark-safe), bloom = FILL limpio (no halo sucio). */
+.boot-reveal { background: #060608; }
+/* Lienzo WebGL glitter de la intro: cubre todo, detrás del león+REBELL. opacity .5 + mix-blend-lighten +
+   scale 1.25 (igual que la referencia 21st.dev). Entra con un fundido suave. */
+.br-glitter { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; pointer-events: none;
+  opacity: .5; mix-blend-mode: lighten; transform: scale(1.25); animation: brGlitterIn 1s ease both; }
+@keyframes brGlitterIn { from { opacity: 0; } to { opacity: .5; } }
+.br-glow { position: absolute; top: 47%; left: 50%; width: min(126vw, 1180px); height: min(126vw, 1180px);
+  transform: translate(-50%, -50%); pointer-events: none; will-change: transform, opacity;
+  background: radial-gradient(circle at 50% 50%, rgba(255,191,16,.17), rgba(255,150,10,.06) 30%, transparent 62%); }
+.br-stack { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center;
+  gap: clamp(22px, 3.4vw, 40px); padding: 0 20px; }
+/* emblema del león: retrato circular con anillo dorado fino + sombra neutra */
+.br-beast { width: clamp(116px, 15vw, 178px); height: clamp(116px, 15vw, 178px); border-radius: 50%; overflow: hidden;
+  flex: none; background: #0b0b0e; will-change: transform, opacity;
+  box-shadow: 0 0 0 1px rgba(255,191,16,.32), 0 26px 64px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06); }
+.br-beast img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* wordmark REBELL en CRISTAL (mismo glass premium de antes, sin el chrome táctico) */
+.br-logo { width: clamp(280px, 60vw, 660px); height: auto; overflow: visible; will-change: transform, opacity; }
+.br-logo text { font-family: var(--font-display); font-weight: 800; font-size: 140px; letter-spacing: -4px; }
+.br-fill { fill: url(#brGlass); }
+.br-shine { mix-blend-mode: screen; }
 @media (prefers-reduced-motion: reduce) { .boot { display: none; } }
 
 /* ── Aviso de modo offline ── */
@@ -2491,9 +2522,10 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .tk-mesa:hover { color: var(--ink); border-color: var(--gold); }
 .tk-mesa.on { background: color-mix(in srgb, var(--gold) 16%, transparent); border-color: color-mix(in srgb, var(--gold) 55%, var(--line-strong)); color: var(--gold); }
 
-.tk-actions { display: flex; gap: 8px; }
-.tk-actions .tpv-pay { flex: 1; }
-.tk-comanda { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 var(--btn-px); border-radius: var(--btn-radius); border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--ink); font-family: var(--font); font-weight: 600; font-size: var(--btn-fs); cursor: pointer; transition: background .16s, border-color .16s, transform .1s; }
+.tk-actions { display: flex; gap: 8px; align-items: stretch; }
+/* ambos botones centran su contenido (vertical+horizontal); la Cobrar puede ir a 2 líneas y queda centrada (Juan 28-jun) */
+.tk-actions .tpv-pay { flex: 1; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.15; }
+.tk-comanda { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 var(--btn-px); border-radius: var(--btn-radius); border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--ink); font-family: var(--font); font-weight: 600; font-size: var(--btn-fs); cursor: pointer; transition: background .16s, border-color .16s, transform .1s; }
 .tk-comanda svg { width: 16px; height: 16px; }
 .tk-comanda:hover:not(:disabled) { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .tk-comanda:active:not(:disabled) { transform: scale(.96); }
@@ -2509,8 +2541,8 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
    CARTERA del día (arriba-dcha) quedan SIEMPRE visibles; las moneditas vuelan hacia la cartera visible. */
 @media (min-width: 1024px) { .tpv-mesa-scrim { left: var(--side-w); top: 62px; } }
 
-.tms-head { flex: none; display: flex; align-items: center; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--line); }
-.tms-htxt { display: flex; flex-direction: column; gap: 5px; margin-right: auto; }
+.tms-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--line); }
+.tms-htxt { display: flex; flex-direction: column; gap: 5px; }
 .tms-htxt b { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); line-height: 1; display: block; }
 .tms-htxt small { font-size: var(--fs-xs); color: var(--faint); font-weight: 500; }
 .tms-live { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -2542,11 +2574,24 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 
 .tpv-mesa-foot { flex: none; padding: 16px 24px; display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--line); }
 .tms-legend { font-size: var(--fs-xs); color: var(--faint); margin-right: auto; }
-.tmp-llevar { display: inline-flex; align-items: center; gap: 9px; padding: var(--btn-py) var(--btn-px); border-radius: var(--btn-radius); border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--ink); font-family: var(--font); font-weight: 650; font-size: var(--btn-fs); cursor: pointer; transition: background .16s, border-color .16s, transform .1s; }
-.tmp-llevar svg { width: 18px; height: 18px; }
-.tmp-llevar:hover { border-color: var(--gold); }
+/* Botón GRANDE de abrir/cerrar caja: full-width = ancho del popup, debajo de "¿A qué mesa va?" (Juan 28-jun) */
+.tpv-mesa-caja { flex: none; width: 100%; display: flex; align-items: center; justify-content: center; gap: 11px;
+  padding: 18px 24px; border: 0; border-top: 1px solid var(--line); cursor: pointer;
+  font-family: var(--font); font-weight: 750; font-size: var(--fs-md); color: #1a1404; letter-spacing: -.01em;
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold-deep)); transition: filter .18s, transform .12s; }
+.tpv-mesa-caja:hover { filter: brightness(1.05); }
+.tpv-mesa-caja:active { transform: scale(.992); }
+.tpv-mesa-caja small { font-weight: 600; opacity: .72; }
+.tpv-mesa-caja .tmc-dot { width: 9px; height: 9px; border-radius: 50%; background: #1a1404; opacity: .5; }
+.tpv-mesa-caja.on { background: var(--surface-2); color: var(--ink); }
+.tpv-mesa-caja.on .tmc-dot { background: var(--ok); opacity: 1; box-shadow: 0 0 8px 1px color-mix(in srgb, var(--ok) 60%, transparent); }
+.tpv-mesa-caja.on small { color: var(--muted); }
+/* "Para llevar" = NARANJA (delivery), icono grande, en la cabecera entre el título y las chips (Juan 28-jun). */
+.tmp-llevar { display: inline-flex; align-items: center; gap: 9px; padding: var(--btn-py) var(--btn-px); border-radius: var(--btn-radius); border: 1px solid color-mix(in srgb, #ff7e36 55%, transparent); background: color-mix(in srgb, #ff7e36 12%, transparent); color: #ff9a5c; font-family: var(--font); font-weight: 700; font-size: var(--btn-fs); cursor: pointer; white-space: nowrap; transition: background .16s, border-color .16s, transform .1s, color .16s; }
+.tmp-llevar svg { width: 22px; height: 22px; }
+.tmp-llevar:hover { border-color: #ff7e36; background: color-mix(in srgb, #ff7e36 20%, transparent); }
 .tmp-llevar:active { transform: scale(.97); }
-.tmp-llevar.on { background: var(--gold); border-color: transparent; color: #1a1404; }
+.tmp-llevar.on { background: linear-gradient(180deg, #ff9a4d, #f5701a); border-color: transparent; color: #2a1404; }
 
 /* nº de ticket en la cabecera del ticket */
 .tk-num { margin-left: 9px; font-size: var(--fs-xs); font-weight: 700; color: var(--gold); letter-spacing: .04em; padding: 2px 8px; border-radius: 7px; background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent); vertical-align: 2px; }
@@ -2606,7 +2651,9 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 }
 
 /* ── Ventas · calendario de 12 meses ── */
-.ventas-year { display: inline-flex; align-items: center; gap: 8px; }
+.ventas-year { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; row-gap: 8px; }
+/* el botón Excel NUNCA se aplasta: mantiene su ancho y, si no cabe, baja de línea (Juan 28-jun) */
+.ventas-year .ventas-xls { flex: 0 0 auto; min-width: max-content; white-space: nowrap; }
 .ventas-year button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 60%, transparent); color: var(--ink); font-size: var(--fs-md); line-height: 1; cursor: pointer; transition: background .15s, border-color .15s; }
 .ventas-year button:hover { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); }
 .ventas-year b { min-width: 52px; text-align: center; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); color: var(--ink); }
@@ -2673,7 +2720,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .vtpv-hero-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .vtpv-kick { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
 .vtpv-bignum { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(40px, 6.5vw, 68px); line-height: 1; letter-spacing: var(--num-spacing); color: #fff; margin: 8px 0 4px; display: inline-flex; align-items: baseline; }
-.vtpv-bignum i { font-style: normal; font-size: .32em; font-weight: 700; color: var(--gold); margin-left: .12em; }
+.vtpv-bignum i { font-style: normal; font-size: .52em; font-weight: 700; color: var(--gold); margin-left: .12em; }
 .vtpv-hero-stats { justify-content: flex-start; margin-top: 16px; }
 .vtpv-hero-stats .rstat { align-items: flex-start; padding: 4px clamp(16px, 2.4vw, 34px); }
 .vtpv-hero-stats .rstat:first-child { padding-left: 0; }
@@ -4481,3 +4528,58 @@ body.map-fullscreen .cromo { max-width: 320px; }
   font-weight: 800; font-size: var(--fs-sm); transition: filter .15s, transform .12s; }
 .pd-review-btn:active { transform: scale(.97); }
 .pd-review.done { text-align: center; font-size: var(--fs-xs); color: var(--ink); font-weight: 600; }
+
+/* ════════════ AHORRO DE ENERGÍA (calor / batería) ════════════
+   Gates que escribe lib/power.ts en <html>. Bajan trabajo de GPU/CPU sin tocar la estética en uso normal.
+   • data-hidden (pestaña en segundo plano): pausa TODA animación CSS — nadie la mira → cero gasto.
+   • data-saver ("Salón frío", con batería o a mano): apaga los DECORADOS EN BUCLE (no esenciales);
+     su estado de reposo es válido (glow/veil estáticos), así que no se rompe nada. */
+html[data-hidden='1'] *, html[data-hidden='1'] *::before, html[data-hidden='1'] *::after {
+  animation-play-state: paused !important;
+}
+html[data-saver='1'] .hero::before,
+html[data-saver='1'] .nav-item.on::before,
+html[data-saver='1'] .ck-flick,
+html[data-saver='1'] .ck-ember,
+html[data-saver='1'] .ng-label,
+html[data-saver='1'] .ng-ia-spark,
+html[data-saver='1'] .login-veil,
+html[data-saver='1'] .login-flicker,
+html[data-saver='1'] .mp-block,
+html[data-saver='1'] .mapa-scan::after,
+html[data-saver='1'] .m3-ping,
+html[data-saver='1'] .msw-scan,
+html[data-saver='1'] .mht-live,
+html[data-saver='1'] .mp-emo,
+html[data-saver='1'] .kds-ticket.late .kt-time,
+html[data-saver='1'] .alm-pcard.crit {
+  animation: none !important;
+}
+/* En ahorro, la barra lateral del león no necesita el vídeo: lo ocultamos y dejamos el póster (foto). */
+html[data-saver='1'] .side-beast-vid { display: none; }
+
+/* ════ Detalle del DÍA (modal de Ventas/Compras) ════
+   Centrado ROBUSTO: un wrapper fijo a pantalla completa centra por flexbox, y el modal va en flujo normal
+   → así el transform inline de framer-motion (scale/y) NO pisa el centrado (antes lo descentraba). */
+.vtpv-center { position: fixed; inset: 0; z-index: 91; display: flex; align-items: center; justify-content: center; padding: 24px; pointer-events: none; }
+.vtpv-center > .vtpv-z { position: static; left: auto; top: auto; pointer-events: auto; }
+.vt-day { width: min(580px, calc(100vw - 40px)); max-width: none; }
+.vt-turnos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 8px 0 4px; }
+.vt-turno .vtpv-dr-row { flex-wrap: nowrap; gap: 10px; }
+.vt-turno .vtpv-dr-row span { white-space: nowrap; }
+.vt-turno .vtpv-dr-row b { white-space: nowrap; }
+@media (max-width: 560px) { .vt-turnos { grid-template-columns: 1fr; } }
+.vt-turno { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 14px; padding: 8px 14px 12px; }
+[data-theme='light'] .vt-turno { background: rgba(15,20,35,.03); }
+.vt-turno-h { text-align: center; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 7px 0; margin: 0 -8px 8px; border-radius: 10px; }
+.vt-turno-h.man { color: var(--gold-soft); background: rgba(var(--brand-rgb),.1); }
+.vt-turno-h.tar { color: #8fb6ff; background: rgba(90,140,255,.12); }
+.vt-turno .vt-sub { border-top: 1px dashed var(--line-strong); margin-top: 5px; padding-top: 9px; }
+.vt-turno .vt-sub b { color: var(--ink); }
+.vt-resp { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 12px; }
+.vt-resp b { color: var(--gold); font-weight: 700; }
+.vt-lines { margin: 6px 0 2px; max-height: 38vh; overflow: auto; }
+.cmp-dialink { background: none; border: 0; padding: 0; font: inherit; color: var(--gold-soft); cursor: pointer; border-bottom: 1px dotted transparent; transition: border-color .15s; }
+.cmp-dialink:hover { border-bottom-color: currentColor; }
+/* Coste vs ventas: la columna de personal se trunca para que la tabla QUEPA sin scroll horizontal (Juan 28-jun) */
+.coste-staff { display: block; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: var(--fs-xs); }

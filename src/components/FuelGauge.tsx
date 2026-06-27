@@ -60,14 +60,18 @@ export default function FuelGauge({
         {segs.map((s, i) => (
           <path key={i} d={arcPath(s.a, s.b)} stroke={s.color} className="fg-zone" />
         ))}
+        {/* arco de VALOR encendido (0 → valor) en el color de la zona, con glow tipo cuentakm moderno */}
+        <path d={arcPath(0, Math.max(0.001, frac))} stroke={status?.color || 'var(--gold)'} className="fg-value-arc" style={{ ['--gc' as string]: status?.color || 'var(--gold)' }} />
         <motion.g
-          style={{ transformBox: 'view-box', transformOrigin: '100px 100px' }}
+          style={{ transformBox: 'view-box', transformOrigin: '100px 100px', ['--gc' as string]: status?.color || 'var(--gold)' }}
           initial={{ rotate: deg }}
           animate={{ rotate: deg }}
           transition={rm ? { duration: 0 } : { type: 'spring', stiffness: 80, damping: 11, mass: 0.9 }}
         >
-          <line x1="100" y1="100" x2="100" y2="30" className="fg-needle" />
-          <circle cx="100" cy="100" r="7" className="fg-hub" />
+          <line x1="100" y1="100" x2="100" y2="24" className="fg-needle" />
+          <circle cx="100" cy="24" r="3.4" className="fg-needle-tip" />
+          <circle cx="100" cy="100" r="8" className="fg-hub" />
+          <circle cx="100" cy="100" r="3" className="fg-hub-dot" />
         </motion.g>
       </svg>
       <div className="fg-read">
