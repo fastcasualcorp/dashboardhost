@@ -12,13 +12,6 @@ gsap.registerPlugin(useGSAP)
 
 type Turn = { efectivo: number; tarjeta: number; domicilio: number }
 
-// Brasas que suben (posición/velocidad fijas → no saltan entre renders).
-const EMBERS = [
-  { l: '22%', d: '7.5s', delay: '0s' }, { l: '30%', d: '9s', delay: '1.4s' },
-  { l: '38%', d: '6.5s', delay: '3s' }, { l: '45%', d: '8.2s', delay: '.7s' },
-  { l: '54%', d: '7s', delay: '2.2s' }, { l: '63%', d: '9.5s', delay: '4s' },
-  { l: '34%', d: '8s', delay: '5.2s' }, { l: '48%', d: '6.8s', delay: '6s' },
-]
 // Facturación del negocio (mes) → el número GIGANTE del hero. Con datos reales saldrá de Supabase.
 const NEGOCIO = 47280
 // Abreviaturas de día (tira de fechas, estilo week-strip).
@@ -31,6 +24,32 @@ const MOTIV = [
   'Por encima de la media de tu zona ✨',
   'Racha de 5 días cuadrando caja 💪',
 ]
+
+/* Tarta (donut) de 3 quesos: efectivo / tarjeta / domicilio del día. */
+function DayDonut({ efe, tar, dom }: { efe: number; tar: number; dom: number }) {
+  const total = efe + tar + dom || 1
+  const r = 30
+  const c = 2 * Math.PI * r
+  const segs = [
+    { v: efe, color: 'var(--cash)', k: 'e' },
+    { v: tar, color: 'var(--card)', k: 't' },
+    { v: dom, color: 'var(--home)', k: 'd' },
+  ]
+  let acc = 0
+  return (
+    <div className="day-donut" aria-hidden="true">
+      <svg viewBox="0 0 84 84">
+        <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="11" />
+        {segs.map((s) => {
+          const len = (s.v / total) * c
+          const off = -acc
+          acc += len
+          return <circle key={s.k} cx="42" cy="42" r={r} fill="none" stroke={s.color} strokeWidth="11" strokeLinecap="butt" strokeDasharray={`${len.toFixed(2)} ${(c - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" />
+        })}
+      </svg>
+    </div>
+  )
+}
 
 export default function Caja() {
   const root = useRef<HTMLDivElement>(null)
@@ -241,16 +260,8 @@ export default function Caja() {
         {/* ── HERO COCINA: el local toma el foco; el total del día flota sobre la cocina viva ── */}
         <section className={'ckitchen' + (descuadre ? ' warn' : '')} ref={heroRef}>
           <div className="ck-bg" aria-hidden="true">
-            {/* Fondo de cocina ESTÁTICO (sin vídeo) → la información se lee mejor y no calienta el equipo.
-                (Juan, 27-jun: "quita el vídeo del fondo para dejar mejor la información".) */}
-            <div className="ck-vid ck-still" style={{ backgroundImage: "url('/img/kitchen-1.jpg')" }} />
-            <div className="ck-flick" />
-            <div className="ck-embers">
-              {EMBERS.map((e, i) => (
-                <span key={i} className="ck-ember" style={{ left: e.l, animationDuration: e.d, animationDelay: e.delay }} />
-              ))}
-            </div>
-            <div className="ck-scrim" />
+            {/* Fondo NEGRO limpio (sin cocina): la información manda. Vignette sutil (no plano-muerto)
+                + grano. (Juan, 27-jun: "quita el vídeo de atrás y deja el fondo negro".) */}
             <div className="ck-grain" />
           </div>
 
@@ -263,6 +274,8 @@ export default function Caja() {
 
             {/* navegador de fecha: tira de días (separados por línea fina, como el StatRow). Va DEBAJO de la identidad */}
             <div className="ck-datenav">
+              <span className="ckd-spacer" aria-hidden="true" />
+              <div className="ckd-nav">
               <button className="ckd-arrow" onClick={() => stepDia(-1)} aria-label="Día anterior">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
               </button>
@@ -283,6 +296,7 @@ export default function Caja() {
               <button className="ckd-arrow" onClick={() => stepDia(1)} disabled={esHoy} aria-label="Día siguiente">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
               </button>
+              </div>
               <button className={'ck-cmp-toggle' + (cmpOn ? ' on' : '')} onClick={toggleCmp} aria-pressed={cmpOn} title="Comparar dos días">
                 <span className="cmp-ic">⚖</span>{cmpOn ? 'Comparando' : 'Comparar'}
               </button>
@@ -350,10 +364,13 @@ export default function Caja() {
                   <div className="turno-name"><span className="badge sol">€</span>Caja del día</div>
                   <div className="turno-sub">{eur(subM + subT)}<span className="cur"> €</span></div>
                 </div>
-                <div className="day-rows">
-                  <div className="day-row"><span className="lbl"><i className="i-cash" />Efectivo</span><b className="amt tnum">{eur(manana.efectivo + tarde.efectivo)} €</b></div>
-                  <div className="day-row"><span className="lbl"><i className="i-card" />Tarjeta</span><b className="amt tnum">{eur(manana.tarjeta + tarde.tarjeta)} €</b></div>
-                  <div className="day-row"><span className="lbl"><i className="i-home" />Domicilio</span><b className="amt tnum">{eur(manana.domicilio + tarde.domicilio)} €</b></div>
+                <div className="day-body">
+                  <DayDonut efe={manana.efectivo + tarde.efectivo} tar={manana.tarjeta + tarde.tarjeta} dom={manana.domicilio + tarde.domicilio} />
+                  <div className="day-rows">
+                    <div className="day-row"><span className="lbl"><i className="i-cash" />Efectivo</span><b className="amt tnum">{eur(manana.efectivo + tarde.efectivo)} €</b></div>
+                    <div className="day-row"><span className="lbl"><i className="i-card" />Tarjeta</span><b className="amt tnum">{eur(manana.tarjeta + tarde.tarjeta)} €</b></div>
+                    <div className="day-row"><span className="lbl"><i className="i-home" />Domicilio</span><b className="amt tnum">{eur(manana.domicilio + tarde.domicilio)} €</b></div>
+                  </div>
                 </div>
                 <div className="day-split">
                   <span className="ds-seg">☀ Mañana <b className="tnum">{eur(subM)} €</b></span>

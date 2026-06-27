@@ -56,7 +56,6 @@ export default function SalesChart() {
   const line = w ? smooth(pts) : ''
   const area = w ? `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z` : ''
   const last = pts[pts.length - 1]
-  const today = SALES[SALES.length - 1]
   // niveles de la rejilla (para leer los importes de un vistazo)
   const gridYs = Array.from({ length: GRID }, (_, k) => TOP + ((k + 1) * (H - TOP - BOTTOM)) / (GRID + 1))
 
@@ -167,13 +166,7 @@ export default function SalesChart() {
           </svg>
         )}
 
-        {/* etiqueta del valor de HOY anclada al punto (se oculta al hacer hover) */}
-        {w > 0 && (
-          <div className="ch-today-cap" style={{ left: last.x, top: last.y, opacity: hover == null ? 1 : 0 }}>
-            <b className="tnum">{eur0(today.value)} €</b>
-            <small>hoy</small>
-          </div>
-        )}
+        {/* (sin etiqueta fija de HOY: la info aparece SOLO al pasar por encima — Juan, 27-jun) */}
 
         {/* crosshair + punto + tooltip al hover */}
         <div className="ch-cross" style={{ left: hpt?.x ?? 0, opacity: hpt ? 1 : 0 }} />
