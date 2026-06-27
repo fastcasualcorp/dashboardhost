@@ -32,60 +32,6 @@ const MOTIV = [
   'Racha de 5 días cuadrando caja 💪',
 ]
 
-function Turno({ badge, badgeClass, name, subtotal, t, franjas }: {
-  badge: string
-  badgeClass: 'sol' | 'luna'
-  name: string
-  subtotal: number
-  t: Turn
-  franjas: [string, number, number][]
-}) {
-  const max = Math.max(t.efectivo, t.tarjeta, t.domicilio)
-  const row = (c: 'cash' | 'card' | 'home', label: string, v: number) => (
-    <div className="linea" key={c}>
-      <span className="lbl">
-        <i className={'i-' + c} />
-        {label}
-      </span>
-      <div className="bar">
-        <span className={c} data-p={(v / max).toFixed(3)} />
-      </div>
-      <span className="amt">{eur(v)} €</span>
-    </div>
-  )
-  return (
-    <div className="turno" data-tilt>
-      <div className="turno-head">
-        <div className="turno-name">
-          <span className={'badge ' + badgeClass}>{badge}</span>
-          {name}
-        </div>
-        <div className="turno-sub">
-          {eur(subtotal)}
-          <span className="cur"> €</span>
-        </div>
-      </div>
-      {row('cash', 'Efectivo', t.efectivo)}
-      {row('card', 'Tarjeta', t.tarjeta)}
-      {row('home', 'Domicilio', t.domicilio)}
-      <div className="turno-more">
-        <div className="inner">
-          <div className="hdr">Por franjas horarias</div>
-          {franjas.map((f, i) => (
-            <div className="hrline" key={i}>
-              <span className="h">{f[0]}</span>
-              <span className="mini">
-                <span style={{ width: f[2] + '%' }} />
-              </span>
-              <b>{eur(f[1])} €</b>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function Caja() {
   const root = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLElement>(null)
@@ -110,13 +56,10 @@ export default function Caja() {
   const kDia = esHoy && dia.total > 0 ? hoyTotal / dia.total : 1
   const sc = (v: number) => Math.round(v * kDia * 100) / 100
   const scTurn = (t: Turn): Turn => ({ efectivo: sc(t.efectivo), tarjeta: sc(t.tarjeta), domicilio: sc(t.domicilio) })
-  const scFranjas = (fr: [string, number, number][]): [string, number, number][] => fr.map(([h, v, p]) => [h, sc(v), p])
   const manana = esHoy ? scTurn(dia.manana) : dia.manana
   const tarde = esHoy ? scTurn(dia.tarde) : dia.tarde
   const subM = esHoy ? sc(dia.subM) : dia.subM
   const subT = esHoy ? sc(dia.subT) : dia.subT
-  const franjasM = esHoy ? scFranjas(dia.franjasM) : dia.franjasM
-  const franjasT = esHoy ? scFranjas(dia.franjasT) : dia.franjasT
   const medioDia = esHoy && dia.tickets ? Math.round((totalDia / dia.tickets) * 100) / 100 : dia.medio
   const efectivoDia = sc(dia.manana.efectivo + dia.tarde.efectivo)
   const tarjetaDia = sc(dia.manana.tarjeta + dia.tarde.tarjeta)
@@ -424,9 +367,23 @@ export default function Caja() {
             {/* Gráfica + turnos INTEGRADOS dentro de la misma página de cocina (glass), no como recuadros aparte */}
             <div className="ck-sub">
               <SalesChart />
-              <div className="turnos">
-                <Turno badge="☀" badgeClass="sol" name="Mañana" subtotal={subM} t={manana} franjas={franjasM} />
-                <Turno badge="☾" badgeClass="luna" name="Tarde" subtotal={subT} t={tarde} franjas={franjasT} />
+              {/* Caja del día UNIFICADA: total + métodos en números limpios (sin barras),
+                  con el split Mañana/Tarde debajo. (Juan, 27-jun: "las barras sobran, unificar en 1") */}
+              <div className="turno turno-day" data-tilt>
+                <div className="turno-head">
+                  <div className="turno-name"><span className="badge sol">€</span>Caja del día</div>
+                  <div className="turno-sub">{eur(subM + subT)}<span className="cur"> €</span></div>
+                </div>
+                <div className="day-rows">
+                  <div className="day-row"><span className="lbl"><i className="i-cash" />Efectivo</span><b className="amt tnum">{eur(manana.efectivo + tarde.efectivo)} €</b></div>
+                  <div className="day-row"><span className="lbl"><i className="i-card" />Tarjeta</span><b className="amt tnum">{eur(manana.tarjeta + tarde.tarjeta)} €</b></div>
+                  <div className="day-row"><span className="lbl"><i className="i-home" />Domicilio</span><b className="amt tnum">{eur(manana.domicilio + tarde.domicilio)} €</b></div>
+                </div>
+                <div className="day-split">
+                  <span className="ds-seg">☀ Mañana <b className="tnum">{eur(subM)} €</b></span>
+                  <span className="ds-dot">·</span>
+                  <span className="ds-seg">☾ Tarde <b className="tnum">{eur(subT)} €</b></span>
+                </div>
               </div>
 
               {/* Balance de platos del día + alerta de stock para mañana (cruce ventas × stock) */}

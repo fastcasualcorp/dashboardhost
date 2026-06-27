@@ -396,6 +396,20 @@ body {
 .ckitchen .turnos { display: grid; grid-template-columns: 1fr; gap: 14px; }
 @media (min-width: 760px) { .ckitchen .turnos { grid-template-columns: 1fr 1fr; } }
 
+/* Caja del día UNIFICADA (un bloque, métodos en números, sin barras) */
+.turno-day .turno-head { margin-bottom: 8px; }
+.turno-day .turno-name .badge.sol { font-family: var(--font-num); font-weight: 800; }
+.day-rows { display: flex; flex-direction: column; }
+.day-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.05); }
+.day-row:first-child { border-top: 0; }
+.day-row .lbl { display: flex; align-items: center; gap: 11px; font-size: var(--fs-base); color: var(--muted); font-weight: 500; }
+.day-row .lbl i { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.day-row .amt { font-family: var(--font-num); font-weight: 650; font-size: var(--fs-lg); letter-spacing: var(--num-spacing); color: var(--ink); }
+.day-split { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--line-strong); font-size: var(--fs-sm); color: var(--muted); }
+.day-split .ds-seg b { color: var(--ink); font-weight: 650; margin-left: 5px; }
+.day-split .ds-dot { color: var(--faint); }
+[data-theme='light'] .day-row { border-top-color: rgba(15,20,35,.07); }
+
 /* CAJA INMERSIVA: ocupa TODA la pestaña sin bordes ni padding; la cabecera (tema/sonido/dino) flota DENTRO
    sobre la cocina. Pedido de Juan (24-jun): "que ocupe la pestaña completa, sin bordes, todo dentro". */
 .panel-main.caja-full .panel-content { padding: 0; }
