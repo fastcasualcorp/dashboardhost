@@ -4,9 +4,11 @@
    Ahora: cada albarán tiene base + IVA → cuota/total calculados; das de ALTA
    uno y entran a la vez la tabla, las barras por proveedor y los KPIs. El
    estado pagado/pendiente se alterna con un clic. Mismo patrón que
-   wallet/equipo/gastos/ventas. Persiste en localStorage. (audit · Compras)
+   wallet/equipo/gastos/ventas. Cableado a Supabase por local (hidrata + siembra
+   + escribe) con fallback demo si no hay sesión. (audit · Compras)
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
 
 export type EstadoPago = 'pagado' | 'pendiente'
 export type Albaran = { id: string; ts: number; proveedor: string; concepto: string; base: number; iva: number; estado: EstadoPago }
@@ -58,6 +60,31 @@ function emit() {
 
 export const getCompras = (): Albaran[] => albaranes
 
+/* ── Cableado Supabase (albaranes por local; hidrata + siembra + escribe) ── */
+type ARow = { id: string; ts: number; proveedor: string; concepto: string | null; base: number; iva: number; estado: EstadoPago }
+const fromRow = (r: ARow): Albaran => ({ id: r.id, ts: Number(r.ts), proveedor: r.proveedor, concepto: r.concepto ?? '—', base: Number(r.base), iva: r.iva, estado: r.estado })
+let _syncStarted = false
+let _live = false
+let _lid: string | null = null
+async function initSync() {
+  if (_syncStarted || !supabase) return
+  _syncStarted = true
+  const { data } = await supabase.auth.getSession()
+  const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
+  if (!lid) return // demo → localStorage
+  _live = true
+  _lid = lid
+  let rows = (await supabase.from('compras').select('*').eq('local_id', lid).order('ts', { ascending: false })).data as ARow[] | null
+  if (!rows || !rows.length) {
+    await supabase.from('compras').insert(SEED.map((a) => ({ local_id: lid, ts: a.ts, proveedor: a.proveedor, concepto: a.concepto, base: a.base, iva: a.iva, estado: a.estado })))
+    rows = (await supabase.from('compras').select('*').eq('local_id', lid).order('ts', { ascending: false })).data as ARow[] | null
+  }
+  if (rows) {
+    albaranes = rows.map(fromRow)
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:compras'))
+  }
+}
+
 export function addAlbaran(a: { proveedor: string; concepto: string; base: number; iva: number; estado?: EstadoPago }): Albaran {
   const nuevo: Albaran = {
     id: 'a' + ++seq + '_' + String(Date.now()).slice(-4),
@@ -68,19 +95,29 @@ export function addAlbaran(a: { proveedor: string; concepto: string; base: numbe
     iva: a.iva,
     estado: a.estado ?? 'pendiente',
   }
-  albaranes = [nuevo, ...albaranes].slice(0, 300)
+  if (_live && supabase && _lid) {
+    // La verdad va a Supabase; el store se actualiza con la fila real (uuid).
+    supabase.from('compras').insert({ local_id: _lid, ts: nuevo.ts, proveedor: nuevo.proveedor, concepto: nuevo.concepto, base: nuevo.base, iva: nuevo.iva, estado: nuevo.estado }).select().single().then(({ data }) => {
+      if (data) { albaranes = [fromRow(data as ARow), ...albaranes].slice(0, 300); emit() }
+    })
+    return nuevo
+  }
+  albaranes = [nuevo, ...albaranes].slice(0, 300) // demo
   emit()
   return nuevo
 }
 
 export function toggleEstado(id: string) {
-  albaranes = albaranes.map((a) => (a.id === id ? { ...a, estado: a.estado === 'pagado' ? 'pendiente' : 'pagado' } : a))
+  let nuevoEstado: EstadoPago = 'pagado'
+  albaranes = albaranes.map((a) => { if (a.id !== id) return a; nuevoEstado = a.estado === 'pagado' ? 'pendiente' : 'pagado'; return { ...a, estado: nuevoEstado } })
   emit()
+  if (_live && supabase) supabase.from('compras').update({ estado: nuevoEstado }).eq('id', id).then(() => {})
 }
 
 export function removeAlbaran(id: string) {
   albaranes = albaranes.filter((a) => a.id !== id)
   emit()
+  if (_live && supabase) supabase.from('compras').delete().eq('id', id).then(() => {})
 }
 
 // ── Derivadas del mes (una sola fuente para tabla, barras y KPIs) ──
@@ -101,6 +138,7 @@ export function gastoPorProveedor(): { proveedor: string; total: number; color: 
 export function useCompras(): Albaran[] {
   const [, force] = useState(0)
   useEffect(() => {
+    void initSync()
     const on = () => force((n) => n + 1)
     window.addEventListener('rebell:compras', on)
     return () => window.removeEventListener('rebell:compras', on)

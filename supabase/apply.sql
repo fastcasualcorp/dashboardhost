@@ -142,6 +142,45 @@ drop policy if exists "gastos: gestionar las de mi local" on public.gastos;
 create policy "gastos: gestionar las de mi local" on public.gastos for all to authenticated
   using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
 
+-- ── empleados (PII: nóminas → Supabase con RLS, NUNCA localStorage; gate de rol gerencia) ──
+create table if not exists public.empleados (
+  id uuid primary key default gen_random_uuid(),
+  local_id uuid not null references public.locales(id) on delete cascade,
+  nombre text not null,
+  role text not null default 'sala',
+  jornada text not null default 'Completa',
+  liquido_mes numeric(10,2) not null default 0,
+  antig text,
+  sexo text,
+  turnos jsonb not null default '[]',
+  creado_at timestamptz not null default now()
+);
+alter table public.empleados enable row level security;
+create index if not exists empleados_local_idx on public.empleados (local_id, creado_at);
+-- Solo la GERENCIA del local (admin/encargado/central) ve y edita nóminas (M5 + PII).
+drop policy if exists "empleados: gerencia de mi local" on public.empleados;
+create policy "empleados: gerencia de mi local" on public.empleados for all to authenticated
+  using ( local_id = public.jwt_local_id() and public.jwt_rol() in ('admin','encargado','central') )
+  with check ( local_id = public.jwt_local_id() and public.jwt_rol() in ('admin','encargado','central') );
+
+-- ── compras / albaranes (por local, scoped) ──
+create table if not exists public.compras (
+  id uuid primary key default gen_random_uuid(),
+  local_id uuid not null references public.locales(id) on delete cascade,
+  ts bigint not null,
+  proveedor text not null,
+  concepto text,
+  base numeric(10,2) not null default 0,
+  iva int not null default 21,
+  estado text not null default 'pendiente' check (estado in ('pagado','pendiente')),
+  creado_at timestamptz not null default now()
+);
+alter table public.compras enable row level security;
+create index if not exists compras_local_idx on public.compras (local_id, ts desc);
+drop policy if exists "compras: gestionar las de mi local" on public.compras;
+create policy "compras: gestionar las de mi local" on public.compras for all to authenticated
+  using ( local_id = public.jwt_local_id() ) with check ( local_id = public.jwt_local_id() );
+
 -- ── Pedido online ATÓMICO y TRANSACCIONAL (lo llama la Edge Function) ──
 -- nº de comanda por local con lock (sin carrera) + comanda+venta en UNA transacción
 -- (o las dos o ninguna → nunca venta huérfana). SECURITY DEFINER, search_path fijo,

@@ -13,8 +13,13 @@
      coste/hora = (líquido × FACTOR_EMPRESA) / horas contratadas del mes
      coste real = horas TRABAJADAS (turnos) × coste/hora
    → subir el sueldo en Empleados o un turno en Horarios mueve el coste en todo.
+
+   CABLEADO A SUPABASE (Fase 1): si hay sesión, el roster (PII: nóminas) vive en
+   la tabla `empleados`, con RLS que SOLO deja a la gerencia del local (M5). Sin
+   sesión, demo en localStorage. Sin realtime (un editor por local).
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
 
 export type Role = 'encargado' | 'cocina' | 'sala' | 'reparto'
 export type Turno = { m: boolean; t: boolean }
@@ -99,19 +104,60 @@ function emit() {
 
 export const getRoster = () => roster
 
+/* ── Cableado Supabase (empleados por local, PII; hidrata + siembra + escribe) ── */
+type ERow = { id: string; nombre: string; role: Role; jornada: Emp['jornada']; liquido_mes: number; antig: string | null; sexo: Emp['sexo'] | null; turnos: Turno[] }
+const fromRow = (r: ERow): Emp => ({ id: r.id, nombre: r.nombre, role: r.role, jornada: r.jornada, liquidoMes: Number(r.liquido_mes), antig: r.antig ?? '', sexo: r.sexo ?? 'h', turnos: r.turnos || [] })
+const toRow = (e: Emp, lid: string) => ({ local_id: lid, nombre: e.nombre, role: e.role, jornada: e.jornada, liquido_mes: e.liquidoMes, antig: e.antig, sexo: e.sexo, turnos: e.turnos })
+function patchToDb(p: Partial<Emp>): Record<string, unknown> {
+  const d: Record<string, unknown> = {}
+  if (p.nombre !== undefined) d.nombre = p.nombre
+  if (p.role !== undefined) d.role = p.role
+  if (p.jornada !== undefined) d.jornada = p.jornada
+  if (p.liquidoMes !== undefined) d.liquido_mes = p.liquidoMes
+  if (p.antig !== undefined) d.antig = p.antig
+  if (p.sexo !== undefined) d.sexo = p.sexo
+  if (p.turnos !== undefined) d.turnos = p.turnos
+  return d
+}
+let _syncStarted = false
+let _live = false
+async function initSync() {
+  if (_syncStarted || !supabase) return
+  _syncStarted = true
+  const { data } = await supabase.auth.getSession()
+  const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
+  if (!lid) return // demo → localStorage
+  _live = true
+  let rows = (await supabase.from('empleados').select('*').eq('local_id', lid).order('creado_at')).data as ERow[] | null
+  if (!rows || !rows.length) {
+    await supabase.from('empleados').insert(SEED.map((e) => toRow(e, lid)))
+    rows = (await supabase.from('empleados').select('*').eq('local_id', lid).order('creado_at')).data as ERow[] | null
+  }
+  if (rows) {
+    roster = rows.map(fromRow)
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:equipo'))
+  }
+}
+
 export function updateEmp(id: string, patch: Partial<Emp>) {
   roster = roster.map((e) => (e.id === id ? { ...e, ...patch } : e))
   emit()
+  if (_live && supabase) supabase.from('empleados').update(patchToDb(patch)).eq('id', id).then(() => {})
 }
 export function toggleTurno(id: string, dia: number, slot: 'm' | 't') {
   roster = roster.map((e) => (e.id !== id ? e : { ...e, turnos: e.turnos.map((d, j) => (j !== dia ? d : { ...d, [slot]: !d[slot] })) }))
   emit()
+  if (_live && supabase) {
+    const e = roster.find((x) => x.id === id)
+    if (e) supabase.from('empleados').update({ turnos: e.turnos }).eq('id', id).then(() => {})
+  }
 }
 
 /* Hook: devuelve el roster vivo y re-renderiza cuando cambia en CUALQUIER sección. */
 export function useEquipo(): Emp[] {
   const [, force] = useState(0)
   useEffect(() => {
+    void initSync()
     const on = () => force((n) => n + 1)
     window.addEventListener('rebell:equipo', on)
     return () => window.removeEventListener('rebell:equipo', on)
