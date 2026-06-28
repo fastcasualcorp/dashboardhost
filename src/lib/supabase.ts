@@ -17,13 +17,20 @@ export const hasSupabase = supabase !== null
 /* local_id del usuario logueado (vive en app_metadata, lo fija el service_role).
    Lo cacheamos de la sesión para que las inserciones lleven su local sin pedir BD. */
 let _localId: string | null = null
+let _rol: string | null = null
 export const localId = () => _localId
+/** Rol del usuario (de app_metadata, solo escribible por service_role). 'central' = propietario/admin del SaaS. */
+export const userRol = () => _rol
+/** ¿Cuenta de administración (central)? Para funciones internas (semáforo de salud, modo escaparate). */
+export const isCentral = () => _rol === 'central'
 type AppMeta = { local_id?: string; rol?: string }
 if (supabase) {
   supabase.auth.getSession().then(({ data }) => {
     _localId = (data.session?.user?.app_metadata as AppMeta)?.local_id ?? null
+    _rol = (data.session?.user?.app_metadata as AppMeta)?.rol ?? null
   })
   supabase.auth.onAuthStateChange((_e, session) => {
     _localId = (session?.user?.app_metadata as AppMeta)?.local_id ?? null
+    _rol = (session?.user?.app_metadata as AppMeta)?.rol ?? null
   })
 }

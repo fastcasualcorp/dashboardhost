@@ -11,6 +11,7 @@ import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import CommentLayer from './CommentLayer'
 import ErrorBoundary from './ErrorBoundary'
 import Clock from './Clock'
+import HealthDot from './HealthDot'
 import WalletHoy from './WalletHoy'
 import DeployBadge from './DeployBadge'
 import LogoMark, { type LogoVariant } from './LogoMark'
@@ -441,6 +442,7 @@ export default function Shell() {
                 <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" />
               </svg>
             </button>
+            <HealthDot />
             <Clock />
           </div>
         </header>

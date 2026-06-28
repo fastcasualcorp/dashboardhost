@@ -195,6 +195,15 @@ body {
 .plan-pill:hover { border-color: rgba(var(--brand-rgb),.6); filter: brightness(1.05); }
 .plan-pill:active { transform: scale(.96); }
 @media (max-width: 600px) { .plan-pill { padding: 7px 11px; } }
+/* Semáforo de salud de la BD (solo central): verde rápida · ámbar lenta · rojo caída. */
+.health-dot { display: inline-flex; align-items: center; justify-content: center; padding: 4px; }
+.hd-led { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px transparent; transition: background .3s, box-shadow .3s; }
+.health-ok .hd-led { background: var(--ok); box-shadow: 0 0 0 3px rgba(52,211,153,.16); }
+.health-slow .hd-led { background: var(--warn); box-shadow: 0 0 0 3px rgba(245,179,65,.18); }
+.health-down .hd-led { background: #ff5c5c; box-shadow: 0 0 0 3px rgba(255,92,92,.2); animation: hdBlink 1.1s steps(2, jump-none) infinite; }
+@keyframes hdBlink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .health-down .hd-led { animation: none; } }
+
 /* Badge MODO DEMO: avisa de que el panel muestra datos de ejemplo. Clic = volver a real. */
 .demo-pill {
   display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-2xs); font-weight: 800;

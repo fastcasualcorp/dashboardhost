@@ -6,7 +6,8 @@ import { Stat, StatRow } from '../components/ui'
 import { play } from '../lib/sound'
 import { eur, eur0, reduceMotion, HOY } from '../lib/data'
 import { cierreDia, esMismoDia, fmtDiaLargo, addDias } from '../lib/cierre'
-import { useCajaDelDia } from '../lib/wallet'
+import { useCajaDelDia, walletPorMetodo } from '../lib/wallet'
+import { isLive, ventasHoyCount } from '../lib/ventas'
 
 gsap.registerPlugin(useGSAP)
 
@@ -109,9 +110,12 @@ export default function Caja() {
   const tarde = esHoy ? scTurn(dia.tarde) : dia.tarde
   const subM = esHoy ? sc(dia.subM) : dia.subM
   const subT = esHoy ? sc(dia.subT) : dia.subT
-  const medioDia = esHoy && dia.tickets ? Math.round((totalDia / dia.tickets) * 100) / 100 : dia.medio
-  const efectivoDia = sc(dia.manana.efectivo + dia.tarde.efectivo)
-  const tarjetaDia = sc(dia.manana.tarjeta + dia.tarde.tarjeta)
+  // REAL (hoy): nº de tickets y efectivo/tarjeta salen de las ventas REALES, no del cierre demo escalado.
+  const liveHoy = esHoy && isLive()
+  const ticketsDia = liveHoy ? ventasHoyCount() : dia.tickets
+  const medioDia = esHoy ? (ticketsDia ? Math.round((totalDia / ticketsDia) * 100) / 100 : 0) : dia.medio
+  const efectivoDia = liveHoy ? walletPorMetodo('efectivo') : sc(dia.manana.efectivo + dia.tarde.efectivo)
+  const tarjetaDia = liveHoy ? walletPorMetodo('tarjeta') : sc(dia.manana.tarjeta + dia.tarde.tarjeta)
   const descAmt = dia.descuadre < 0 ? dia.descuadre : -12.4
   const maxUds = Math.max(...dia.topPlatos.map((p) => p.uds), 1)
 
@@ -334,7 +338,7 @@ export default function Caja() {
             {/* UNA línea de diseño: el MISMO componente <Stat> para todos → valor grande + unidad
                 pequeña dorada + label. Imposible que se descuadre (criterio único del dashboard). */}
             <StatRow className="ck-statrow">
-              <Stat value={String(dia.tickets)} label="Tickets" count={false} />
+              <Stat value={String(ticketsDia)} label="Tickets" count={false} />
               <Stat value={eur(medioDia)} unit="€" label="Ticket medio" count={false} />
               <Stat value={(dia.deltaSemana >= 0 ? '+' : '') + dia.deltaSemana.toFixed(1)} unit="%" label="vs sem. pasada" tone={dia.deltaSemana >= 0 ? 'green' : 'gold'} count={false} />
               <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
