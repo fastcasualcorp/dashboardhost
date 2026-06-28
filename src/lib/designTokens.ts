@@ -29,8 +29,19 @@ export const BTN_TOKENS: BtnToken[] = [
 ]
 export const BTN_DEFAULTS: Record<string, number> = { fs: 15, py: 13, px: 24, radius: 14 }
 
+// RADIOS editables por uso (Juan 28-jun): el redondeo de TODA la app desde 3 mandos.
+// Sobreescriben --r-input / --r-chip / --card-r en .app → entran en todo a la vez (el login queda fuera, usa :root).
+export type RadiusToken = { key: string; varName: string; label: string; role: string; min: number; max: number }
+export const RADIUS_TOKENS: RadiusToken[] = [
+  { key: 'input', varName: '--r-input', label: 'Campos', role: 'inputs, celdas, controles ceñidos', min: 4, max: 18 },
+  { key: 'chip', varName: '--r-chip', label: 'Chips / botón', role: 'chips, etiquetas, botones pequeños', min: 4, max: 22 },
+  { key: 'card', varName: '--card-r', label: 'Paneles', role: 'tarjetas y paneles rectangulares', min: 8, max: 30 },
+]
+export const RADIUS_DEFAULTS: Record<string, number> = { input: 10, chip: 12, card: 18 }
+
 const TYPE_KEY = 'rebell-typescale-v1'
 const BTN_KEY = 'rebell-buttons-v1'
+const RADIUS_KEY = 'rebell-radius-v1'
 const WIDE_KEY = 'rebell-fontwide-v1'
 
 // Anchura de fuente: factor scaleX que ESTIRA horizontalmente los números-héroe y titulares
@@ -95,6 +106,14 @@ export function applyBtn(v: Record<string, number>) {
   for (const t of BTN_TOKENS) if (v[t.key] != null) app.style.setProperty(t.varName, v[t.key] + 'px')
 }
 
+export const loadRadius = () => read(RADIUS_KEY, RADIUS_DEFAULTS)
+export const saveRadius = (v: Record<string, number>) => write(RADIUS_KEY, v)
+export function applyRadius(v: Record<string, number>) {
+  const app = appEl()
+  if (!app) return
+  for (const t of RADIUS_TOKENS) if (v[t.key] != null) app.style.setProperty(t.varName, v[t.key] + 'px')
+}
+
 export function loadWide(): number {
   try {
     const r = parseFloat(localStorage.getItem(WIDE_KEY) || '')
@@ -143,6 +162,7 @@ export function applyBar(v: number) { const app = appEl(); if (app) app.style.se
 export function applySavedDesign() {
   applyType(loadType())
   applyBtn(loadBtn())
+  applyRadius(loadRadius())
   applyWide(loadWide())
   applyTrack(loadTrack())
   applyNumW(loadNumW())

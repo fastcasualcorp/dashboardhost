@@ -63,59 +63,66 @@ function RoiCalc() {
   )
 }
 
-/* Pantalla de PLANES (pricing premium): Free · Basic · Pro. Pro va cargado de features y resaltado
-   (glow dorado + "Recomendado") para que COMPENSE pasarse. Fondo = el mismo glitter de la intro.
-   Se abre desde el perfil ("Mejorar") vía evento 'rebell:open-planes'. (Juan, 28-jun) */
+/* Pantalla de PLANES (pricing premium): Free · Basic · Pro. Tarjetas IGUALES en rejilla limpia (Pro
+   destacado por borde+badge oro, NO por tamaño → calco de la estructura de higgsfield, pero en nuestro
+   tema). Toggle Mensual/Anual interactivo que recalcula precios y muestra el ahorro. Fondo = glitter de
+   la intro. Se abre desde el perfil ("Mejorar") vía evento 'rebell:open-planes'. (Juan, 28-jun) */
 
+type Feat = { t: string; b?: string }
 type Plan = {
   id: 'free' | 'basic' | 'pro'
   name: string
-  price: string
+  monthly: number // €/mes en facturación mensual (0 = gratis)
   tagline: string
-  features: string[]
+  feats: Feat[]
   best?: boolean
 }
 
 const PLANS: Plan[] = [
   {
-    id: 'free',
-    name: 'Free',
-    price: '0',
-    tagline: 'Lo esencial para arrancar',
-    features: ['Caja diaria', 'TPV básico', 'Comandas (KDS)', '1 local', 'Soporte por email'],
+    id: 'free', name: 'Free', monthly: 0, tagline: 'Lo esencial para arrancar',
+    feats: [{ t: 'Caja diaria' }, { t: 'TPV básico' }, { t: 'Comandas (KDS)' }, { t: '1 local' }, { t: 'Soporte por email' }],
   },
   {
-    id: 'basic',
-    name: 'Basic',
-    price: '29',
-    tagline: 'Controla los números',
-    features: ['Todo lo de Free', 'Ventas + Compras por día', 'Coste de personal', 'Food cost', 'Gastos fijos', 'Resumen / P&L', 'Hasta 3 locales'],
+    id: 'basic', name: 'Basic', monthly: 29, tagline: 'Controla los números',
+    feats: [{ t: 'Todo lo de Free' }, { t: 'Ventas + Compras por día' }, { t: 'Coste de personal' }, { t: 'Food cost' }, { t: 'Gastos fijos' }, { t: 'Resumen / P&L' }, { t: 'Hasta 3 locales' }],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    price: '59',
-    tagline: 'El arsenal completo',
-    best: true,
-    features: [
-      'Todo lo de Basic',
-      '🛰️ Mapa de rivales con IA',
-      '📱 Pedido online por QR',
-      '🔔 Alertas inteligentes de competencia',
-      '📈 Analítica avanzada + tendencias',
-      '♾️ Locales ilimitados',
-      '🎯 Soporte prioritario 24/7',
-      '✨ Acceso anticipado a novedades',
+    id: 'pro', name: 'Pro', monthly: PRO_PRICE, tagline: 'El arsenal completo', best: true,
+    feats: [
+      { t: 'Todo lo de Basic' },
+      { t: 'Mapa de rivales', b: 'IA' },
+      { t: 'Pedido online por QR', b: 'NUEVO' },
+      { t: 'Alertas de competencia', b: 'IA' },
+      { t: 'Analítica avanzada + tendencias' },
+      { t: 'Locales ilimitados' },
+      { t: 'Soporte prioritario 24/7' },
+      { t: 'Acceso anticipado a novedades' },
     ],
   },
 ]
 
+// Facturación anual = 2 MESES GRATIS (paga 10, usa 12). Equivalente mensual y ahorro/año.
+const annualMonthly = (m: number) => Math.round((m * 10) / 12)
+const annualYear = (m: number) => m * 10
+const yearSave = (m: number) => m * 2
+
+type Billing = 'mensual' | 'anual'
+
 export default function Planes({ onClose, current = 'pro' }: { onClose: () => void; current?: string }) {
+  const [billing, setBilling] = useState<Billing>('anual')
+
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onEsc)
     return () => window.removeEventListener('keydown', onEsc)
   }, [onClose])
+
+  const setBill = (b: Billing) => {
+    if (b === billing) return
+    setBilling(b)
+    play('tap', 0.45, b === 'anual' ? 1.12 : 1)
+  }
 
   return (
     <motion.div className="planes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -134,27 +141,60 @@ export default function Planes({ onClose, current = 'pro' }: { onClose: () => vo
 
         <RoiCalc />
 
+        {/* Toggle Mensual / Anual — recalcula los precios en vivo (calco interacción higgsfield, tema oro). */}
+        <div className="plans-billing">
+          <div className="plans-toggle" data-b={billing}>
+            <button className={billing === 'mensual' ? 'on' : ''} onClick={() => setBill('mensual')}>Mensual</button>
+            <button className={billing === 'anual' ? 'on' : ''} onClick={() => setBill('anual')}>Anual</button>
+            <span className="pt-ind" aria-hidden="true" />
+          </div>
+          <span className="plans-save-badge">2 meses gratis</span>
+        </div>
+
         <div className="planes-grid">
-          {PLANS.map((p) => (
-            <div key={p.id} className={'plan-card' + (p.best ? ' best' : '') + (current === p.id ? ' current' : '')}>
-              {p.best && <span className="plan-badge">★ Recomendado</span>}
-              <div className="plan-name">{p.name}</div>
-              <div className="plan-price"><b>{p.price}</b><i>€/mes</i></div>
-              <div className="plan-tag">{p.tagline}</div>
-              <ul className="plan-feats">
-                {p.features.map((f, i) => (
-                  <li key={i}><span className="pf-check">✓</span>{f}</li>
-                ))}
-              </ul>
-              <button
-                className={'plan-cta' + (p.best ? ' gold' : '')}
-                disabled={current === p.id}
-                onClick={() => play(p.best ? 'success' : 'tap', 0.5, p.best ? 1.1 : 1)}
-              >
-                {current === p.id ? 'Tu plan actual' : p.id === 'free' ? 'Empezar gratis' : `Mejorar a ${p.name}`}
-              </button>
-            </div>
-          ))}
+          {PLANS.map((p) => {
+            const isAnnual = billing === 'anual' && p.monthly > 0
+            const shown = isAnnual ? annualMonthly(p.monthly) : p.monthly
+            return (
+              <div key={p.id} className={'plan-card' + (p.best ? ' best' : '') + (current === p.id ? ' current' : '')}>
+                {p.best && <span className="plan-badge">★ Recomendado</span>}
+                <div className="plan-name">{p.name}</div>
+
+                <div className="plan-price">
+                  {isAnnual && <s className="plan-was">{p.monthly}€</s>}
+                  <b>{shown}</b>
+                  <i>€/mes</i>
+                </div>
+                <div className="plan-billnote">
+                  {p.monthly === 0 ? 'Gratis para siempre' : isAnnual ? `facturado ${annualYear(p.monthly)} €/año` : 'facturado cada mes'}
+                </div>
+
+                <div className="plan-tag">{p.tagline}</div>
+
+                <ul className="plan-feats">
+                  {p.feats.map((f, i) => (
+                    <li key={i}>
+                      <span className="pf-check">✓</span>
+                      <span className="pf-txt">{f.t}</span>
+                      {f.b && <span className={'pf-badge' + (f.b === 'NUEVO' ? ' nuevo' : '')}>{f.b}</span>}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  className={'plan-cta' + (p.best ? ' gold' : '')}
+                  disabled={current === p.id}
+                  onClick={() => play(p.best ? 'success' : 'tap', 0.5, p.best ? 1.1 : 1)}
+                >
+                  {current === p.id ? 'Tu plan actual' : p.id === 'free' ? 'Empezar gratis' : `Mejorar a ${p.name}`}
+                </button>
+
+                {isAnnual && current !== p.id && (
+                  <div className="plan-save">Ahorras {yearSave(p.monthly)} €/año</div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <p className="planes-foot">Sin permanencia · cancela cuando quieras · IVA no incluido</p>

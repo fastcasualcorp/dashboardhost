@@ -5,12 +5,13 @@
    se reviste TODO al instante → es mi espejo de verificación y el escaparate
    del selector de temas. v1 interna; lista para promocionar a "Kit de marca".
    ════════════════════════════════════════════════════════════════════ */
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card, SectionHeader, Stat, StatRow, KpiTile, BarRow, BarChart, Donut, Badge, Grid, DataTable } from '../components/ui'
 import { ACCENTS, type AccentKey, type FontKey } from './../components/SettingsPanel'
 import { SFX } from '../lib/sfx'
 import { SFX_LIST, getSfxVolume, setSfxVolume, play, playSweep, playGlitch, type SfxName } from '../lib/sound'
-import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT, loadBar, saveBar, applyBar, BAR_MIN, BAR_MAX, BAR_DEFAULT } from '../lib/designTokens'
+import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, RADIUS_TOKENS, RADIUS_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadRadius, saveRadius, applyRadius, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT, loadBar, saveBar, applyBar, BAR_MIN, BAR_MAX, BAR_DEFAULT } from '../lib/designTokens'
+import { toggleAudit, stopAudit, isAuditing } from '../lib/radiusAudit'
 
 type Theme = 'dark' | 'light'
 
@@ -76,6 +77,8 @@ function DesignSystemEditor() {
   const [numW, setNumW] = useState<number>(() => loadNumW())
   const [titleW, setTitleW] = useState<number>(() => loadTitleW())
   const [barH, setBarH] = useState<number>(() => loadBar())
+  const [rad, setRad] = useState<Record<string, number>>(() => loadRadius())
+  const [audit, setAudit] = useState<boolean>(() => isAuditing())
   const [saved, setSaved] = useState(false)
   // refs "en vivo" → evitan closures viejos al aplicar al soltar
   const liveType = useRef(type)
@@ -85,7 +88,13 @@ function DesignSystemEditor() {
   const liveNumW = useRef(numW)
   const liveTitleW = useRef(titleW)
   const liveBarH = useRef(barH)
+  const liveRad = useRef(rad)
   const setBH = (v: number) => { liveBarH.current = v; setBarH(v); applyBar(v) }
+  // Radios: en vivo (cambia --r-input/--r-chip/--card-r en .app → toda la app se redondea al instante).
+  const setR = (k: string, v: number) => { const next = { ...liveRad.current, [k]: v }; liveRad.current = next; setRad(next); applyRadius(next) }
+  // Modo auditor: pinta cada elemento del color de su token de radio (rojo = fuera del sistema). Se limpia al salir.
+  const onAudit = () => { const on = toggleAudit(); setAudit(on); play(on ? 'toggle' : 'tap', 0.5) }
+  useEffect(() => () => { stopAudit() }, [])
   // Anchura de fuente: en vivo (solo transform → cero reflow). Estira los números-héroe.
   const setW = (v: number) => { liveWide.current = v; setWide(v); applyWide(v) }
   // Tracking (espaciado entre cifras): en vivo, controla --num-spacing.
@@ -99,11 +108,11 @@ function DesignSystemEditor() {
   const commitType = () => applyType(liveType.current)
   // Botones: en vivo (en Canon no se ven CTAs reales → no salta nada, y el botón-demo cambia al momento).
   const setB = (k: string, v: number) => { const next = { ...liveBtn.current, [k]: v }; liveBtn.current = next; setBtn(next); applyBtn(next) }
-  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveWide(liveWide.current); saveTrack(liveTrack.current); saveNumW(liveNumW.current); saveTitleW(liveTitleW.current); saveBar(liveBarH.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
+  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveRadius(liveRad.current); saveWide(liveWide.current); saveTrack(liveTrack.current); saveNumW(liveNumW.current); saveTitleW(liveTitleW.current); saveBar(liveBarH.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
   const reset = () => {
-    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveWide.current = WIDE_DEFAULT; liveTrack.current = TRACK_DEFAULT; liveNumW.current = NUMW_DEFAULT; liveTitleW.current = TITLEW_DEFAULT; liveBarH.current = BAR_DEFAULT
-    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setWide(WIDE_DEFAULT); setTrack(TRACK_DEFAULT); setNumW(NUMW_DEFAULT); setTitleW(TITLEW_DEFAULT); setBarH(BAR_DEFAULT)
-    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyWide(WIDE_DEFAULT); applyTrack(TRACK_DEFAULT); applyNumW(NUMW_DEFAULT); applyTitleW(TITLEW_DEFAULT); applyBar(BAR_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveWide(WIDE_DEFAULT); saveTrack(TRACK_DEFAULT); saveNumW(NUMW_DEFAULT); saveTitleW(TITLEW_DEFAULT); saveBar(BAR_DEFAULT)
+    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveRad.current = { ...RADIUS_DEFAULTS }; liveWide.current = WIDE_DEFAULT; liveTrack.current = TRACK_DEFAULT; liveNumW.current = NUMW_DEFAULT; liveTitleW.current = TITLEW_DEFAULT; liveBarH.current = BAR_DEFAULT
+    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setRad({ ...RADIUS_DEFAULTS }); setWide(WIDE_DEFAULT); setTrack(TRACK_DEFAULT); setNumW(NUMW_DEFAULT); setTitleW(TITLEW_DEFAULT); setBarH(BAR_DEFAULT)
+    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyRadius(RADIUS_DEFAULTS); applyWide(WIDE_DEFAULT); applyTrack(TRACK_DEFAULT); applyNumW(NUMW_DEFAULT); applyTitleW(TITLEW_DEFAULT); applyBar(BAR_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveRadius(RADIUS_DEFAULTS); saveWide(WIDE_DEFAULT); saveTrack(TRACK_DEFAULT); saveNumW(NUMW_DEFAULT); saveTitleW(TITLEW_DEFAULT); saveBar(BAR_DEFAULT)
     play('toggle', 0.5)
   }
   return (
@@ -114,6 +123,7 @@ function DesignSystemEditor() {
           <small>Mueve un slider → cambia al instante en TODA la app. Pulsa <b>Aplicar</b> para guardarlo.</small>
         </div>
         <div className="ds-actions">
+          <button className={'ds-audit' + (audit ? ' on' : '')} onClick={onAudit} title="Pinta cada elemento del color de su token de radio (rojo = fuera del sistema)">{audit ? '◉ Auditor ON' : '🔍 Auditor'}</button>
           <button className="ds-reset" onClick={reset}>Restablecer</button>
           <button className={'ds-apply' + (saved ? ' ok' : '')} onClick={aplicar}>{saved ? '✓ Guardado' : 'Aplicar cambios'}</button>
         </div>
@@ -211,6 +221,29 @@ function DesignSystemEditor() {
           <input type="range" min={BAR_MIN} max={BAR_MAX} step={1} value={barH}
             onChange={(e) => setBH(parseInt(e.target.value))} aria-label="Grosor de barras" />
           <span className="ds-px tnum">{barH}px</span>
+        </div>
+      </div>
+
+      <div className="ds-head ds-head-btn">
+        <div className="ds-htxt">
+          <b>Redondeo</b>
+          <small>El radio de campos, chips y paneles. Mueve un slider → toda la app se redondea en vivo. (El auditor de arriba marca lo que se salga.)</small>
+        </div>
+      </div>
+      <div className="ds-radius">
+        <div className="ds-radius-prev" aria-hidden="true">
+          <div className="dsr-card" style={{ borderRadius: 'var(--card-r)' }}><span>Panel</span></div>
+          <div className="dsr-chip" style={{ borderRadius: 'var(--r-chip)' }}>Chip</div>
+          <div className="dsr-input" style={{ borderRadius: 'var(--r-input)' }}>Campo de texto</div>
+        </div>
+        <div className="ds-radius-sliders">
+          {RADIUS_TOKENS.map((t) => (
+            <label className="ds-bslider" key={t.key} title={t.role}>
+              <span>{t.label}</span>
+              <input type="range" min={t.min} max={t.max} step={1} value={rad[t.key]} onChange={(e) => setR(t.key, parseInt(e.target.value))} aria-label={t.label} />
+              <b className="tnum">{rad[t.key]}px</b>
+            </label>
+          ))}
         </div>
       </div>
 
