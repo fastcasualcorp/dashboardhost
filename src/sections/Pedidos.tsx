@@ -34,7 +34,10 @@ function PlatChip({ plat, lg = false }: { plat: Plat; lg?: boolean }) {
   return (
     <span className={'plat-chip' + (lg ? ' lg' : '')} style={{ background: p.chip, color: p.ink, borderColor: p.color + '55' }}>
       {showLogo ? (
-        <img className="plat-logo" src={p.logo} alt={plat} draggable={false} onError={() => setLogoOk(false)} />
+        <>
+          <span className="plat-logo-plate"><img src={p.logo} alt="" draggable={false} onError={() => setLogoOk(false)} /></span>
+          {plat}
+        </>
       ) : (
         <>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{p.glyph}</svg>

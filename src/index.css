@@ -1387,8 +1387,10 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 /* Chip de plataforma (logo + nombre) */
 .plat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 100px; font-size: var(--fs-xs); font-weight: 700; letter-spacing: -.01em; border: 1px solid transparent; white-space: nowrap; justify-self: start; width: max-content; }
 .plat-chip svg { width: 14px; height: 14px; flex: none; }
-.plat-chip .plat-logo { height: 14px; width: auto; max-width: 72px; display: block; object-fit: contain; }
-.plat-chip.lg .plat-logo { height: 18px; max-width: 92px; }
+/* logo oficial de marca sobre placa blanca → su color se lee sobre la pastilla de color */
+.plat-chip .plat-logo-plate { display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 5px; padding: 2px 4px; flex: none; }
+.plat-chip .plat-logo-plate img { height: 11px; width: auto; max-width: 60px; display: block; object-fit: contain; }
+.plat-chip.lg .plat-logo-plate img { height: 14px; max-width: 78px; }
 .plat-chip.lg { font-size: var(--fs-sm); padding: 7px 15px 7px 11px; }
 .plat-chip.lg svg { width: 17px; height: 17px; }
 
