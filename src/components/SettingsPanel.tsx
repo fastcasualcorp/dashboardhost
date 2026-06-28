@@ -335,8 +335,19 @@ export default function SettingsPanel({
             } catch {
               /* sin sesión */
             }
+            // SEGURIDAD (auditoría 28-jun · fuga entre negocios): al cerrar sesión se borran TODOS los datos
+            // de negocio cacheados (ventas, cuentas, comandas, empleados…) y el perfil. Así un tablet de barra
+            // COMPARTIDO no enseña los datos del local anterior al siguiente. Solo se conservan las preferencias
+            // de DISEÑO del dispositivo (no son sensibles y son por-aparato).
             try {
-              localStorage.removeItem('rebell-profile')
+              const KEEP = new Set([
+                'rebell-theme', 'rebell-accent', 'rebell-density', 'rebell-logo', 'rebell-comments-on',
+                'rebell-typescale-v1', 'rebell-buttons-v1', 'rebell-radius-v1', 'rebell-fontwide-v1',
+                'rebell-fonttrack-v1', 'rebell-numweight-v1', 'rebell-titleweight-v1', 'rebell-barh-v1',
+              ])
+              Object.keys(localStorage)
+                .filter((k) => k.startsWith('rebell-') && !KEEP.has(k))
+                .forEach((k) => localStorage.removeItem(k))
             } catch {
               /* sin localStorage */
             }

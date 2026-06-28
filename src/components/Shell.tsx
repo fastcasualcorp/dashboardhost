@@ -9,6 +9,7 @@ import { reduceMotion } from '../lib/data'
 import { play, playBeast, playPowerup, preloadSfx, setAudio } from '../lib/sound'
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import CommentLayer from './CommentLayer'
+import ErrorBoundary from './ErrorBoundary'
 import WalletHoy from './WalletHoy'
 import DeployBadge from './DeployBadge'
 import LogoMark, { type LogoVariant } from './LogoMark'
@@ -457,20 +458,22 @@ export default function Shell() {
         </header>
 
         <main className="panel-content" key={active}>
-          {active === 'canon' ? (
-            <Canon
-              accent={accent}
-              onAccent={changeAccent}
-              font={font}
-              onFont={changeFont}
-              theme={theme}
-              onTheme={toggleTheme}
-              density={density}
-              onDensity={changeDensity}
-            />
-          ) : (
-            renderSection(active)
-          )}
+          <ErrorBoundary section={active}>
+            {active === 'canon' ? (
+              <Canon
+                accent={accent}
+                onAccent={changeAccent}
+                font={font}
+                onFont={changeFont}
+                theme={theme}
+                onTheme={toggleTheme}
+                density={density}
+                onDensity={changeDensity}
+              />
+            ) : (
+              renderSection(active)
+            )}
+          </ErrorBoundary>
         </main>
 
         {/* Barra de pestañas inferior (solo móvil) — patrón nativo tipo Revolut. Las 4 vistas más usadas
