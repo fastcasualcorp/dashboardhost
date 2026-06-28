@@ -255,7 +255,7 @@ body {
 /* ── panel de perfil (popover origin-aware) ── */
 .profile-wrap { position: relative; }
 .settings-pop {
-  position: fixed; top: 60px; left: 16px; z-index: 110; width: 300px; max-height: calc(100dvh - 80px); overflow-y: auto;
+  position: fixed; top: 60px; left: 16px; z-index: 110; width: min(400px, 94vw); max-height: calc(100dvh - 80px); overflow-y: auto;
   background: rgba(16,16,19,.97); backdrop-filter: blur(26px) saturate(1.4); -webkit-backdrop-filter: blur(26px) saturate(1.4);
   border: 1px solid var(--line-strong); border-radius: 18px; padding: 16px; box-shadow: 0 24px 60px -12px rgba(0,0,0,.85);
   transform-origin: top left;
@@ -265,6 +265,11 @@ body {
 .sp-field .sp-k { color: var(--faint); font-weight: 500; }
 .sp-field .sp-v { color: var(--ink); font-weight: 600; }
 .sp-field .sp-v.gold { color: var(--gold); }
+/* Fila Plan clicable → abre Planes (Juan 28-jun: "cambiar de plan tiene que estar aquí") */
+.sp-field-btn { width: 100%; border: 1px solid var(--line); background: color-mix(in srgb, var(--brand) 7%, transparent); border-radius: 10px; padding: 9px 11px; cursor: pointer; transition: background .18s, border-color .18s; }
+.sp-field-btn:hover { background: color-mix(in srgb, var(--brand) 13%, transparent); border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
+.sp-field-btn .sp-v { display: inline-flex; align-items: center; gap: 8px; }
+.sp-plan-go { font-size: var(--fs-2xs); font-weight: 700; color: var(--accent-ink, #1a1404); background: var(--brand); padding: 2px 8px; border-radius: 100px; }
 .sp-action { display: flex; align-items: center; gap: 9px; width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 11px; cursor: pointer; font-size: var(--fs-xs); font-weight: 600; transition: border-color .2s, background .2s; }
 .sp-action:hover { border-color: var(--line-strong); }
 .sp-action.on { border-color: rgba(var(--brand-rgb),.34); background: rgba(var(--brand-rgb),.07); }
