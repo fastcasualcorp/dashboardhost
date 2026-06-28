@@ -6,10 +6,12 @@
         "background": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
         "background-color": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
         "fill": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
-        "stroke": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"]
+        "stroke": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
+        "border-radius": ["/^100px$/", "/^18px$/", "/^20px$/", "/^22px$/", "/^24px$/", "/^26px$/", "/^28px$/"],
+        "font-size": ["/^10px$/", "/^11px$/", "/^13px$/", "/^15px$/", "/^16px$/", "/^19px$/", "/^21px$/", "/^26px$/", "/^32px$/", "/^42px$/", "/^52px$/"]
       },
       {
-        "message": "Anti-deriva (Juan): ese color YA tiene token — usa var(--accent-ink) / var(--ok) / var(--brand), no el hex a pelo. Cambiar un token debe cambiar TODO."
+        "message": "Anti-deriva (Juan): ese valor YA tiene token. Color → var(--accent-ink)/--ok/--brand. Pastilla → var(--r-pill). Panel/modal → var(--card-r)/--card-r-lg. Texto → var(--fs-*). Cambiar un token debe cambiar TODO."
       }
     ]
   }
