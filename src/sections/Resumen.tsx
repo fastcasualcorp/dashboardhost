@@ -4,6 +4,7 @@ import DatePicker, { rangeFor, type RangeSel } from '../components/DatePicker'
 import { eur, eur0, VENTAS_MES, FOOD_COST_PCT } from '../lib/data'
 import { useEquipo, costeMes } from '../lib/equipo'
 import { useGastos, gastosMes } from '../lib/gastos'
+import { useFoodcost, fcMedio } from '../lib/foodcost'
 import { imgFor } from '../lib/products'
 import WaterfallPL from '../components/WaterfallPL'
 
@@ -72,8 +73,11 @@ export default function Resumen() {
   // ── Cuenta de resultados del MES, DERIVADA y consistente (mismas cifras en héroe, KPIs, cascada y tabla) ──
   const roster = useEquipo()
   useGastos() // suscribe: editar un gasto recalcula el P&L
+  useFoodcost() // suscribe: editar el escandallo (Food cost) recalcula el P&L
+  // P&L con DATOS REALES de cada sección: personal (equipo), gastos (gastos fijos), food cost (escandallo).
+  const fcPct = (fcMedio() || FOOD_COST_PCT * 100) / 100 // % real del escandallo; si aún no hay, el objetivo
   const plPersonal = roster.reduce((s, e) => s + costeMes(e), 0) // = Coste personal (fuente única equipo)
-  const plFood = Math.round(VENTAS_MES * FOOD_COST_PCT)
+  const plFood = Math.round(VENTAS_MES * fcPct)
   const plGastos = gastosMes() // = Gastos fijos (fuente única gastos, total con IVA)
   const plNeto = VENTAS_MES - plPersonal - plFood - plGastos
   const plPct = (n: number) => Math.round((n / VENTAS_MES) * 1000) / 10
@@ -122,7 +126,7 @@ export default function Resumen() {
       <Grid cols={4} className="kpi-grid">
         <KpiTile label="Facturación" value={eur0(VENTAS_MES)} unit="€" delta="+6,3%" foot="vs mes anterior" trend="up" />
         <KpiTile label="Coste de personal" value={eur0(plPersonal)} unit="€" delta={plPct(plPersonal) + '%'} foot="s/ventas" trend="flat" />
-        <KpiTile label="Food cost" value={String(Math.round(FOOD_COST_PCT * 100))} unit="%" delta="-0,8 pts" foot="vs media" trend="up" />
+        <KpiTile label="Food cost" value={String(Math.round(fcPct * 100))} unit="%" delta="escandallo" foot="real de la carta" trend="up" />
         <KpiTile label="Resultado neto" value={eur0(plNeto)} unit="€" delta={plPct(plNeto) + '%'} foot="margen del mes" trend="up" />
       </Grid>
 
