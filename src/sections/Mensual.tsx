@@ -1,5 +1,5 @@
 import { Card, SectionHeader, KpiTile, BarChart, DataTable, Badge, Donut, Grid } from '../components/ui'
-import { eur0, VENTAS_MES, FOOD_COST_PCT } from '../lib/data'
+import { eur0, VENTAS_MES, FOOD_COST_PCT, useRealAgg } from '../lib/data'
 import { useEquipo, costeMes } from '../lib/equipo'
 import { useGastos, gastosMes } from '../lib/gastos'
 
@@ -29,6 +29,7 @@ const e2 = (n: number) => {
 const pct = (n: number) => String(n).replace('.', ',')
 
 export default function Mensual() {
+  useRealAgg() // facturación mensual REAL en modo real
   const roster = useEquipo() // suscribe: editar un sueldo recalcula el histórico
   useGastos() // suscribe: editar un gasto recalcula el histórico
   const personal = roster.reduce((s, e) => s + costeMes(e), 0) // coste fijo de plantilla (mismo cada mes)

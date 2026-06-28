@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
+import { isDemoMode } from './demo'
+
 /* ── Datos demo de la caja (un día) ── */
 export const CAJA = {
   manana: { efectivo: 180.5, tarjeta: 320.0, domicilio: 145.9 },
@@ -11,9 +15,11 @@ export const totalDia = subM + subT
 export const avgT = totalDia / CAJA.pedidos
 export const OBJ = 1492 // media objetivo (€) — referencia del "peso emocional"
 export const META_DIA = 2000 // meta de facturación del día (€) — la que mide el anillo
-// Facturación del MES — fuente ÚNICA compartida (Resumen P&L y Coste personal % s/ventas la usan IGUAL → no se contradicen).
-// PENDIENTE (0.3): cuando exista la fuente VENTAS real, derivar esto de las ventas reales del mes.
-export const VENTAS_MES = 42000
+// Facturación del MES — fuente ÚNICA compartida (Resumen P&L y Coste personal % s/ventas la usan IGUAL).
+// En DEMO = 42000 (escaparate). En REAL la reescribe initRealAggregates() con la suma real del mes (RPC
+// server-side, no el .limit del cliente). Es `let` → live binding: los consumidores ven el valor real al
+// re-renderizar (useRealAgg). (auditoría 28-jun, datos reales)
+export let VENTAS_MES = 42000
 export const FOOD_COST_PCT = 0.3 // food cost objetivo del mes (30% s/facturación)
 // Los gastos fijos del mes ahora son fuente única reactiva en lib/gastos.ts (gastosMes), no una constante.
 
@@ -46,10 +52,17 @@ const frac = (seed: number) => {
   return x - Math.floor(x)
 }
 
+// Caché de ventas reales por día (clave y-m-d), poblada por initRealAggregates() en modo REAL. null = aún demo.
+const _realByDay = new Map<string, DiaVenta>()
+let _realLoaded = false
+const _dk = (y: number, m: number, day: number) => `${y}-${m}-${day}`
+
 export function salesForDay(y: number, m: number, day: number): DiaVenta | null {
-  if (y !== HOY.getFullYear()) return null // la demo solo tiene datos del año en curso
   const date = new Date(y, m, day)
-  if (date > HOY) return null
+  if (date > HOY) return null // futuro: sin datos (gris)
+  // REAL: devuelve la venta real de ese día (0 si ese día no vendió), NUNCA el mock Math.sin.
+  if (_realLoaded) return _realByDay.get(_dk(y, m, day)) ?? { e: 0, t: 0, d: 0, total: 0 }
+  if (y !== HOY.getFullYear()) return null // la demo solo tiene datos del año en curso
   const wd = date.getDay() // 0 dom … 6 sáb
   const boost = wd === 5 || wd === 6 ? 1.5 : wd === 0 ? 1.2 : wd === 1 ? 0.82 : 1
   const seed = (m + 1) * 100 + day
@@ -84,7 +97,7 @@ export function salesForYear(y: number): number {
 /* ── Serie de los últimos 10 días terminando HOY (último punto = hoy) ── */
 const DOW_AB = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MES_AB = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-export const SALES: SalesPoint[] = Array.from({ length: 10 }, (_, k) => {
+export let SALES: SalesPoint[] = Array.from({ length: 10 }, (_, k) => {
   const off = 9 - k
   const d = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() - off)
   const s = salesForDay(d.getFullYear(), d.getMonth(), d.getDate())
@@ -98,13 +111,59 @@ export const SALES: SalesPoint[] = Array.from({ length: 10 }, (_, k) => {
     today: off === 0,
   }
 })
-export const salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
+export let salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
 /* Rango legible de la serie para subtítulos ("18–27 jun"); contempla el cruce de mes. */
 const _d0 = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() - 9)
 export const SALES_RANGE =
   _d0.getMonth() === HOY.getMonth()
     ? `${_d0.getDate()}–${HOY.getDate()} ${MES_AB[HOY.getMonth()]}`
     : `${_d0.getDate()} ${MES_AB[_d0.getMonth()]} – ${HOY.getDate()} ${MES_AB[HOY.getMonth()]}`
+
+/* ════════════════════════════════════════════════════════════════════
+   DATOS REALES (modo REAL) — reescriben los agregados demo con las ventas reales del local vía el RPC
+   server-side `ventas_resumen` (suma TODAS las filas, no el .limit del cliente → el mes no miente). Math.sin
+   queda solo como DEMO. Live bindings (let) + evento 'rebell:realagg' → los consumidores con useRealAgg() se
+   actualizan al aterrizar los datos. (auditoría 28-jun, Fase datos reales) ════════════════════════════════ */
+function recomputeSales() {
+  SALES = Array.from({ length: 10 }, (_, k) => {
+    const off = 9 - k
+    const d = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() - off)
+    const s = salesForDay(d.getFullYear(), d.getMonth(), d.getDate())
+    return { day: d.getDate(), wd: DOW_AB[d.getDay()], value: s ? s.total : 0, e: s ? s.e : 0, t: s ? s.t : 0, d: s ? s.d : 0, today: off === 0 }
+  })
+  salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
+}
+
+let _aggStarted = false
+export async function initRealAggregates() {
+  if (_aggStarted || isDemoMode() || !supabase) return
+  _aggStarted = true
+  const { data: sess } = await supabase.auth.getSession()
+  if (!sess.session) { _aggStarted = false; return } // sin sesión aún → reintentar luego
+  const y = HOY.getFullYear()
+  const { data, error } = await supabase.rpc('ventas_resumen', { desde: `${y}-01-01`, hasta: `${y}-12-31` })
+  if (error || !data) return
+  _realByDay.clear()
+  for (const r of data as Array<{ dia: string; total: number; efectivo: number; tarjeta: number }>) {
+    const dt = new Date(r.dia + 'T00:00:00')
+    _realByDay.set(_dk(dt.getFullYear(), dt.getMonth(), dt.getDate()), { e: Number(r.efectivo), t: Number(r.tarjeta), d: 0, total: Number(r.total) })
+  }
+  _realLoaded = true
+  VENTAS_MES = salesForMonth(y, HOY.getMonth()).total // suma real del mes en curso
+  recomputeSales()
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:realagg'))
+}
+
+/** Suscribe un componente a los agregados reales: dispara la carga y re-renderiza cuando aterrizan. */
+export function useRealAgg() {
+  const [, force] = useState(0)
+  useEffect(() => {
+    void initRealAggregates()
+    const on = () => force((n) => n + 1)
+    window.addEventListener('rebell:realagg', on)
+    return () => window.removeEventListener('rebell:realagg', on)
+  }, [])
+}
 
 /* ── formato ──
    eur: ENTEROS sin decimales (722 €), con decimales solo cuando los hay (722,20 €) → más visual en TODO el

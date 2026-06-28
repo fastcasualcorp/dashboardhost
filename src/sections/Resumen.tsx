@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Card, SectionHeader, Donut, CountValue, BarChart, BarRow, DataTable, Badge, Grid, KpiTile } from '../components/ui'
 import DatePicker, { rangeFor, type RangeSel } from '../components/DatePicker'
-import { eur, eur0, VENTAS_MES, FOOD_COST_PCT } from '../lib/data'
+import { eur, eur0, VENTAS_MES, FOOD_COST_PCT, useRealAgg } from '../lib/data'
 import { useEquipo, costeMes } from '../lib/equipo'
 import { useGastos, gastosMes } from '../lib/gastos'
 import { useFoodcost, fcMedio } from '../lib/foodcost'
@@ -65,6 +65,7 @@ const columnasPL = [
   { key: 'pct', label: '% s/ventas', align: 'right' as const },
 ]
 export default function Resumen() {
+  useRealAgg() // P&L con facturación REAL en modo real (RPC); demo = escaparate
   const init = rangeFor('mes')
   const [range, setRange] = useState<RangeSel>({ key: 'mes', label: 'Este mes', start: init.start, end: init.end })
   const d = dataFor(range.key)

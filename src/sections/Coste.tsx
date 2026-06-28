@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Card, SectionHeader, KpiTile, BarChart, DataTable, Badge, Donut, Grid } from '../components/ui'
 import { useEquipo, horasSemana, costeHora, costeSemana, costeMes, costeDia, DIAS_CORTO } from '../lib/equipo'
-import { VENTAS_MES, salesForDay, HOY } from '../lib/data'
+import { VENTAS_MES, salesForDay, HOY, useRealAgg } from '../lib/data'
 import FuelGauge from '../components/FuelGauge'
 
 /* Coste personal — TODO derivado de la FUENTE ÚNICA `lib/equipo`: coste REAL = horas trabajadas (turnos
@@ -20,6 +20,7 @@ const fmt0 = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 0
 const todayIdx = (new Date().getDay() + 6) % 7 // Lun=0 … Dom=6
 
 export default function Coste() {
+  useRealAgg() // % coste personal sobre facturación REAL en modo real
   const roster = useEquipo()
 
   const d = useMemo(() => {

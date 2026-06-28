@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { SectionHeader, Badge, Card, Stat, StatRow } from '../components/ui'
-import { eur0, eur, salesForDay, HOY } from '../lib/data'
+import { eur0, eur, salesForDay, HOY, useRealAgg } from '../lib/data'
 import { useVentas, ventasPorDia, dayKey } from '../lib/ventas'
 import { useEquipo } from '../lib/equipo'
 import { play } from '../lib/sound'
@@ -134,6 +134,7 @@ function MonthCard({ y, m, real, ovr, onDay }: { y: number; m: number; real: Rea
 }
 
 export default function Ventas() {
+  useRealAgg() // calendario de ventas REAL en modo real (RPC)
   const [year, setYear] = useState(2026)
   const ventas = useVentas() // re-render al registrarse una venta (TPV/online)
   const real = ventasPorDia(ventas)

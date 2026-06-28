@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
-import { SALES, salesMedian, eur, eur0, reduceMotion, SALES_RANGE } from '../lib/data'
+import { SALES, salesMedian, eur, eur0, reduceMotion, SALES_RANGE, useRealAgg } from '../lib/data'
 
 type Pt = { x: number; y: number }
 
@@ -30,6 +30,7 @@ const BOTTOM = 26 // banda de la línea; el área baja hasta H (base del "monte"
 const GRID = 3 // líneas de referencia horizontales
 
 export default function SalesChart() {
+  useRealAgg() // en REAL repinta con las ventas reales (RPC) cuando aterrizan; en DEMO no hace nada
   const areaRef = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(0)
   const [hover, setHover] = useState<number | null>(null)
