@@ -47,6 +47,17 @@ export const TRACK_MIN = -4
 export const TRACK_MAX = 3
 export const TRACK_DEFAULT = 0
 
+// Peso de la tipografía POR USO (Juan 28-jun): números (héroe) y títulos de panel.
+// Pasos de 100 = los pesos que Inter tiene cargados (600-900 / 500-900).
+const NUMW_KEY = 'rebell-numweight-v1'
+export const NUMW_MIN = 600
+export const NUMW_MAX = 900
+export const NUMW_DEFAULT = 900
+const TITLEW_KEY = 'rebell-titleweight-v1'
+export const TITLEW_MIN = 500
+export const TITLEW_MAX = 900
+export const TITLEW_DEFAULT = 800
+
 const read = (k: string, def: Record<string, number>): Record<string, number> => {
   try {
     const r = localStorage.getItem(k)
@@ -108,10 +119,23 @@ export function applyTrack(v: number) {
   if (app) app.style.setProperty('--num-spacing', v + 'px')
 }
 
+const readNum = (k: string, min: number, max: number, def: number): number => {
+  try { const r = parseFloat(localStorage.getItem(k) || ''); if (r >= min && r <= max) return r } catch { /* */ }
+  return def
+}
+export const loadNumW = () => readNum(NUMW_KEY, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT)
+export const saveNumW = (v: number) => { try { localStorage.setItem(NUMW_KEY, String(v)) } catch { /* */ } }
+export function applyNumW(v: number) { const app = appEl(); if (app) app.style.setProperty('--num-weight', String(v)) }
+export const loadTitleW = () => readNum(TITLEW_KEY, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT)
+export const saveTitleW = (v: number) => { try { localStorage.setItem(TITLEW_KEY, String(v)) } catch { /* */ } }
+export function applyTitleW(v: number) { const app = appEl(); if (app) app.style.setProperty('--title-weight', String(v)) }
+
 // Al arrancar la app: re-aplica lo guardado para que el diseño persista entre recargas.
 export function applySavedDesign() {
   applyType(loadType())
   applyBtn(loadBtn())
   applyWide(loadWide())
   applyTrack(loadTrack())
+  applyNumW(loadNumW())
+  applyTitleW(loadTitleW())
 }
