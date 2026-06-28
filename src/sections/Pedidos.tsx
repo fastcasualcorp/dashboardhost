@@ -4,19 +4,21 @@ import { Card, SectionHeader, KpiTile, BarRow, Badge, Grid } from '../components
 import { imgFor } from '../lib/products'
 import { play } from '../lib/sound'
 
-/* ── Identidad de cada plataforma (color + glifo para reconocer al toque) ── */
+/* ── Identidad de cada plataforma (color de marca + LOGO oficial; glifo de reserva) ──
+   `logo` = SVG oficial de la marca en /public/img/brands/. Si el archivo no está, cae al glifo
+   + nombre (los logos de marca son registrados → se usan los oficiales, no se recrean). */
 type Plat = 'Glovo' | 'Uber Eats' | 'Just Eat' | 'Local'
-const PLATFORMS: Record<Plat, { color: string; ink: string; chip: string; bar: string; glyph: ReactNode }> = {
+const PLATFORMS: Record<Plat, { color: string; ink: string; chip: string; bar: string; glyph: ReactNode; logo?: string }> = {
   Glovo: {
-    color: '#FFC244', ink: '#1a1205', chip: 'linear-gradient(180deg,#ffd05a,#ffbf2e)', bar: 'glovo',
+    color: '#FFC244', ink: '#1a1205', chip: 'linear-gradient(180deg,#ffd05a,#ffbf2e)', bar: 'glovo', logo: '/img/brands/glovo.svg',
     glyph: <><path d="M6 8h12l-1.1 11.2a1 1 0 0 1-1 .9H8.1a1 1 0 0 1-1-.9L6 8Z" /><path d="M9 8a3 3 0 0 1 6 0" /></>,
   },
   'Uber Eats': {
-    color: '#06C167', ink: '#04210f', chip: 'linear-gradient(180deg,#2ad982,#06C167)', bar: 'ubereats',
+    color: '#06C167', ink: '#04210f', chip: 'linear-gradient(180deg,#2ad982,#06C167)', bar: 'ubereats', logo: '/img/brands/ubereats.svg',
     glyph: <><path d="M4 11h16a8 8 0 0 1-16 0Z" /><path d="M9 6c0-1.1 1.3-2 3-2s3 .9 3 2" /></>,
   },
   'Just Eat': {
-    color: '#FF8000', ink: '#fff', chip: 'linear-gradient(180deg,#ff8f1f,#f57600)', bar: 'justeat',
+    color: '#FF8000', ink: '#fff', chip: 'linear-gradient(180deg,#ff8f1f,#f57600)', bar: 'justeat', logo: '/img/brands/justeat.svg',
     glyph: <><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></>,
   },
   Local: {
@@ -27,10 +29,18 @@ const PLATFORMS: Record<Plat, { color: string; ink: string; chip: string; bar: s
 
 function PlatChip({ plat, lg = false }: { plat: Plat; lg?: boolean }) {
   const p = PLATFORMS[plat]
+  const [logoOk, setLogoOk] = useState(true)
+  const showLogo = !!p.logo && logoOk
   return (
     <span className={'plat-chip' + (lg ? ' lg' : '')} style={{ background: p.chip, color: p.ink, borderColor: p.color + '55' }}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{p.glyph}</svg>
-      {plat}
+      {showLogo ? (
+        <img className="plat-logo" src={p.logo} alt={plat} draggable={false} onError={() => setLogoOk(false)} />
+      ) : (
+        <>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{p.glyph}</svg>
+          {plat}
+        </>
+      )}
     </span>
   )
 }
