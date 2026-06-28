@@ -63,7 +63,7 @@
   /* Inter pesa ÓPTICAMENTE menos que Clash a igual número → bajo Inter usamos Inter HEAVY (900) en los
      números héroe y apretamos el tracking para que el número gigante se vea grueso y premium (Juan, 28-jun:
      "lo quiero en Inter 28pt Heavy"). El 900 se carga en index.html. */
-  --num-spacing: -2px; --num-weight: 900;
+  --num-spacing: 0px; --num-weight: 900;
   --body-weight: 500;
 }
 .app[data-type='roundo'] {
@@ -502,7 +502,7 @@ body {
 .ck-kick { font-size: var(--fs-2xs); letter-spacing: .2em; text-transform: uppercase; color: var(--gold-soft); font-weight: 700; }
 /* número GIGANTE (facturación negocio). El brillo SIGUE LA FORMA del texto (background-clip:text), no un
    rectángulo invisible. Pedido de Juan (24-jun). */
-.ck-total { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(48px, 8.4vw, 104px); line-height: .86; letter-spacing: -.045em;
+.ck-total { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(48px, 8.4vw, 104px); line-height: .86; letter-spacing: -.02em;
   font-variant-numeric: tabular-nums; margin: 18px 0 6px; color: #fff;
   display: inline-flex; align-items: center; justify-content: center; }
 /* ghost (oculto) reserva el ancho FINAL → el count-up no reajusta la pantalla. La cifra se superpone centrada. */
