@@ -28,6 +28,7 @@ export type Cierre = {
   franjasT: Franja[]
   topPlatos: Plato[]
   alertas: Alerta[]
+  stockManana: Alerta[] // lista COMPLETA (no curada) → fuente única para "Preparar mañana"
 }
 
 const seedOf = (d: Date) => d.getFullYear() * 372 + (d.getMonth() + 1) * 31 + d.getDate()
@@ -124,6 +125,7 @@ export function cierreDia(fecha: Date): Cierre {
     franjasT: scaleFr(FRANJAS_T as Franja[]),
     topPlatos: topPlatos.slice(0, 5),
     alertas,
+    stockManana: computadas,
   }
 }
 
@@ -136,3 +138,47 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'o
 export const fmtDiaLargo = (d: Date, hoy: Date) =>
   esMismoDia(d, hoy) ? 'Hoy' : `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`
 export const addDias = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
+
+/* ════════ PREPARAR MAÑANA (Juan, 28-jun) ════════
+   Vista forward: a partir del cruce ventas×stock de cierreDia (FUENTE ÚNICA), calcula cuánto PEDIR de cada
+   producto para cubrir mañana, su proveedor y el coste estimado. Sirve a la pestaña "Preparar mañana". */
+const PROVEEDOR: Record<string, string> = {
+  'Pan brioche': 'Panadería Sundas',
+  'Pechuga de pollo': 'Cárnicas Breo',
+  'Bacon': 'Cárnicas Breo',
+  'Queso cheddar': 'Lácteos Arzúa',
+  'Patata': 'Huerta do Ulla',
+}
+const PRECIO_UD: Record<string, number> = { 'Pan brioche': 0.9, 'Pechuga de pollo': 5.2, 'Bacon': 6.5, 'Queso cheddar': 7, 'Patata': 1.1 }
+const nivelRank = (n: Alerta['nivel']) => (n === 'alta' ? 2 : n === 'media' ? 1 : 0)
+
+export type PrepItem = Alerta & { pedir: number; proveedor: string; coste: number; precio: number }
+export type Prep = {
+  items: PrepItem[]
+  nRepon: number // cuántos hay que reponer (no-ok)
+  totalPedido: number // € estimado del pedido
+  porProveedor: { proveedor: string; items: PrepItem[]; total: number }[]
+}
+
+export function prepManana(fecha: Date): Prep {
+  const dia = cierreDia(fecha)
+  const items: PrepItem[] = dia.stockManana
+    .map((s) => {
+      const falta = Math.max(0, s.necesita - s.quedan)
+      const pedir = s.nivel === 'ok' ? 0 : Math.max(1, Math.ceil(falta * 1.1)) // +10% de colchón
+      const precio = PRECIO_UD[s.item] ?? 2
+      return { ...s, pedir, proveedor: PROVEEDOR[s.item] ?? 'Varios', precio, coste: Math.round(pedir * precio) }
+    })
+    .sort((a, b) => nivelRank(b.nivel) - nivelRank(a.nivel) || b.necesita - b.quedan - (a.necesita - a.quedan))
+  const reponer = items.filter((i) => i.nivel !== 'ok')
+  const totalPedido = reponer.reduce((s, i) => s + i.coste, 0)
+  const map = new Map<string, PrepItem[]>()
+  for (const i of reponer) {
+    if (!map.has(i.proveedor)) map.set(i.proveedor, [])
+    map.get(i.proveedor)!.push(i)
+  }
+  const porProveedor = [...map.entries()]
+    .map(([proveedor, list]) => ({ proveedor, items: list, total: list.reduce((s, i) => s + i.coste, 0) }))
+    .sort((a, b) => b.total - a.total)
+  return { items, nRepon: reponer.length, totalPedido, porProveedor }
+}

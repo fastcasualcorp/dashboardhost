@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import SalesChart from '../components/SalesChart'
-import { Stat, StatRow } from '../components/ui'
+import { Stat, StatRow, Money } from '../components/ui'
 import { play } from '../lib/sound'
 import { eur, eur0, reduceMotion, HOY } from '../lib/data'
 import { cierreDia, esMismoDia, fmtDiaLargo, addDias } from '../lib/cierre'
@@ -20,11 +20,24 @@ const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 /* Tarta (donut) premium + INTERACTIVA de 3 quesos (efectivo/tarjeta/domicilio): al pasar por un quesito
    (o por su fila), ESE método BRILLA y se eleva, los demás se atenúan, el centro muestra su % en su color
    y su fila se resalta. Donut y leyenda comparten el mismo estado de hover (una sola fuente). (Juan, 27-jun) */
+// Iconos de método de pago (Juan, 28-jun): billete / tarjeta / casa-domicilio. Stroke = color del método.
+function methodIcon(key: string) {
+  const p = key === 'i-cash'
+    ? <><rect x="2.5" y="6.5" width="19" height="11" rx="2" /><circle cx="12" cy="12" r="2.4" /><path d="M6 12h.01M18 12h.01" /></>
+    : key === 'i-card'
+    ? <><rect x="2.5" y="5.5" width="19" height="13" rx="2.2" /><path d="M2.5 10h19" /><path d="M6 14.5h4" /></>
+    : <><path d="M3 11.2 12 4l9 7.2" /><path d="M5.5 9.6V19a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.6" /><path d="M10 20v-5h4v5" /></>
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{p}</svg>
+  )
+}
+
 function DayBreakdown({ efe, tar, dom }: { efe: number; tar: number; dom: number }) {
+  // Opción 1 (lima + neutros): la serie dominante (Tarjeta) en lima; el resto en NEUTROS para no saturar.
   const segs = [
-    { key: 'efectivo', label: 'Efectivo', v: efe, color: 'var(--cash)', icon: 'i-cash' },
-    { key: 'tarjeta', label: 'Tarjeta', v: tar, color: 'var(--card)', icon: 'i-card' },
-    { key: 'domicilio', label: 'Domicilio', v: dom, color: 'var(--home)', icon: 'i-home' },
+    { key: 'efectivo', label: 'Efectivo', v: efe, color: '#b8bdc4', icon: 'i-cash' },
+    { key: 'tarjeta', label: 'Tarjeta', v: tar, color: 'var(--brand)', icon: 'i-card' },
+    { key: 'domicilio', label: 'Domicilio', v: dom, color: '#5a5f67', icon: 'i-home' },
   ]
   const total = efe + tar + dom || 1
   const [hov, setHov] = useState<string | null>(null)
@@ -73,8 +86,8 @@ function DayBreakdown({ efe, tar, dom }: { efe: number; tar: number; dom: number
             style={{ ['--seg' as string]: s.color }}
             onPointerEnter={() => setHov(s.key)}
           >
-            <span className="lbl"><i className={s.icon} />{s.label}</span>
-            <b className="amt tnum">{eur(s.v)} €</b>
+            <span className="lbl"><i className="m-ic" style={{ color: s.color }}>{methodIcon(s.icon)}</i>{s.label}</span>
+            <b className="amt tnum"><Money value={eur(s.v)} /></b>
           </div>
         ))}
       </div>
@@ -323,40 +336,22 @@ export default function Caja() {
               </button>
             </div>
 
-            <div className="ck-center">
-              <span className="ck-kick">{fmtDiaLargo(fecha, HOY)}</span>
-              <div className="ck-total" data-ds="caja.heronum">
-                {/* el "ghost" reserva el ANCHO final → nada se reajusta al cambiar de día */}
-                <span className="odo-wrap">
-                  <span className="odo-ghost" aria-hidden="true">{heroNum}</span>
-                  <span className="odonum" ref={negRef}>{heroNum}</span>
-                </span>
-                <span className="u">€</span>
-              </div>
-              <div className={'ck-cuadre' + (descuadre ? ' warn' : '')} ref={balanceRef}>
-                <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
-                {descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}
-              </div>
-              {/* Efectivo/tarjeta: real solo HOY (wallet). Días pasados en real = simulado escalado → ocultar. */}
-              {(demo || liveHoy) && (
-                <div className="ck-cuadre-sub"><span className="cs-emo">💵</span> <b className="tnum">{eur(efectivoDia)} €</b> <span className="cs-dot">·</span> <span className="cs-emo">💳</span> <b className="tnum">{eur(tarjetaDia)} €</b></div>
-              )}
-            </div>
-
-            {/* UNA línea de diseño: el MISMO componente <Stat> para todos → valor grande + unidad
-                pequeña dorada + label. Imposible que se descuadre (criterio único del dashboard). */}
-            {/* REAL: Tickets/Ticket medio solo son reales HOY (liveHoy, vía ventas). Días pasados en real no
-                tienen cierre real → "—". "vs sem. pasada" y "Mejor franja" vienen del simulador → ocultos. */}
-            <StatRow className="ck-statrow">
+            {/* COCKPIT (Juan, 28-jun): UN SOLO rectángulo con los 4 datos clave, equidistantes y alineados
+                (el mismo <Stat> para todos → imposible descuadrar). El total de HOY es el primero, en lima. */}
+            <StatRow className="ck-statrow ck-statrow-top">
+              <Stat value={heroNum} unit="€" label="Caja hoy" count={false} className="rs-hoy" />
               <Stat value={demo || liveHoy ? String(ticketsDia) : '—'} label="Tickets" count={false} />
               <Stat value={demo || liveHoy ? eur(medioDia) : '—'} unit={demo || liveHoy ? '€' : ''} label="Ticket medio" count={false} />
-              {demo && (
-                <Stat value={(dia.deltaSemana >= 0 ? '+' : '') + dia.deltaSemana.toFixed(1)} unit="%" label="vs sem. pasada" tone={dia.deltaSemana >= 0 ? 'green' : 'gold'} count={false} />
-              )}
               {demo && (
                 <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
               )}
             </StatRow>
+            {/* Caja cuadrada → barra ANCHA y discreta debajo (Juan, 28-jun): es importante pero no debe gritar. */}
+            <div className={'ck-cuadre-bar' + (descuadre ? ' warn' : '')} ref={balanceRef}>
+              <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
+              <b>{descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}</b>
+              <span className="ccb-sub">{descuadre ? 'El efectivo contado no cuadra con lo esperado' : 'El efectivo contado cuadra con lo esperado'}</span>
+            </div>
 
             {/* Comparativa de 2 días: eliges AMBAS fechas en la tira; los paneles aparecen REACTIVOS y se enfrentan
                 las cifras (Caja/Tickets/Ticket medio) con flechas ▲▼ verdes/rojas y el % de diferencia. (Juan 28-jun) */}
@@ -421,18 +416,19 @@ export default function Caja() {
                   con el split Mañana/Tarde debajo. (Juan, 27-jun: "las barras sobran, unificar en 1") */}
               <div className="turno turno-day" data-tilt>
                 <div className="turno-head">
-                  <div className="turno-name"><span className="badge sol">€</span>Caja del día</div>
-                  {demo && <div className="turno-sub">{eur(subM + subT)}<span className="cur"> €</span></div>}
+                  {/* Sin repetir el total (ya está arriba en "Caja hoy"): este panel es el DESGLOSE por método,
+                      no otra vez la cifra. Juan, 29-jun: "tenemos repetido caja". */}
+                  <div className="turno-name"><span className="badge sol">€</span>Caja del día <small className="turno-tag">por método</small></div>
                 </div>
                 {/* El desglose por método y el split Mañana/Tarde vienen del simulador (no hay franjas reales
                     todavía) → en REAL, estado vacío honesto. */}
                 {demo ? (
                   <>
-                    <DayBreakdown efe={manana.efectivo + tarde.efectivo} tar={manana.tarjeta + tarde.tarjeta} dom={manana.domicilio + tarde.domicilio} />
+                    <DayBreakdown efe={efectivoDia} tar={tarjetaDia} dom={manana.domicilio + tarde.domicilio} />
                     <div className="day-split">
-                      <span className="ds-seg">☀ Mañana <b className="tnum">{eur(subM)} €</b></span>
+                      <span className="ds-seg">☀ Mañana <Money value={eur(subM)} tone="ink" /></span>
                       <span className="ds-dot">·</span>
-                      <span className="ds-seg">☾ Tarde <b className="tnum">{eur(subT)} €</b></span>
+                      <span className="ds-seg">☾ Tarde <Money value={eur(subT)} tone="ink" /></span>
                     </div>
                   </>
                 ) : (
@@ -441,48 +437,25 @@ export default function Caja() {
               </div>
               </div>
 
-              {/* Balance de platos del día + alerta de stock para mañana (cruce ventas × stock) */}
-              <div className="ck-extra">
+              {/* Platos más vendidos de HOY, a ancho completo. (Stock para mañana se movió a su propia
+                  pestaña "Preparar mañana" — Caja diaria = solo dinero/ventas de hoy. Juan, 28-jun) */}
+              <div className="ck-extra ck-extra-1">
                 <div className="ck-panel ck-platos" data-tilt>
                   <div className="ck-panel-h"><span className="ck-panel-emo">🍔</span> Platos más vendidos <small>· {fmtDiaLargo(fecha, HOY).toLowerCase()}</small></div>
                   {/* Top platos viene del simulador → en REAL, estado vacío honesto (sin ranking real todavía). */}
                   {demo ? (
                     <div className="ck-plato-list">
-                      {dia.topPlatos.map((p, i) => (
+                      {dia.topPlatos.slice(0, 5).map((p, i) => (
                         <div className={'ck-plato' + (i < 3 ? ' r' + (i + 1) : '')} key={p.name} style={{ ['--i' as string]: i }}>
                           <span className="ck-plato-img"><img src={p.img} alt="" loading="lazy" draggable={false} /></span>
                           <span className="ck-plato-nm">{p.name}</span>
-                          <span className="ck-plato-uds tnum" data-val={p.uds}>{p.uds}</span>
                           <span className="ck-plato-bar"><i style={{ width: ((p.uds / maxUds) * 100).toFixed(1) + '%' }} /></span>
+                          <span className="ck-plato-uds tnum" data-val={p.uds}>{p.uds}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="vtpv-empty">Aún sin ventas para rankear platos</div>
-                  )}
-                </div>
-
-                <div className="ck-panel ck-stock" data-tilt>
-                  <div className="ck-panel-h"><span className="ck-panel-emo">📦</span> Stock para mañana <small>· si vendes igual</small></div>
-                  {/* Las alertas cruzan ventas simuladas × stock → en REAL, estado vacío honesto. */}
-                  {!demo ? (
-                    <div className="vtpv-empty">Sin previsión de stock todavía</div>
-                  ) : dia.alertas.length ? (
-                    <div className="ck-alert-list">
-                      {dia.alertas.map((a, i) => (
-                        <div className={'ck-alert ' + a.nivel} key={a.item} style={{ ['--i' as string]: i }}>
-                          <span className="ck-alert-img"><img src={a.img} alt="" loading="lazy" draggable={false} /></span>
-                          <span className="ck-alert-tx">
-                            <b>{a.item} <span className="ck-alert-q">· {a.quedan} {a.unidad}</span></b>
-                            <small>necesitas ~{a.necesita} {a.unidad}</small>
-                          </span>
-                          <span className="ck-alert-pill">{a.nivel === 'alta' ? 'Repón ya' : a.nivel === 'media' ? 'Justo' : 'Suficiente'}</span>
-                          <span className="ck-alert-bar"><i style={{ width: Math.min(100, (a.quedan / a.necesita) * 100).toFixed(1) + '%' }}><span className="ck-shine" /></i></span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="ck-alert-ok"><span>✓</span> Stock suficiente para mañana</div>
                   )}
                 </div>
               </div>

@@ -25,6 +25,7 @@ const FoodCost = lazy(() => import('./FoodCost'))
 const Almacen = lazy(() => import('./Almacen'))
 const Platos = lazy(() => import('./Platos'))
 const Compras = lazy(() => import('./Compras'))
+const PrepararManana = lazy(() => import('./PrepararManana'))
 import SectionPreview from './SectionPreview'
 
 // Fallback mientras se descarga un chunk lazy: fondo de marca (NO blanco) + pulso sutil. Respeta la regla
@@ -61,6 +62,7 @@ const MAP: Record<string, ComponentType> = {
   stock: Almacen,
   platos: Platos,
   compras: Compras,
+  preparar: PrepararManana,
 }
 
 export function renderSection(id: string) {

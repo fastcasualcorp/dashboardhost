@@ -38,6 +38,7 @@ export const NAV: NavGroup[] = [
   {
     g: 'Cocina',
     items: [
+      { id: 'preparar', t: 'Preparar mañana', s: 'Pedido para mañana', alert: 'amber', desc: 'A partir de lo que vendes, qué te faltará mañana: cuánto pedir de cada producto y a qué proveedor, listo para enviar de un toque.' },
       { id: 'foodcost', t: 'Food cost', s: 'Ficha técnica', desc: 'Ficha técnica por plato: ingredientes, coste y % de food cost. Sabrás qué plato te da margen.' },
       { id: 'stock', t: 'Almacén', s: 'Stock por almacén', alert: 'amber', desc: 'Tus almacenes (obrador, cámara, congelados, seco) como fichas con foto; cada uno con su stock, niveles y alertas de umbral. Puedes crear varios.' },
       { id: 'platos', t: 'Carta', s: 'Catálogo y extras', desc: 'Tu catálogo del TPV con precios, IVA y modificadores (extras, salsas). Una sola fuente de verdad.' },

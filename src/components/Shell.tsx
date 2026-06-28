@@ -13,10 +13,12 @@ import ErrorBoundary from './ErrorBoundary'
 import Clock from './Clock'
 import HealthDot from './HealthDot'
 import WalletHoy from './WalletHoy'
+import ScaleControl from './ScaleControl'
 import DeployBadge from './DeployBadge'
 import LogoMark from './LogoMark'
 import { beastById } from '../lib/beasts'
 import { isDemoMode, setDemoMode } from '../lib/demo'
+import { getPlan, canUpgrade, planName, type Plan } from '../lib/plan'
 import { renderSection } from '../sections/registry'
 import { applySavedDesign } from '../lib/designTokens'
 // Canon es una herramienta interna grande → lazy (fuera del bundle inicial; solo carga al abrirla).
@@ -27,7 +29,7 @@ const NAV_EMOJI: Record<string, string> = {
   caja: '💰', tpv: '🛒', salon: '🪑', pedidos: '🛵', kds: '🍳',
   mapa: '🛰️', resumen: '📊', cuadro: '📈', mensual: '🗓️', gastos: '🧾',
   ventas: '📅', ventastpv: '📖', empleados: '👥', horarios: '⏰', coste: '💶',
-  foodcost: '🍔', stock: '📦', compras: '🛍️', ingresos: '🏦',
+  foodcost: '🍔', stock: '📦', compras: '🛍️', ingresos: '🏦', preparar: '🌅',
 }
 
 type Theme = 'dark' | 'light'
@@ -52,6 +54,8 @@ export default function Shell() {
     }
   })
   const [drawer, setDrawer] = useState(false)
+  // Plan de la cuenta (Pro = badge morado · Free/Basic = botón "Mejorar" animado). Reactivo a 'rebell:plan'.
+  const [plan, setPlanState] = useState<Plan>(() => getPlan())
   // Modo offline: avisamos cuando se cae la red (la app sigue con datos guardados).
   const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
   // El reloj de la cabecera vive AISLADO en <Clock/> → su tick ya no re-renderiza toda la app (perf).
@@ -105,6 +109,13 @@ export default function Shell() {
   useEffect(() => {
     preloadSfx()
     applySavedDesign() // re-aplica la escala tipográfica + botones guardados en el panel "Sistema de diseño"
+  }, [])
+
+  // La píldora de plan se actualiza sola al cambiar de plan en la pantalla de Planes (sin recargar).
+  useEffect(() => {
+    const onPlan = () => setPlanState(getPlan())
+    window.addEventListener('rebell:plan', onPlan)
+    return () => window.removeEventListener('rebell:plan', onPlan)
   }, [])
 
   // Escuchar caídas/recuperación de red para el aviso de modo offline.
@@ -369,10 +380,23 @@ export default function Shell() {
             </div>
           </div>
           <div className="top-actions">
-            {/* Plan SIEMPRE visible y clicable (movido desde Ajustes) → abre la pantalla de Planes. */}
-            <button className="plan-pill" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Tu plan · ver y cambiar">
-              <span className="plan-pill-ic" aria-hidden="true">◆</span> Plan <b>Pro</b>
-            </button>
+            {/* Píldora de PLAN (Juan, 30-jun). DOS caras de la misma píldora, según el plan de la cuenta:
+                · Pro  → badge MORADO glossy (estilo "Get Started" de la referencia).
+                · Free/Basic → botón "Mejorar" ANIMADO (barrido de brillo + glow, calcado del vídeo).
+                Ambas abren la pantalla de Planes. Misma altura (34px) que las demás píldoras. */}
+            {canUpgrade(plan) ? (
+              <button className="plan-pill upgrade" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Mejora tu plan">
+                <span className="pp-shine" aria-hidden="true" />
+                <span className="pp-in">
+                  <svg className="pp-spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.55 5.1 2.7 7.25 7.8 7.8-5.1.55-7.25 2.7-7.8 7.8-.55-5.1-2.7-7.25-7.8-7.8 5.1-.55 7.25-2.7 7.8-7.8Z" /></svg>
+                  Mejorar
+                </span>
+              </button>
+            ) : (
+              <button className="plan-pill" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Tu plan · ver y cambiar">
+                <span className="pp-in"><span className="plan-pill-ic" aria-hidden="true">◆</span> Plan <b>{planName(plan)}</b></span>
+              </button>
+            )}
             {/* Demo SIEMPRE visible y de doble sentido: apagado = enciende datos de ejemplo; encendido = vuelve a real.
                 Antes solo aparecía cuando ya estaba activo → no había forma de encenderlo sin entrar en Ajustes (Juan, 29-jun). */}
             <button
@@ -471,6 +495,9 @@ export default function Shell() {
       </div>
 
       <CommentLayer on={commentsOn} setOn={setCommentsOn} active={active} />
+
+      {/* Mando flotante DISCRETO de tamaño + "Ajustar a pantalla" — siempre a la vista en la pantalla principal. */}
+      <ScaleControl />
     </div>
   )
 }

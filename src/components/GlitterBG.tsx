@@ -11,18 +11,19 @@ const VERT = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`
 // Fragment shader EXACTO de la referencia (uv vía gl_FragCoord; el ruido va en REPEAT → wrap idéntico).
 const FRAG = `precision highp float;
 uniform float iTime; uniform vec2 iResolution; uniform sampler2D iChannel0;
+uniform vec3 uColor;
 void main(){
   vec2 uv = gl_FragCoord.xy / iResolution.xy;
   float result = 0.0;
   result += texture2D(iChannel0, uv * 1.1 + vec2(iTime * -0.005)).r;
   result *= texture2D(iChannel0, uv * 0.9 + vec2(iTime *  0.005)).g;
   result = pow(result, 12.0);          // destellos afilados
-  gl_FragColor = vec4(vec3(5.0) * result, 1.0); // ×5 brillo (blanco)
+  gl_FragColor = vec4(vec3(5.0) * result * uColor, 1.0); // ×5 brillo, teñido al color de acento
 }`
 
 const SPEED = 0.2 // « mucho más lenta » (la ref usaba 0.75)
 
-export default function GlitterBG() {
+export default function GlitterBG({ color = '#ffffff' }: { color?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const cvs = ref.current
@@ -70,6 +71,10 @@ export default function GlitterBG() {
     const uTime = gl.getUniformLocation(prog, 'iTime')
     const uRes = gl.getUniformLocation(prog, 'iResolution')
     gl.uniform1i(gl.getUniformLocation(prog, 'iChannel0'), 0)
+    // Tinte de las partículas = color de acento (hex → vec3 normalizado). Default blanco = sin teñir.
+    const cHex = color.replace('#', '')
+    const cN = parseInt(cHex.length === 3 ? cHex.split('').map((x) => x + x).join('') : cHex, 16)
+    gl.uniform3f(gl.getUniformLocation(prog, 'uColor'), ((cN >> 16) & 255) / 255, ((cN >> 8) & 255) / 255, (cN & 255) / 255)
 
     const dpr = Math.min(1.5, window.devicePixelRatio || 1)
     const t0 = performance.now()
@@ -93,6 +98,6 @@ export default function GlitterBG() {
       const ext = gl.getExtension('WEBGL_lose_context')
       if (ext) ext.loseContext()
     }
-  }, [])
+  }, [color])
   return <canvas ref={ref} className="br-glitter" aria-hidden="true" />
 }

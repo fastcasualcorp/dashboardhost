@@ -36,7 +36,7 @@ export const FRANJAS_T: [string, number, number][] = [
 /* ── Serie de ventas (últimos 10 días, terminando HOY) ──
    Se genera RELATIVA a HOY (abajo) con el mismo motor determinista del calendario → el último punto es
    SIEMPRE hoy y la gráfica nunca se ve "vieja". Cada día lleva su desglose efectivo/tarjeta/domicilio. */
-export type SalesPoint = { day: number; wd: string; value: number; e: number; t: number; d: number; today?: boolean }
+export type SalesPoint = { day: number; mon: string; wd: string; value: number; e: number; t: number; d: number; today?: boolean }
 
 /* ── Ventas diarias para el calendario (mock determinista) ──
    "Hoy" = el día REAL del sistema (a medianoche). Toda la demo navega relativa a HOY (la tira de fechas, el
@@ -105,6 +105,7 @@ export let SALES: SalesPoint[] = Array.from({ length: 10 }, (_, k) => {
   const s = salesForDay(d.getFullYear(), d.getMonth(), d.getDate())
   return {
     day: d.getDate(),
+    mon: MES_AB[d.getMonth()],
     wd: DOW_AB[d.getDay()],
     value: s ? s.total : 0,
     e: s ? s.e : 0,
@@ -131,7 +132,7 @@ function recomputeSales() {
     const off = 9 - k
     const d = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() - off)
     const s = salesForDay(d.getFullYear(), d.getMonth(), d.getDate())
-    return { day: d.getDate(), wd: DOW_AB[d.getDay()], value: s ? s.total : 0, e: s ? s.e : 0, t: s ? s.t : 0, d: s ? s.d : 0, today: off === 0 }
+    return { day: d.getDate(), mon: MES_AB[d.getMonth()], wd: DOW_AB[d.getDay()], value: s ? s.total : 0, e: s ? s.e : 0, t: s ? s.t : 0, d: s ? s.d : 0, today: off === 0 }
   })
   salesMedian = SALES.reduce((s, p) => s + p.value, 0) / SALES.length
 }

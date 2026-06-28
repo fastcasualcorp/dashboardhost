@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import GlitterBG from './GlitterBG'
 import { play } from '../lib/sound'
+import { getPlan, setPlan, type Plan as PlanId } from '../lib/plan'
 
 const PRO_PRICE = 59
 // Palancas de AHORRO que da Pro, como % de la facturación (prudentes, defendibles ante el dueño):
@@ -109,7 +110,7 @@ const yearSave = (m: number) => m * 2
 
 type Billing = 'mensual' | 'anual'
 
-export default function Planes({ onClose, current = 'pro' }: { onClose: () => void; current?: string }) {
+export default function Planes({ onClose, current = getPlan() }: { onClose: () => void; current?: PlanId }) {
   const [billing, setBilling] = useState<Billing>('anual')
 
   useEffect(() => {
@@ -184,7 +185,7 @@ export default function Planes({ onClose, current = 'pro' }: { onClose: () => vo
                 <button
                   className={'plan-cta' + (p.best ? ' gold' : '')}
                   disabled={current === p.id}
-                  onClick={() => play(p.best ? 'success' : 'tap', 0.5, p.best ? 1.1 : 1)}
+                  onClick={() => { play(p.best ? 'success' : 'tap', 0.5, p.best ? 1.1 : 1); setPlan(p.id); onClose() }}
                 >
                   {current === p.id ? 'Tu plan actual' : p.id === 'free' ? 'Empezar gratis' : `Mejorar a ${p.name}`}
                 </button>

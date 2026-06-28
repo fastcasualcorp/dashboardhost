@@ -247,6 +247,7 @@ export default function SettingsPanel({
                 'rebell-theme', 'rebell-accent', 'rebell-density', 'rebell-logo', 'rebell-comments-on',
                 'rebell-typescale-v1', 'rebell-buttons-v1', 'rebell-radius-v1', 'rebell-fontwide-v1',
                 'rebell-fonttrack-v1', 'rebell-numweight-v1', 'rebell-titleweight-v1', 'rebell-barh-v1',
+                'rebell-intensity-v1', 'rebell-uiscale-v1',
               ])
               Object.keys(localStorage)
                 .filter((k) => k.startsWith('rebell-') && !KEEP.has(k))

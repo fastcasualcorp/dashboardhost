@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { SALES, salesMedian, eur, eur0, reduceMotion, SALES_RANGE, useRealAgg } from '../lib/data'
+import { Money } from './ui'
 
 type Pt = { x: number; y: number }
 
@@ -23,8 +24,9 @@ function smooth(p: Pt[]): string {
   return d
 }
 
-const H = 240
-const PAD_X = 12
+const H_FALLBACK = 240 // alto en unidades de viewBox antes de medir el contenedor
+const PAD_L = 48 // hueco izquierdo para el eje Y (€ por línea de rejilla)
+const PAD_R = 14
 const TOP = 20
 const BOTTOM = 26 // banda de la línea; el área baja hasta H (base del "monte")
 const GRID = 3 // líneas de referencia horizontales
@@ -33,16 +35,25 @@ export default function SalesChart() {
   useRealAgg() // en REAL repinta con las ventas reales (RPC) cuando aterrizan; en DEMO no hace nada
   const areaRef = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(0)
+  // Alto REAL del .chart-area en px. El viewBox usa este alto (no 240 fijo) → el SVG mapea 1:1 con el
+  // contenedor (preserveAspectRatio="none" deja de deformar): puntos redondos, dot del hover SOBRE la línea
+  // y tooltip bien colocado. Antes el alto era 240 fijo y el contenedor mide ~140px → todo descuadrado. (Juan)
+  const [hpx, setHpx] = useState(0)
+  const H = hpx || H_FALLBACK
   const [hover, setHover] = useState<number | null>(null)
 
   useLayoutEffect(() => {
     const el = areaRef.current
     if (!el) return
     const ro = new ResizeObserver((entries) => {
-      for (const e of entries) setW(e.contentRect.width)
+      for (const e of entries) {
+        setW(e.contentRect.width)
+        setHpx(e.contentRect.height)
+      }
     })
     ro.observe(el)
     setW(el.clientWidth)
+    setHpx(el.clientHeight)
     return () => ro.disconnect()
   }, [])
 
@@ -52,7 +63,10 @@ export default function SalesChart() {
   const vmin = Math.min(...values)
   const span = vmax - vmin || 1
   const yOf = (v: number) => TOP + (1 - (v - vmin) / span) * (H - TOP - BOTTOM)
-  const xOf = (i: number) => PAD_X + (i * (w - 2 * PAD_X)) / (SALES.length - 1)
+  const xOf = (i: number) => PAD_L + (i * (w - PAD_L - PAD_R)) / (SALES.length - 1)
+  // valor (€) que corresponde a una altura de la rejilla → etiquetas del eje Y (a la izquierda).
+  const valAtY = (gy: number) => vmin + (1 - (gy - TOP) / (H - TOP - BOTTOM)) * span
+  const kfmt = (v: number) => (v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + 'k' : String(Math.round(v)))
 
   const pts: Pt[] = SALES.map((s, i) => ({ x: xOf(i), y: yOf(s.value) }))
   const line = w ? smooth(pts) : ''
@@ -111,7 +125,7 @@ export default function SalesChart() {
   const hpt = hover != null ? pts[hover] : null
   const tipLeft = hpt ? Math.min(Math.max(hpt.x, 84), Math.max(84, w - 84)) : 0
   const tipAbove = hpt ? hpt.y > H * 0.42 : true
-  const tipTop = hpt ? (tipAbove ? hpt.y - 12 : hpt.y + 14) : 0
+  const tipTop = hpt ? (tipAbove ? hpt.y - 26 : hpt.y + 30) : 0 // más hueco: no pisa el punto ni la curva (Juan)
   const tipTransform = tipAbove ? 'translate(-50%,-100%)' : 'translate(-50%,0)'
 
   return (
@@ -130,17 +144,25 @@ export default function SalesChart() {
           <div className="ch-sub">{SALES_RANGE} · Bertamiráns</div>
         </div>
         <div className="ch-stat">
-          <b className="tnum">{eur0(salesMedian)} €</b>
+          <b className="tnum"><Money value={eur0(salesMedian)} /></b>
           <small>media diaria</small>
         </div>
       </div>
 
       <div className="chart-area" ref={areaRef} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
+        {/* Eje Y a la IZQUIERDA: a cuántos € corresponde cada línea de la rejilla (Juan, 29-jun). */}
+        {w > 0 && hasData && (
+          <div className="ch-yaxis" aria-hidden="true">
+            {gridYs.map((gy, i) => (
+              <span key={i} style={{ top: ((gy / H) * 100).toFixed(2) + '%' }}>{kfmt(valAtY(gy))}<i>€</i></span>
+            ))}
+          </div>
+        )}
         {/* sin ventas en el rango → vacío honesto, SIN la línea con degradado. (Juan, 29-jun) */}
         {w > 0 && !hasData && (
           <svg viewBox={`0 0 ${w} ${H}`} preserveAspectRatio="none">
             {gridYs.map((gy, i) => (
-              <line key={i} className="dc-grid" x1={PAD_X} x2={w - PAD_X} y1={gy} y2={gy} />
+              <line key={i} className="dc-grid" x1={PAD_L} x2={w - PAD_R} y1={gy} y2={gy} />
             ))}
           </svg>
         )}
@@ -172,7 +194,7 @@ export default function SalesChart() {
             </defs>
             {/* rejilla de referencia (clara visualmente, no decorativa) */}
             {gridYs.map((gy, i) => (
-              <line key={i} className="dc-grid" x1={PAD_X} x2={w - PAD_X} y1={gy} y2={gy} />
+              <line key={i} className="dc-grid" x1={PAD_L} x2={w - PAD_R} y1={gy} y2={gy} />
             ))}
             {/* área + línea NÍTIDA (sin glow borroso) */}
             <path className="dc-area" d={area} fill="url(#dca)" stroke="none" />
@@ -224,7 +246,7 @@ export default function SalesChart() {
         {w > 0 &&
           SALES.map((s, i) => (
             <span key={s.day} className={s.today ? 'today' : ''} style={{ left: xOf(i) }}>
-              {s.today ? 'Hoy' : s.day}
+              {s.today ? 'Hoy' : <>{s.day}<i> {s.mon}</i></>}
             </span>
           ))}
       </div>

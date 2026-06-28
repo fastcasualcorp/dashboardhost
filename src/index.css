@@ -6,7 +6,7 @@
    Tokens en :root · tipografía conmutable en .app[data-type]
    ════════════════════════════════════════════════════════════════ */
 :root {
-  --bg: #08080a; --bg-2: #0d0d10; --surface: #141417; --surface-2: #1a1a1e;
+  --bg: #050506; --bg-2: #0a0a0c; --surface: #141417; --surface-2: #1a1a1e;
   --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.13);
   /* ── MARCA (theming): cambia estas 4 (o el data-accent) y se reviste TODO el dashboard ── */
   /* LIMA = color principal de marca (Juan, 29-jun): chartreuse ELÉCTRICO PURO y PLANO (sin degradados:
@@ -153,6 +153,12 @@ body {
 .brand b { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); letter-spacing: .2px; line-height: 1; }
 .brand span { font-size: var(--fs-2xs); color: var(--faint); font-weight: 500; }
 .top-actions { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+/* PÍLDORAS HERMANAS = MISMA ALTURA. 3 píldoras juntas con alturas distintas se ven dispares (Juan, 30-jun).
+   Altura única 34px (= el toggle de tema) → fila homogénea. El padding horizontal puede variar (anchos
+   distintos), la ALTURA no. box-sizing:border-box ya cuenta el borde. */
+.top-actions .plan-pill,
+.top-actions .demo-pill,
+.top-actions .wallet-hoy { height: 34px; padding-top: 0; padding-bottom: 0; }
 
 /* Loader de chunk lazy (p.ej. el Mapa): fondo de marca + pulso dorado (NO blanco). */
 .section-loading { display: grid; place-items: center; min-height: 60vh; }
@@ -172,19 +178,71 @@ body {
 
 /* Identidad del local SIEMPRE visible en la cabecera (todas las pestañas). */
 .top-ident { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.ti-flag { width: 40px; height: 27px; border-radius: var(--r-input); overflow: hidden; border: 1px solid rgba(255,255,255,.18); flex: none; background: linear-gradient(180deg, #c60b1e 0 33%, #ffc400 33% 66%, #c60b1e 66%); }
+.ti-flag { width: 48px; height: 32px; border-radius: var(--r-input); overflow: hidden; border: 1px solid rgba(255,255,255,.18); flex: none; background: linear-gradient(180deg, #c60b1e 0 33%, #ffc400 33% 66%, #c60b1e 66%); }
 .ti-tx { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; }
-.ti-tx b { font-size: var(--fs-sm); font-weight: 800; letter-spacing: -.3px; line-height: 1.05; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ti-tx span { font-size: var(--fs-2xs); color: var(--muted); font-weight: 600; white-space: nowrap; }
+.ti-tx b { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -.3px; line-height: 1.05; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ti-tx span { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; white-space: nowrap; }
 @media (max-width: 600px) { .ti-tx span { display: none; } .ti-tx b { font-size: var(--fs-xs); } .ti-flag { width: 32px; height: 22px; } }
 
 /* Pastilla de PLAN (cabecera, derecha) → abre Planes. */
-.plan-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--r-pill); border: 1px solid rgba(var(--brand-rgb),.34); background: linear-gradient(180deg, rgba(var(--brand-rgb),.14), rgba(var(--brand-rgb),.05)); color: var(--muted); font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; transition: border-color .18s, filter .15s, transform .12s; }
-.plan-pill b { color: var(--gold); font-weight: 800; }
-.plan-pill-ic { color: var(--gold); font-size: .9em; }
-.plan-pill:hover { border-color: rgba(var(--brand-rgb),.6); filter: brightness(1.05); }
+/* ── PÍLDORA DE PLAN — badge MORADO glossy (estilo "Get Started" de la referencia de Juan, 30-jun) ──
+   Degradado violeta→índigo + ceja de luz glossy arriba + halo morado. El morado es el acento PREMIUM del
+   plan (a propósito distinto del lima de la marca). Altura 34px la fija .top-actions (píldoras hermanas). */
+.plan-pill {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; padding: 0 15px; border-radius: var(--r-pill);
+  border: 1px solid rgba(196,181,253,.55);
+  background: linear-gradient(180deg, #9069ff 0%, #7c3aed 52%, #6422c8 100%);
+  color: #fff; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs);
+  letter-spacing: .01em; white-space: nowrap; cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    inset 0 -7px 12px rgba(54,18,120,.45),
+    0 4px 14px -3px rgba(124,58,237,.6),
+    0 0 0 1px rgba(124,58,237,.22);
+  transition: filter .15s, box-shadow .2s, transform .12s;
+}
+/* ceja de luz glossy superior (el reflejo de los botones brillantes) */
+.plan-pill::before {
+  content: ''; position: absolute; inset: 1px 1px auto 1px; height: 46%; z-index: 1; pointer-events: none;
+  border-radius: var(--r-pill) var(--r-pill) 42% 42% / 100% 100% 64% 64%;
+  background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,0));
+}
+.plan-pill .pp-in { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; }
+.plan-pill b { color: #fff; font-weight: 800; }
+.plan-pill-ic { color: #fff; font-size: .9em; filter: drop-shadow(0 0 4px rgba(255,255,255,.45)); }
+.plan-pill:hover { filter: brightness(1.07); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -7px 12px rgba(54,18,120,.45), 0 6px 20px -3px rgba(140,90,255,.8), 0 0 0 1px rgba(140,90,255,.35); }
 .plan-pill:active { transform: scale(.96); }
-@media (max-width: 600px) { .plan-pill { padding: 7px 11px; } }
+@media (max-width: 600px) { .plan-pill { padding: 0 12px; } }
+
+/* ── VARIANTE "MEJORAR" (Free/Basic) — ANIMADA, calcada del vídeo de Juan: barrido de brillo periódico +
+   glow que respira + destello que titila. El morado llama a mejorar de plan. Respeta reduced-motion. ── */
+.plan-pill .pp-spark { width: 15px; height: 15px; fill: #fff; flex: none; filter: drop-shadow(0 0 5px rgba(255,255,255,.7)); }
+.plan-pill.upgrade { animation: ppGlow 3.6s var(--ease-in-out, ease-in-out) infinite; }
+.plan-pill.upgrade .pp-spark { animation: ppTwinkle 3.6s var(--ease-in-out, ease-in-out) infinite; }
+/* barrido de luz diagonal que CRUZA y descansa (no es un parpadeo continuo) */
+.plan-pill.upgrade .pp-shine { position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit; overflow: hidden; }
+.plan-pill.upgrade .pp-shine::before {
+  content: ''; position: absolute; top: -20%; left: 0; width: 36%; height: 140%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.6) 50%, transparent);
+  transform: translateX(-220%) skewX(-20deg); animation: ppSweep 3.6s var(--ease-in-out, ease-in-out) infinite;
+}
+@keyframes ppSweep {
+  0% { transform: translateX(-220%) skewX(-20deg); }
+  38% { transform: translateX(380%) skewX(-20deg); }
+  100% { transform: translateX(380%) skewX(-20deg); }
+}
+@keyframes ppGlow {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -7px 12px rgba(54,18,120,.45), 0 3px 14px -3px rgba(124,58,237,.55), 0 0 0 1px rgba(124,58,237,.22); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -7px 12px rgba(54,18,120,.45), 0 5px 22px -2px rgba(150,105,255,.95), 0 0 0 1px rgba(150,110,255,.5); }
+}
+@keyframes ppTwinkle {
+  0%, 100% { opacity: .85; transform: scale(.92) rotate(0deg); }
+  45% { opacity: 1; transform: scale(1.12) rotate(8deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-pill.upgrade, .plan-pill.upgrade .pp-shine::before, .plan-pill.upgrade .pp-spark { animation: none; }
+}
 /* Semáforo de salud de la BD (solo central): verde rápida · ámbar lenta · rojo caída. */
 .health-dot { display: inline-flex; align-items: center; justify-content: center; padding: 4px; }
 .hd-led { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px transparent; transition: background .3s, box-shadow .3s; }
@@ -249,10 +307,10 @@ body {
   flex: none; display: grid; place-items: center; line-height: 1;
   font-family: var(--font-num); font-weight: 800; font-size: 23px; color: var(--gold);
 }
-.wh-txt { display: flex; flex-direction: column; align-items: center; line-height: 1; gap: 3px; }
+.wh-txt { display: flex; flex-direction: row; align-items: baseline; justify-content: center; line-height: 1; gap: 6px; }
 .wh-lbl { font-size: var(--fs-3xs); letter-spacing: .16em; text-transform: uppercase; color: var(--gold-soft); font-weight: 800; }
 /* El número sigue el token de peso de NÚMEROS (Canon · "Peso números") → extra-bold por defecto (900). */
-.wh-val { font-family: var(--font-num); font-weight: var(--num-weight, 800); font-size: var(--fs-base); color: var(--ink); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 1px; letter-spacing: var(--num-spacing); }
+.wh-val { font-family: var(--font-num); font-weight: var(--num-weight, 800); font-size: var(--fs-base); color: var(--ink); font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; gap: 2px; letter-spacing: var(--num-spacing); }
 .wh-val i { font-style: normal; font-size: .82em; color: var(--gold); margin-left: 1px; }
 .wh-pop { position: absolute; top: -4px; right: 10px; font-family: var(--font-num); font-weight: 800; font-size: var(--fs-xs); color: var(--gold); text-shadow: 0 2px 12px rgba(0,0,0,.55); pointer-events: none; }
 .wallet-hoy { cursor: pointer; }
@@ -495,7 +553,7 @@ body {
 
 /* ── contenido sobre la cocina ── */
 .ck-content { position: relative; z-index: 3; flex: 1; display: flex; flex-direction: column; padding: clamp(20px, 3vw, 34px); gap: 10px; }
-.ck-center { flex: 0 0 auto; min-height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px 0; }
+.ck-center { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px 0; }
 /* gráfica + turnos integrados dentro de la página (sobre el fondo oscuro de la cocina, como glass) */
 .ck-sub { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
 .ckitchen .chartcard, .ckitchen .turno { background: rgba(10,10,14,.5); -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2); border-color: rgba(255,255,255,.08); box-shadow: 0 24px 56px -34px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05); }
@@ -538,7 +596,7 @@ body {
 .day-donut-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; line-height: 1; }
 .day-donut-c b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 33px); color: var(--ink); letter-spacing: var(--num-spacing); transition: color .2s ease, text-shadow .2s ease; }
 .day-donut-c b.on { color: var(--seg); text-shadow: 0 0 18px color-mix(in srgb, var(--seg) 45%, transparent); }
-.day-donut-c b i { font-style: normal; font-size: .6em; color: var(--muted); margin-left: 1px; }
+.day-donut-c b i { font-style: normal; font-size: .62em; color: var(--muted); margin-left: 1px; }
 .day-donut-c span { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .08em; color: var(--faint); margin-top: 4px; font-weight: 700; transition: color .2s ease; }
 .day-donut-c span.on { color: color-mix(in srgb, var(--seg) 78%, #fff); }
 
@@ -556,13 +614,97 @@ body {
 
 /* CAJA INMERSIVA: ocupa TODA la pestaña sin bordes ni padding; la cabecera (tema/sonido/dino) flota DENTRO
    sobre la cocina. Pedido de Juan (24-jun): "que ocupe la pestaña completa, sin bordes, todo dentro". */
+/* Sin recorte duro: el alto lo gobierna el cockpit (min-height compensado por el zoom). Si en alguna pantalla
+   el contenido se pasa, el usuario lo ajusta con el slider de TAMAÑO (no se recorta a ciegas). */
 .panel-main.caja-full .panel-content { padding: 0; }
-.panel-main.caja-full .panel-top { position: absolute; top: 0; left: 0; right: 0; z-index: 40; background: transparent; border: 0; padding: 16px clamp(16px, 3vw, 28px); pointer-events: none; }
+/* Cabecera flotante EQUIDISTANTE de la esquina (Juan, 28-jun): mismo margen arriba que a los lados → la
+   identidad (izq) y las píldoras (der) respiran igual del borde, y el bloque baja un poco del techo. */
+.panel-main.caja-full .panel-top { position: absolute; top: 0; left: 0; right: 0; z-index: 40; background: transparent; border: 0; padding: clamp(22px, 2.4vw, 32px) clamp(22px, 2.4vw, 32px); pointer-events: none; }
 .panel-main.caja-full .panel-top > * { pointer-events: auto; }
-.panel-main.caja-full .wrap { max-width: none; margin: 0; padding-top: 0; }
+.panel-main.caja-full .wrap { max-width: none; margin: 0; padding: 0; gap: 0; }
 .panel-main.caja-full .ckitchen { border: 0; border-radius: 0; min-height: 100vh; }
 .panel-main.caja-full .ck-content { padding-top: 84px; } /* deja sitio a los botones flotantes + la identidad flotante */
 @media (max-width: 768px) { .panel-main.caja-full .ck-content { padding-top: 60px; } }
+
+/* ════════ COCKPIT BENTO — Caja diaria (Juan, 28-jun) ════════
+   Tarjetas de tamaño NATURAL y armónico, todo de un golpe de vista. NO se estira para llenar la pantalla
+   (eso deja aire muerto DENTRO de las tarjetas y rompe la armonía). Si sobra alto, el aire va ABAJO. Como la
+   preview que aprobó Juan. En cada fila, las 2 tarjetas comparten alto (igual ritmo). */
+.panel-main.caja-full .ckitchen { min-height: calc(100dvh / var(--ui-scale, 1)); }
+.panel-main.caja-full .ck-content {
+  display: flex; flex-direction: column; justify-content: flex-start;
+  min-height: calc(100dvh / var(--ui-scale, 1)); padding: 98px clamp(16px, 2.4vw, 32px) 18px;
+  gap: clamp(14px, 1.9vh, 24px); max-width: 1840px; margin: 0 auto;
+}
+
+/* Selector de fecha con MÁS aire arriba y abajo + ligeramente más grande (Juan, 28-jun). */
+.caja-full .ck-datenav { margin: 0; padding: clamp(10px, 1.4vh, 18px) 0 clamp(14px, 2vh, 26px); flex: none; }
+/* héroe + KPIs lado a lado */
+.caja-full .ck-cockpit-top { flex: none; display: grid; grid-template-columns: minmax(220px, .8fr) 1.85fr; gap: clamp(10px, 1.1vw, 16px); }
+.caja-full .ck-center { padding: 16px clamp(16px,1.7vw,22px); border: 1px solid var(--line); border-radius: var(--card-r);
+  background: rgba(10,10,14,.5); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  align-items: flex-start; text-align: left; justify-content: center; gap: 9px; }
+.caja-full .ck-center .ck-kick { font-size: var(--fs-2xs); }
+/* Héroe HOY en COLUMNA (Juan, 28-jun): número arriba → estado → efectivo/tarjeta. */
+.caja-full .ck-center .ck-herobar { margin-top: 2px; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: clamp(8px, 1.1vh, 13px); flex-wrap: nowrap; }
+.caja-full .ck-center .ck-total { margin: 0; }
+.ck-hero-split { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--muted); font-weight: 600; }
+.ck-hero-split > span { display: inline-flex; align-items: baseline; gap: 7px; }
+.ck-hero-split i.i-cash, .ck-hero-split i.i-card { width: 8px; height: 8px; border-radius: 2px; flex: none; align-self: center; }
+.ck-hero-split i.i-cash { background: #b8bdc4; } .ck-hero-split i.i-card { background: var(--brand); }
+.ck-hero-split b { color: var(--ink); font-family: var(--font-num); font-weight: var(--num-weight); display: inline-flex; align-items: baseline; gap: 2px; letter-spacing: var(--num-spacing); }
+.ck-hero-split b .u { font-size: .6em; font-style: normal; font-weight: 800; color: var(--brand); }
+.ck-hero-split .chs-dot { color: var(--faint); align-self: center; }
+.caja-full .ck-center .ck-total { font-size: clamp(34px, 3.8vw, 56px); }
+.caja-full .ck-statrow { margin: 0; display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-around;
+  border: 1px solid var(--line); border-radius: var(--card-r); background: rgba(10,10,14,.5);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); padding: 12px clamp(8px,1.5vw,20px); }
+.caja-full .ck-statrow .rstat { padding: 4px clamp(6px, 1vw, 16px); gap: 5px; }
+.caja-full .ck-statrow .rstat-val { font-size: clamp(22px, 2.4vw, 32px); }
+/* gráfica|caja y platos|stock — tarjetas de IGUAL alto en cada fila (armonía); tamaño = su contenido */
+.caja-full .ck-sub { margin: 0; flex: none; display: flex; flex-direction: column; gap: clamp(11px, 1.5vh, 18px); }
+/* Filas de ALTO NATURAL (calco de la preview): cada tarjeta ocupa lo que su contenido necesita; NO se
+   fuerza un alto fijo (eso recortaba/solapaba). En cada fila las 2 tarjetas comparten alto (align-items:
+   stretch → la más alta marca el ritmo). El aire sobrante va ABAJO del cockpit, nunca dentro de las tarjetas. */
+.caja-full .ck-toprow { margin: 0; align-items: stretch; }
+.caja-full .ck-extra { margin: 0; align-items: stretch; }
+.caja-full .ck-toprow .chartcard, .caja-full .ck-toprow .turno-day,
+.caja-full .ck-extra .ck-panel { min-height: 0; display: flex; flex-direction: column; }
+/* el CONTENIDO se reparte para LLENAR la tarjeta (cero aire muerto): donut+leyenda en medio, split abajo;
+   listas de platos/stock repartidas. */
+.caja-full .day-body { flex: none; display: flex; align-items: center; gap: clamp(12px, 1.6vw, 24px); min-width: 0; }
+/* DONUT grande pero que ENCOGE con el espacio real (flex-shrink + svg max-width:100%) → nunca pisa los
+   métodos al estrechar la tarjeta o al hacer zoom. Suelo legible. (Juan: grande + responsive) */
+.caja-full .day-donut { flex: 0 1 auto; min-width: 0; width: auto; height: auto; }
+.caja-full .day-donut svg { width: clamp(108px, min(16vh, 13vw), 190px); height: auto; aspect-ratio: 1 / 1; max-width: 100%; }
+/* El % del centro ESCALA CON EL DONUT (mismo min(vh,vw) que el svg) → en pantalla pequeña el donut encoge y
+   el "47%" encoge con él, no se queda gigante. (Juan, 29-jun: "el 47 se hace muy grande en pantallas pequeñas") */
+.caja-full .day-donut-c b { font-size: clamp(20px, min(4.9vh, 4vw), 46px); }
+.caja-full .day-donut-c span { font-size: clamp(8px, min(1.7vh, 1.4vw), 12px); }
+/* La gráfica trae 240px fijos de área → demasiado alta para el cockpit. La encogemos para que la fila de
+   arriba quepa y deje sitio a Platos/Stock abajo. preserveAspectRatio="none" → la curva se reescala sola. */
+.caja-full .chart-area { height: clamp(108px, 13.5vh, 142px); }
+.caja-full .ch-head { margin-bottom: 10px; }
+.caja-full .day-rows { flex: 1 1 auto; min-width: 0; }
+/* Métodos anclados a la DERECHA (Juan, 28-jun: "muévelos más a la derecha, sobra aire en el medio").
+   Columnas FLEXIBLES (minmax con suelo 0) → se encogen sin romper si la tarjeta estrecha. */
+.caja-full .day-row { display: grid; grid-template-columns: minmax(0, max-content) minmax(56px, max-content); justify-content: end;
+  column-gap: clamp(12px, 2vw, 40px); align-items: center; padding: clamp(7px, 1vh, 11px) 4px; }
+.caja-full .day-row .lbl { font-size: var(--fs-sm); min-width: 0; overflow: hidden; }
+.caja-full .day-row .amt { text-align: right; font-size: var(--fs-sm); white-space: nowrap; }
+/* Mañana/Tarde: separada del borde inferior (no pegada). */
+.caja-full .day-split { margin-top: auto; padding-bottom: 2px; }
+/* Platos y Stock = FILAS HERMANAS (regla de Juan): MISMA rejilla y ritmo. grid-auto-rows:1fr → las 3 filas
+   de cada panel tienen el MISMO alto y, como ambas tarjetas comparten alto (stretch) y nº de filas, la fila N
+   de Platos queda alineada con la fila N de Stock. Recuadros internos idénticos, nada descuadrado. */
+.caja-full .ck-plato-list, .caja-full .ck-alert-list { flex: 1; min-height: 0; display: grid; grid-auto-rows: 1fr; gap: clamp(8px, 1.1vh, 13px); }
+.caja-full .ck-plato, .caja-full .ck-alert { align-self: stretch; }
+.caja-full .turno-day, .caja-full .chartcard { padding: 16px 18px 18px; }
+.caja-full .ck-plato, .caja-full .ck-alert { padding: clamp(5px,.7vh,10px) 16px; }
+.caja-full .ck-plato-img, .caja-full .ck-alert-img { width: clamp(44px, 5vh, 54px); height: clamp(44px, 5vh, 54px); }
+.caja-full .ck-plato-nm, .caja-full .ck-alert-tx b { font-size: clamp(15px, 1.9vh, 19px); }
+.caja-full .ck-plato-uds { font-size: clamp(16px, 2.1vh, 21px); }
+.caja-full .ck-alert-tx small { font-size: clamp(12px, 1.5vh, 15px); }
 /* En Caja el panel-top es absolute a ancho de viewport → en desktop hay que desplazarlo el ancho del
    sidebar para que la identidad (izquierda) NO pise el logo. En móvil el sidebar está fuera → left:0. */
 @media (min-width: 900px) { .panel-main.caja-full .panel-top { left: var(--side-w); } }
@@ -571,7 +713,7 @@ body {
    rectángulo invisible. Pedido de Juan (24-jun). */
 .ck-total { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(48px, 8.4vw, 104px); line-height: .86; letter-spacing: var(--num-spacing);
   font-variant-numeric: tabular-nums; margin: 18px 0 6px; color: #fff;
-  display: inline-flex; align-items: center; justify-content: center; }
+  display: inline-flex; align-items: baseline; justify-content: center; }
 /* ghost (oculto) reserva el ancho FINAL → el count-up no reajusta la pantalla. La cifra se superpone centrada. */
 .odo-wrap { position: relative; display: inline-block; }
 .odo-ghost { visibility: hidden; }
@@ -608,6 +750,15 @@ body {
 .ck-cuadre-sub .cs-emo { font-size: 1.45em; line-height: 1; }
 .ck-cuadre-sub .cs-dot { color: var(--faint); margin: 0 4px; }
 
+/* ── CABECERA UNIFICADA (Juan, 30-jun · opción B): estado · total · efectivo/tarjeta en UNA fila ──
+   El total baja de tamaño (ya no domina), el chip de cuadre va a la IZQUIERDA y el desglose 💵/💳 a la
+   DERECHA, equidistantes del número. Así las métricas de abajo suben. En móvil se apilan centradas. */
+.ck-herobar { display: flex; align-items: center; justify-content: center; gap: clamp(16px, 3vw, 36px); flex-wrap: wrap; margin-top: 16px; }
+.ck-herobar .ck-total { margin: 0; font-size: clamp(40px, 6vw, 80px); }
+.ck-herobar .ck-cuadre { margin-top: 0; }
+.ck-herobar .ck-cuadre-sub { margin-top: 0; }
+@media (max-width: 560px) { .ck-herobar { gap: 10px; } }
+
 /* ── Cierre por FECHA: stepper + balance de platos + alerta de stock ── */
 /* anillo de días: SIN cápsula; los extremos se difuminan (mask horizontal = técnica --sep en eje X) */
 /* El día SELECCIONADO es siempre la celda central de la tira. Para que quede perfectamente
@@ -615,8 +766,8 @@ body {
    (absoluto a la derecha) → la simetría no se rompe. (Juan, 27-jun) */
 .ck-datenav { align-self: stretch; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-bottom: 10px; }
 .ckd-nav { display: flex; align-items: center; gap: 4px; justify-self: center; }
-.ckd-arrow { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 0; background: transparent; color: rgba(255,255,255,.5); cursor: pointer; flex: none; transition: color .16s, background .16s, transform .12s var(--ease-spring); }
-.ckd-arrow svg { width: 21px; height: 21px; }
+.ckd-arrow { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 0; background: transparent; color: rgba(255,255,255,.5); cursor: pointer; flex: none; transition: color .16s, background .16s, transform .12s var(--ease-spring); }
+.ckd-arrow svg { width: 23px; height: 23px; }
 .ckd-arrow:hover:not(:disabled) { color: #fff; background: rgba(255,255,255,.07); }
 .ckd-arrow:active:not(:disabled) { transform: scale(.88); }
 .ckd-arrow:disabled { opacity: .3; cursor: default; }
@@ -624,12 +775,12 @@ body {
 /* tira de días: cada uno = abreviatura + número, SEPARADOS por la línea fina del StatRow */
 .ckd-strip { display: flex; align-items: stretch; -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
 /* Celdas de ANCHO IGUAL (equidistancia) → la seleccionada (central) queda perfectamente centrada. */
-.ckd-cell { position: relative; flex: 0 0 68px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 7px 6px 11px; border: 0; background: transparent; cursor: pointer; transition: transform .12s var(--ease-spring); }
+.ckd-cell { position: relative; flex: 0 0 80px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 7px 13px; border: 0; background: transparent; cursor: pointer; transition: transform .12s var(--ease-spring); }
 .ckd-void { visibility: hidden; pointer-events: none; cursor: default; } /* hueco de día futuro (mantiene el centrado) */
 .ckd-cell + .ckd-cell::before { content: ''; position: absolute; left: 0; top: 12%; bottom: 12%; width: 1px; background: var(--sep); }
 .ckd-cell:active:not(:disabled) { transform: scale(.93); }
-.ckd-dow { position: relative; z-index: 1; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); transition: color .16s; }
-.ckd-dnum { position: relative; z-index: 1; font-family: var(--font-num); font-size: var(--fs-xl); font-weight: 700; line-height: 1; letter-spacing: -.02em; color: rgba(255,255,255,.82); transition: color .16s; }
+.ckd-dow { position: relative; z-index: 1; font-size: var(--fs-sm); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); transition: color .16s; }
+.ckd-dnum { position: relative; z-index: 1; font-family: var(--font-num); font-size: var(--fs-2xl); font-weight: 700; line-height: 1; letter-spacing: -.02em; color: rgba(255,255,255,.82); transition: color .16s; }
 .ckd-cell:hover:not(:disabled) .ckd-dnum { color: #fff; }
 .ckd-cell:hover:not(:disabled) .ckd-dow { color: rgba(255,255,255,.7); }
 .ckd-cell.fut { opacity: .28; cursor: default; }
@@ -657,7 +808,7 @@ body {
 .ckc-col { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
 .ckc-day { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
 .ckc-col.b .ckc-day { color: #c4b5fd; }
-.ckc-hero { font-family: var(--font-num); font-weight: 600; font-size: clamp(30px, 4.4vw, 44px); line-height: 1; letter-spacing: -.025em; color: #fff; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; }
+.ckc-hero { font-family: var(--font-num); font-weight: 600; font-size: clamp(30px, 4.4vw, 44px); line-height: 1; letter-spacing: -.025em; color: #fff; font-variant-numeric: tabular-nums; display: inline-flex; align-items: baseline; justify-content: center; }
 .ckc-hero i { font-style: normal; font-size: .82em; font-weight: 600; margin-left: .06em; color: var(--gold); }
 .ckc-col.b .ckc-hero i { color: #c4b5fd; }
 .ckc-mini { font-size: var(--fs-xs); color: rgba(255,255,255,.6); }
@@ -699,37 +850,33 @@ body {
 /* MISMA estructura/tamaños que Stock para mañana (`.ck-alert`): emoji grande | nombre | número a la
    derecha, barra GRUESA a todo el ancho debajo, mismo padding y radio (Juan 25-jun). */
 .ck-plato-list { display: flex; flex-direction: column; gap: 10px; }
-.ck-plato { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
-  align-items: center; column-gap: 20px; row-gap: 18px; padding: 21px 24px 22px; border-radius: 17px;
+/* FILA ÚNICA (calco de la preview que aprobó Juan, 28-jun): miniatura | nombre | barra que rellena | nº.
+   Compacta y armónica → 5 platos caben sin estirar la tarjeta ni dejar aire muerto. */
+.ck-plato { display: flex; align-items: center; column-gap: 14px; padding: 9px 16px; border-radius: 15px;
   background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.07); }
-/* Miniatura de FOTO real del plato (no emoji) — cuadrado redondeado premium, sombra neutra (dark-safe). */
-.ck-plato-img { grid-area: 1 / 1; width: 58px; height: 58px; border-radius: 14px; overflow: hidden; flex: none;
+.ck-plato-img { width: 46px; height: 46px; border-radius: var(--r-chip); overflow: hidden; flex: none; align-self: center;
   background: #0b0b0e; border: 1px solid rgba(255,255,255,.10);
-  box-shadow: 0 8px 20px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06); }
+  box-shadow: 0 6px 16px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06); }
 .ck-plato-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ck-plato.r1 .ck-plato-img { border-color: rgba(var(--brand-rgb),.55); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.35), 0 8px 20px -10px rgba(0,0,0,.7); }
-.ck-plato-nm { grid-area: 1 / 2; font-size: var(--fs-2xl); font-weight: 750; color: #fff;
-  letter-spacing: -.02em; white-space: nowrap; line-height: 1.03; }
-.ck-plato-uds { grid-area: 1 / 3; font-family: var(--font-num); font-weight: 800; font-size: var(--fs-2xl);
+.ck-plato.r1 .ck-plato-img { border-color: rgba(var(--brand-rgb),.55); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.35), 0 6px 16px -10px rgba(0,0,0,.7); }
+.ck-plato-nm { flex: 0 0 auto; width: clamp(106px, 11vw, 150px); font-size: var(--fs-xl); font-weight: 750; color: #fff;
+  letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.03; }
+.ck-plato-uds { flex: none; min-width: 36px; text-align: right; font-family: var(--font-num); font-weight: 800; font-size: var(--fs-2xl);
   letter-spacing: var(--num-spacing); color: #fff; line-height: 1; }
-/* barra GRUESA a todo el ancho debajo (3 columnas) */
-.ck-plato-bar { grid-row: 2; grid-column: 1 / 4; position: relative; height: var(--bar-h); border-radius: var(--bar-r);
+.ck-plato-bar { flex: 1; min-width: 30px; position: relative; height: var(--bar-h); border-radius: var(--bar-r);
   background: rgba(255,255,255,.08); overflow: hidden; }
 .ck-plato-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill); display: block;
   background: linear-gradient(90deg, rgba(255,255,255,.22), rgba(255,255,255,.4));
   animation: ckGrowX .75s var(--ease) both; animation-delay: calc(var(--i, 0) * 80ms); }
-/* 🥇 ORO */
-.ck-plato.r1 .ck-plato-bar > i { background: linear-gradient(90deg, #a9760a, #ffd75e 55%, #fff1c2);
-  box-shadow: 0 0 16px -3px rgba(var(--brand-rgb),.7); }
-.ck-plato.r1 .ck-plato-uds { color: var(--gold-soft); text-shadow: 0 0 18px rgba(var(--brand-rgb),.45); }
-/* 🥈 PLATA */
-.ck-plato.r2 .ck-plato-bar > i { background: linear-gradient(90deg, #7c8290, #dfe5f0 55%, #ffffff);
-  box-shadow: 0 0 14px -4px rgba(220,228,242,.55); }
-.ck-plato.r2 .ck-plato-uds { color: #e6ebf5; }
-/* 🥉 BRONCE */
-.ck-plato.r3 .ck-plato-bar > i { background: linear-gradient(90deg, #7a4a22, #cd7f43 55%, #f0b483);
-  box-shadow: 0 0 14px -4px rgba(205,127,67,.5); }
-.ck-plato.r3 .ck-plato-uds { color: #f0b483; }
+/* Ranking por INTENSIDAD del ACENTO (Juan 29-jun: "si pongo dorado, las barras deben cambiar"). Todo cuelga
+   de --brand/--brand-rgb → cambia con el color de acento, sin hardcodear lima. #1 pleno → va bajando. */
+.ck-plato.r1 .ck-plato-bar > i { background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 72%, #0a0a0a), var(--brand));
+  box-shadow: 0 0 16px -4px rgba(var(--brand-rgb),.55); }
+.ck-plato.r1 .ck-plato-uds { color: var(--brand); text-shadow: 0 0 18px rgba(var(--brand-rgb),.4); }
+.ck-plato.r2 .ck-plato-bar > i { background: linear-gradient(90deg, rgba(var(--brand-rgb),.34), rgba(var(--brand-rgb),.64)); }
+.ck-plato.r2 .ck-plato-uds { color: #eef4dc; }
+.ck-plato.r3 .ck-plato-bar > i { background: linear-gradient(90deg, rgba(var(--brand-rgb),.2), rgba(var(--brand-rgb),.42)); }
+.ck-plato.r3 .ck-plato-uds { color: rgba(255,255,255,.82); }
 /* ✨ brillo que recorre la barra del Nº1 (one-shot) */
 .ck-plato.r1 .ck-plato-bar::after { content: ''; position: absolute; top: 0; bottom: 0; width: 38%; z-index: 2;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.85), transparent);
@@ -740,28 +887,37 @@ body {
 .ck-alert-list { display: flex; flex-direction: column; gap: 10px; }
 /* Botón a la DERECHA (Juan: NO lo muevas a la izquierda). El vacío rojo se reduce porque el CONTENIDO es
    más grande, no moviendo el botón: emoji/nombre/necesitas/botón grandes → llenan el recuadro (25-jun). */
-.ck-alert { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
-  align-items: center; column-gap: 20px; row-gap: 18px; padding: 21px 24px 22px; border-radius: 17px;
+.ck-alert { display: flex; align-items: center; column-gap: 18px; padding: 16px 22px; border-radius: 17px;
   border: 1px solid transparent; }
-.ck-alert.alta { background: rgba(255,92,92,.09); border-color: rgba(255,92,92,.30); }
+.ck-alert.alta { background: rgba(255,46,46,.1); border-color: rgba(255,46,46,.42); }
 .ck-alert.media { background: rgba(245,179,65,.07); border-color: rgba(245,179,65,.26); }
 .ck-alert.ok { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.28); }
 /* Miniatura de FOTO real del ingrediente (no emoji) — mismo lenguaje que los platos. */
-.ck-alert-img { grid-area: 1 / 1; width: 58px; height: 58px; border-radius: 14px; overflow: hidden; flex: none;
+.ck-alert-img { width: 84px; height: 84px; border-radius: var(--card-r); overflow: hidden; flex: none; align-self: center;
   background: #0b0b0e; border: 1px solid rgba(255,255,255,.10);
   box-shadow: 0 8px 20px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06); }
 .ck-alert-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ck-alert.alta .ck-alert-img { border-color: rgba(255,92,92,.34); }
-.ck-alert-tx { grid-area: 1 / 2; display: flex; flex-direction: column; min-width: 0; gap: 7px; }
-.ck-alert-tx b { font-size: var(--fs-2xl); font-weight: 750; color: #fff; letter-spacing: -.02em; line-height: 1.03; white-space: nowrap; }
+.ck-alert.alta .ck-alert-img { border-color: rgba(255,46,46,.5); }
+/* Cuerpo derecho: misma técnica que los platos → alto = miniatura, barra al PIE (margin-top:auto). */
+.ck-alert-body { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; }
+.ck-alert-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ck-alert-tx { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.ck-alert-tx b { font-size: var(--fs-xl); font-weight: 750; color: #fff; letter-spacing: -.02em; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ck-alert-q { font-weight: 600; color: rgba(255,255,255,.6); }
-.ck-alert-tx small { font-size: var(--fs-lg); color: rgba(255,255,255,.72); font-family: var(--font-num); }
-.ck-alert-pill { grid-area: 1 / 3; font-size: var(--fs-md); font-weight: 700; padding: 17px 32px;
-  border-radius: 15px; white-space: nowrap; }
-.ck-alert.alta .ck-alert-pill { background: linear-gradient(180deg, #ff8a8a, #f5484a); color: #2c0808; box-shadow: 0 10px 22px -10px rgba(255,92,92,.6), inset 0 1px 0 rgba(255,255,255,.3); }
-.ck-alert.media .ck-alert-pill { background: rgba(245,179,65,.16); color: var(--warn); border: 1px solid rgba(245,179,65,.4); }
-.ck-alert.ok .ck-alert-pill { background: rgba(52,211,153,.16); color: #6ee7b7; border: 1px solid rgba(52,211,153,.42); }
-.ck-alert-bar { grid-row: 2; grid-column: 1 / 4; position: relative; height: var(--bar-h); border-radius: var(--bar-r);
+.ck-alert-tx small { font-size: var(--fs-base); color: rgba(255,255,255,.72); font-family: var(--font-num); }
+/* ESTADO ≠ BOTÓN (Juan, 28-jun): tag de SOLO LECTURA (punto + texto + chip tintado fino), NUNCA pinta de
+   botón pulsable (sin gradiente relleno ni sombra tipo CTA). Alerta crítica = ROJO INTENSO. */
+.ck-alert-pill { display: inline-flex; align-items: center; gap: 6px; flex: none; align-self: center;
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .02em; padding: 6px 11px; border-radius: var(--r-input);
+  white-space: nowrap; background: transparent; box-shadow: none; }
+.ck-alert-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.ck-alert.alta .ck-alert-pill { color: #ff4040; background: rgba(255,42,42,.16); border: 1px solid rgba(255,42,42,.55); }
+.ck-alert.alta .ck-alert-pill::before { background: #ff2e2e; box-shadow: 0 0 9px rgba(255,46,46,.95); }
+.ck-alert.media .ck-alert-pill { color: var(--warn); background: rgba(245,179,65,.14); border: 1px solid rgba(245,179,65,.42); }
+.ck-alert.media .ck-alert-pill::before { background: var(--warn); }
+.ck-alert.ok .ck-alert-pill { color: var(--ok); background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.38); }
+.ck-alert.ok .ck-alert-pill::before { background: var(--ok); }
+.ck-alert-bar { margin-top: auto; position: relative; height: var(--bar-h); border-radius: var(--bar-r);
   background: rgba(255,255,255,.07); overflow: hidden; }
 .ck-alert-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill); display: block; overflow: hidden;
   animation: ckGrowX .75s var(--ease) both; animation-delay: calc(var(--i, 0) * 80ms); }
@@ -771,7 +927,7 @@ body {
   transform: translateX(-170%);
   background: linear-gradient(100deg, transparent 24%, rgba(255,255,255,.12) 46%, rgba(255,255,255,.26) 50%, rgba(255,255,255,.12) 54%, transparent 76%);
   animation: ckShine 1.7s ease-out calc(var(--i, 0) * 80ms + .85s) 1 both; }
-.ck-alert.alta .ck-alert-bar > i { background: linear-gradient(90deg, #f5484a, #ff8a8a); }
+.ck-alert.alta .ck-alert-bar > i { background: linear-gradient(90deg, #ff2424, #ff6a6a); }
 .ck-alert.media .ck-alert-bar > i { background: linear-gradient(90deg, var(--warn), #ffd98a); }
 .ck-alert.ok .ck-alert-bar > i { background: linear-gradient(90deg, #10b981, #6ee7b7); }
 .ck-alert-ok { display: flex; align-items: center; gap: 10px; padding: 16px 4px; font-size: var(--fs-sm); font-weight: 600; color: var(--ok); }
@@ -787,11 +943,17 @@ body {
 /* SIN fondo/borde/radio a propósito: son cifras sueltas separadas por línea fina, NO recuadros. (Juan, 24-jun) */
 .rstat { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px clamp(24px, 3.4vw, 48px); position: relative; background: none; border: 0; }
 .rstat + .rstat::before { content: ''; position: absolute; left: 0; top: 4%; bottom: 4%; width: 1px; background: var(--sep); }
-.rstat-val { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(42px, 4.8vw, 58px); color: #fff; line-height: 1; letter-spacing: var(--num-spacing); display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
+.rstat-val { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(42px, 4.8vw, 58px); color: #fff; line-height: 1; letter-spacing: var(--num-spacing); display: inline-flex; align-items: baseline; gap: 3px; font-variant-numeric: tabular-nums; }
 .rstat-val i { font-style: normal; font-size: .82em; font-weight: 700; color: var(--gold); }
 .rstat-val.g, .rstat-val.g i { color: var(--ok); }
+/* <Money> — cifra inline única (mismo canon: símbolo a la BASELINE, acento). */
+.money { display: inline-flex; align-items: baseline; gap: 2px; font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: var(--num-spacing); }
+.money-num { font-weight: var(--num-weight); color: inherit; }
+.money-u { font-style: normal; font-size: .82em; font-weight: 700; color: var(--brand); }
+.money.money-ink .money-num { color: var(--ink); }
+.money.money-muted .money-num { color: var(--muted); }
 .rstat-lbl { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.66); }
-.ck-statrow { margin-top: 18px; }
+.ck-statrow { margin-top: 30px; }
 /* Stats del hero más contenidos (Juan: "todo muy grande") */
 .ck-statrow .rstat-val { font-size: clamp(28px, 3.2vw, 40px); }
 .ck-statrow .rstat { gap: 6px; }
@@ -893,13 +1055,19 @@ body {
 .ch-x { position: relative; width: 100%; height: 26px; margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,.08); }
 .ch-x span { position: absolute; top: 11px; transform: translateX(-50%); font-size: var(--fs-xs); color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ch-x span::before { content: ''; position: absolute; top: -12px; left: 50%; width: 1px; height: 7px; background: rgba(255,255,255,.16); transform: translateX(-50%); }
+/* eje Y (€ por línea de rejilla) a la izquierda (Juan, 29-jun) */
+.ch-yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 48px; pointer-events: none; z-index: 1; }
+.ch-yaxis span { position: absolute; right: 8px; transform: translateY(-50%); font-family: var(--font-num); font-size: var(--fs-2xs); font-weight: 600; color: var(--faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ch-yaxis span i { font-style: normal; font-size: .82em; margin-left: 1px; color: rgba(var(--brand-rgb), .65); }
+/* mes junto al día en el eje X (Juan, 29-jun): "19 jun" */
+.ch-x span i { font-style: normal; font-size: .8em; color: var(--faint); font-weight: 500; margin-left: 2px; }
 .ch-x span.today { color: var(--gold); font-weight: 700; }
 .ch-x span.today::before { background: var(--gold); height: 8px; }
 [data-theme='light'] .ch-x { border-top-color: rgba(15,20,35,.10); }
 [data-theme='light'] .ch-x span::before { background: rgba(15,20,35,.18); }
 /* crosshair + tooltip al hover */
 .ch-cross { position: absolute; top: 0; bottom: 0; width: 1px; background: linear-gradient(180deg, transparent, rgba(var(--brand-rgb),.5) 18%, rgba(var(--brand-rgb),.5) 82%, transparent); opacity: 0; transition: opacity .15s; pointer-events: none; }
-.ch-tip { position: absolute; z-index: 6; min-width: 162px; background: rgba(20,20,24,.97); border: 1px solid var(--line-strong); border-radius: var(--r-chip); padding: 9px 12px; box-shadow: 0 14px 32px -8px rgba(0,0,0,.85); pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap; }
+.ch-tip { position: absolute; z-index: 6; min-width: 132px; background: rgba(16,16,20,.94); border: 1px solid var(--line-strong); border-radius: var(--r-chip); padding: 7px 10px; box-shadow: 0 14px 32px -8px rgba(0,0,0,.85); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap; }
 .ch-tip .d { font-size: var(--fs-3xs); color: var(--faint); font-weight: 600; }
 .ch-tip .v { font-family: var(--font-num); font-weight: var(--num-weight); font-size: var(--fs-base); letter-spacing: var(--num-spacing); margin-top: 1px; }
 .ch-tip-break { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
@@ -944,8 +1112,12 @@ body {
 .turno-name { display: flex; align-items: center; gap: 11px; font-family: var(--font-display); font-weight: 650; font-size: var(--title-size); letter-spacing: -.01em; }
 .turno-name .badge { width: 30px; height: 30px; border-radius: var(--r-input); display: grid; place-items: center; font-size: var(--fs-sm); }
 .badge.sol { background: rgba(var(--brand-rgb),.14); color: var(--gold); } .badge.luna { background: rgba(74,163,255,.14); color: var(--card); }
-.turno-sub { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 38px); letter-spacing: var(--num-spacing); }
-.turno-sub .cur { font-size: .7em; color: var(--muted); }
+/* MISMO patrón canónico que .rstat-val (la cifra del KPI "16,86 €"): inline-flex + align-items baseline →
+   el € se apoya en la BASE de los dígitos, tamaño .58em y color de acento (no gris flotando). (Juan 28-jun) */
+.turno-sub { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 38px); letter-spacing: var(--num-spacing); line-height: 1; display: inline-flex; align-items: baseline; gap: 3px; }
+/* € al tamaño del CANON (.82em, como el KPI "16,86€"): pequeño pero NO superíndice → se ve apoyado en la
+   base, no flotando arriba. (Juan: el de .58em parecía un superíndice torcido.) */
+.turno-sub .cur { font-size: .82em; font-weight: 700; color: var(--brand); }
 .linea { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 14px; padding: 10px 0; }
 .linea .lbl { display: flex; align-items: center; gap: 9px; font-size: var(--fs-sm); color: var(--muted); font-weight: 500; }
 .linea .lbl i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
@@ -1033,10 +1205,13 @@ body {
 /* Logo FAT SMASH del programa, encima del león, bien visible (Juan 28-jun). */
 /* Logo FAT SMASH (SVG inline) → se tiñe con el ACENTO (--brand), brillo suave del acento y
    entrada one-shot. fill=currentColor en el SVG, así que basta con 'color'. */
-.side-logo { display: block; align-self: flex-start; width: clamp(150px, 64%, 184px); aspect-ratio: var(--logo-ar, 333.91 / 59.66); margin: 2px 0 16px;
+/* margin-left 12px = alinea el logo con el borde IZQUIERDO del avatar (el botón .side-brand tiene padding 12px).
+   Antes el logo salía 12px a la izquierda → descuadrado (Juan, 29-jun). */
+.side-logo { display: block; align-self: flex-start; width: clamp(150px, 64%, 184px); aspect-ratio: var(--logo-ar, 333.91 / 59.66); margin: 2px 0 16px 12px;
   background: var(--brand);
   -webkit-mask: var(--logo-src, url(/img/logo-b.svg)) left center / contain no-repeat; mask: var(--logo-src, url(/img/logo-b.svg)) left center / contain no-repeat;
-  filter: drop-shadow(0 2px 11px color-mix(in srgb, var(--brand) 26%, transparent));
+  /* lima INTENSO con brillo del acento (Juan, 29-jun: "estaba más apagado que el resto del panel"). */
+  filter: drop-shadow(0 0 7px rgba(var(--brand-rgb), .6)) drop-shadow(0 2px 9px rgba(var(--brand-rgb), .3)) brightness(1.06);
   animation: logoIn .55s var(--ease-out, cubic-bezier(.23,1,.32,1)) both; }
 .side-logo[data-logo='a'] { --logo-src: url(/img/logo-a.svg); --logo-ar: 332.09 / 40.58; }
 .side-logo[data-logo='b'] { --logo-src: url(/img/logo-b.svg); --logo-ar: 333.91 / 59.66; }
@@ -1098,23 +1273,24 @@ body {
 .nav-item:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 42%, transparent); }
 /* Seleccionado: fondo neutro sutil + BARRA de acento a la izquierda (estilo Linear),
    icono encendido y texto en acento. Menos "caja marcada", más premium. */
-.nav-item.on { background: rgba(255,255,255,.05); color: var(--ink); }
+/* Pestaña activa VERDE VERDE (Juan, 29-jun): fondo de acento, no blanco. */
+.nav-item.on { background: rgba(var(--brand-rgb), .15); color: var(--ink); }
 /* pestaña activa: marco cónico que GIRA (mismo lenguaje que el recuadro hero de Caja),
    adaptado al ítem. El @property --ang y @keyframes orbit ya existen (ver hero). Pedido Juan 24-jun. */
 /* Las imágenes del dashboard NO se arrastran ni se seleccionan → un doble-clic ya no las "abre"
    en una pestaña/app del sistema (bug de Juan, 24-jun). Vale para todo el dashboard. */
 img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
-.nav-item.on { box-shadow: inset 0 0 16px -8px color-mix(in srgb, var(--gold) 40%, transparent); }
+.nav-item.on { box-shadow: inset 0 0 22px -6px rgba(var(--brand-rgb), .55); }
 .nav-item.on::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.6px;
-  /* marco COMPLETO: todo el borde es oro visible (base .42) + un barrido brillante que gira encima */
+  /* marco COMPLETO: borde de acento bien visible (base .62) + un barrido brillante que gira encima */
   background: conic-gradient(from var(--ang),
-    color-mix(in srgb, var(--gold) 42%, transparent) 0deg,
-    color-mix(in srgb, var(--gold) 42%, transparent) 196deg,
+    color-mix(in srgb, var(--gold) 62%, transparent) 0deg,
+    color-mix(in srgb, var(--gold) 62%, transparent) 196deg,
     var(--gold) 244deg, #fff 270deg, var(--gold-soft) 296deg,
-    color-mix(in srgb, var(--gold) 42%, transparent) 344deg,
-    color-mix(in srgb, var(--gold) 42%, transparent) 360deg);
+    color-mix(in srgb, var(--gold) 62%, transparent) 344deg,
+    color-mix(in srgb, var(--gold) 62%, transparent) 360deg);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
   animation: orbit 6.5s linear infinite; pointer-events: none; z-index: 1;
 }
@@ -1155,7 +1331,9 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
    pointer-events: none deja clicar el contenido que pasa por debajo al hacer scroll. */
 .panel-top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 13px; padding: clamp(12px, 1vw, 18px) clamp(18px, 2vw, 40px); background: transparent; border-bottom: 0; pointer-events: none; }
 .panel-top > * { pointer-events: auto; }
-.panel-content { position: relative; z-index: 2; padding: 8px 18px 26px; }
+/* TAMAÑO de la interfaz (slider en Canon): zoom del área de contenido. `zoom` REFLUYE → sigue responsive.
+   El menú lateral (marco) NO se escala. 1 = sin efecto. */
+.panel-content { position: relative; z-index: 2; padding: 8px 18px 26px; zoom: var(--ui-scale, 1); }
 .only-mobile { display: grid; }
 .only-wide { display: none; }
 
@@ -1613,7 +1791,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
    modo NOCHE dentro del sidebar → todo su contenido (texto, iconos, hover, activo) sigue oscuro aunque el
    resto del dashboard esté en claro. Así las reglas por defecto (blancos translúcidos) ya quedan correctas. */
 [data-theme='light'] .sidebar {
-  --bg: #08080a; --bg-2: #0d0d10; --surface: #141417; --surface-2: #1a1a1e;
+  --bg: #050506; --bg-2: #0a0a0c; --surface: #141417; --surface-2: #1a1a1e;
   --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.13);
   --ink: #f5f5f7; --text: #f5f5f7; --muted: rgba(255,255,255,.54); --faint: rgba(255,255,255,.32);
   --gold: var(--brand); --gold-soft: #ffd45e; --gold-deep: #e8ab0c;
@@ -1946,7 +2124,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .fg-hub { fill: var(--ink); stroke: color-mix(in srgb, var(--gc, var(--gold)) 60%, transparent); stroke-width: 2; }
 .fg-hub-dot { fill: var(--gc, var(--gold)); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gc, var(--gold)) 80%, transparent)); }
 .fg-read { width: 100%; text-align: center; margin-top: -8px; }
-.fg-val { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-num); font-size: clamp(40px, 5.2vw, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+.fg-val { display: inline-flex; align-items: baseline; justify-content: center; font-family: var(--font-num); font-size: clamp(40px, 5.2vw, 58px); font-weight: 800; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
 .fg-val i { font-size: .82em; font-weight: 700; color: var(--gold); margin-left: .06em; font-style: normal; }
 .fg-lbl { display: block; font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.5); margin-top: 5px; }
 .fg-status { display: inline-block; margin-top: 9px; font-weight: 800; font-size: var(--fs-sm); }
@@ -2487,20 +2665,20 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 @keyframes brGlitterIn { from { opacity: 0; } to { opacity: .5; } }
 .br-glow { position: absolute; top: 47%; left: 50%; width: min(126vw, 1180px); height: min(126vw, 1180px);
   transform: translate(-50%, -50%); pointer-events: none; will-change: transform, opacity;
-  background: radial-gradient(circle at 50% 50%, rgba(255,191,16,.17), rgba(255,150,10,.06) 30%, transparent 62%); }
+  background: radial-gradient(circle at 50% 50%, rgba(var(--brand-rgb),.18), rgba(var(--brand-rgb),.06) 30%, transparent 62%); }
 .br-stack { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center;
   gap: clamp(22px, 3.4vw, 40px); padding: 0 20px; }
 /* emblema del león: retrato circular con anillo dorado fino + sombra neutra */
 .br-beast { width: clamp(116px, 15vw, 178px); height: clamp(116px, 15vw, 178px); border-radius: 50%; overflow: hidden;
   flex: none; background: #0b0b0e; will-change: transform, opacity;
-  box-shadow: 0 0 0 1px rgba(255,191,16,.32), 0 26px 64px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06); }
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.42), 0 26px 64px -24px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06); }
 .br-beast img { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* wordmark REBELL en CRISTAL (mismo glass premium de antes, sin el chrome táctico) */
 .br-logo { display: flex; flex-direction: column; align-items: center; gap: 14px; will-change: transform, opacity; }
 /* Logo FAT SMASH de la intro (máscara blanca con bloom cálido) + nombre del local del cliente */
 .br-logo-mark { display: block; width: clamp(240px, 52vw, 520px); aspect-ratio: 333.91 / 59.66; background: #fff;
   -webkit-mask: url(/img/logo-b.svg) center / contain no-repeat; mask: url(/img/logo-b.svg) center / contain no-repeat;
-  filter: drop-shadow(0 4px 30px rgba(255,210,140,.45)); }
+  filter: drop-shadow(0 4px 30px rgba(var(--brand-rgb),.4)); }
 .br-logo-local { font-family: var(--font-display); font-weight: 600; font-size: clamp(15px, 2.4vw, 22px); letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.72); }
 @media (prefers-reduced-motion: reduce) { .boot { display: none; } }
 
@@ -2518,6 +2696,36 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 }
 .offline-pill.show { transform: translate(-50%, 0); opacity: 1; }
 .offline-pill svg { width: 17px; height: 17px; color: #ff9a3d; flex: none; }
+
+/* ── Mando flotante de TAMAÑO (abajo-derecha, discreto) + "Ajustar a pantalla" (Juan, 28-jun) ──
+   Vive en .app (NO se escala con --ui-scale, es marco). Semitransparente en reposo → al pasar el ratón se
+   ilumina. Siempre a la vista en la pantalla principal. */
+.scalebar {
+  position: fixed; right: clamp(12px, 1.6vw, 22px); bottom: clamp(12px, 1.7vh, 20px); z-index: 60;
+  display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px;
+  border-radius: 999px; background: rgba(13,13,17,.74);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 14px 36px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.05);
+  -webkit-backdrop-filter: blur(13px) saturate(1.2); backdrop-filter: blur(13px) saturate(1.2);
+  opacity: .4; transition: opacity .25s ease, box-shadow .25s ease;
+}
+.scalebar:hover, .scalebar:focus-within { opacity: 1; box-shadow: 0 18px 44px -14px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.08); }
+.scalebar-fit {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  background: rgba(var(--brand-rgb), .14); border: 1px solid rgba(var(--brand-rgb), .32);
+  color: var(--brand); font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); letter-spacing: -.01em;
+  cursor: pointer; white-space: nowrap; transition: background .2s ease, border-color .2s ease, transform .12s ease;
+}
+.scalebar-fit:hover { background: rgba(var(--brand-rgb), .22); }
+.scalebar-fit:active { transform: scale(.95); }
+.scalebar-fit.ok { background: rgba(52,211,153,.18); border-color: rgba(52,211,153,.45); color: var(--ok); }
+.scalebar-fit svg { width: 15px; height: 15px; flex: none; }
+.scalebar-sep { width: 1px; height: 18px; background: rgba(255,255,255,.12); flex: none; }
+.scalebar input[type='range'] { width: clamp(78px, 9vw, 118px); accent-color: var(--brand); cursor: pointer; }
+.scalebar-pct { font-size: var(--fs-2xs); color: var(--muted); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+/* En móvil no pisar la barra de pestañas inferior */
+@media (max-width: 760px) { .scalebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 66px); } }
+@media (prefers-reduced-motion: reduce) { .scalebar, .scalebar-fit { transition: none; } }
 
 /* ── Editor de Salón (plano de sala) ── */
 .salon-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -2740,9 +2948,11 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
    y usable (Juan, 26-jun). En móvil/tablet la barra es un cajón oculto, así que ocupa todo. */
 .tpv-mesa-scrim { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 3vmin; background: rgba(0,0,0,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .tpv-mesa-panel { width: min(1280px, calc(100% - 24px)); height: min(920px, 92vh); display: flex; flex-direction: column; background: color-mix(in srgb, var(--surface) 96%, #000); border: 1px solid var(--line-strong); border-radius: var(--card-r-lg); overflow: hidden; box-shadow: 0 40px 100px -28px rgba(0,0,0,.9); }
-/* en escritorio el picker se incrusta: arranca tras la barra lateral Y bajo la cabecera → la barra y la
-   CARTERA del día (arriba-dcha) quedan SIEMPRE visibles; las moneditas vuelan hacia la cartera visible. */
-@media (min-width: 1024px) { .tpv-mesa-scrim { left: var(--side-w); top: 62px; } }
+/* en escritorio el picker se incrusta tras la barra lateral. El scrim CUBRE DESDE ARRIBA (top:0) y queda
+   POR DEBAJO de la cabecera (z-index 35 < 40) → la cabecera FLOTA transparente encima (igual que en Caja),
+   sin la costura/"barra superior fea" que dejaba el antiguo top:62. La barra de pills y la CARTERA del día
+   siguen visibles y clicables sobre el fondo difuminado (las moneditas vuelan a la cartera). (Juan, 30-jun) */
+@media (min-width: 1024px) { .tpv-mesa-scrim { left: var(--side-w); top: 0; z-index: 35; } }
 
 .tms-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--line); }
 .tms-htxt { display: flex; flex-direction: column; gap: 5px; }
@@ -2928,7 +3138,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .vtpv-hero { display: flex; gap: clamp(18px, 3vw, 36px); align-items: stretch; }
 .vtpv-hero-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .vtpv-kick { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
-.vtpv-bignum { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(40px, 6.5vw, 68px); line-height: 1; letter-spacing: var(--num-spacing); color: #fff; margin: 8px 0 4px; display: inline-flex; align-items: center; }
+.vtpv-bignum { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(40px, 6.5vw, 68px); line-height: 1; letter-spacing: var(--num-spacing); color: #fff; margin: 8px 0 4px; display: inline-flex; align-items: baseline; }
 .vtpv-bignum i { font-style: normal; font-size: .82em; font-weight: 700; color: var(--gold); margin-left: .06em; }
 .vtpv-hero-stats { justify-content: flex-start; margin-top: 16px; }
 .vtpv-hero-stats .rstat { align-items: flex-start; padding: 4px clamp(16px, 2.4vw, 34px); }
@@ -3688,9 +3898,9 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 @keyframes rsHeroIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .rs-hero { animation: none; } }
 .rs-kick { display: block; font-size: var(--fs-3xs); letter-spacing: .15em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 10px; }
-.rs-big { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; }
+.rs-big { display: inline-flex; align-items: baseline; gap: 4px; }
 .rs-amount { font-family: var(--font-num); font-weight: 800; font-size: clamp(40px, 6.5vw, 66px); color: var(--ink); letter-spacing: -.02em; line-height: 1; }
-.rs-unit { font-family: var(--font-num); font-weight: 700; font-size: clamp(20px, 2.6vw, 30px); color: var(--gold); }
+.rs-unit { font-family: var(--font-num); font-weight: 700; font-size: clamp(20px, 2.6vw, 30px); color: var(--gold); line-height: 1; }
 .rs-delta { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-xs); padding: 4px 10px; border-radius: var(--r-pill); }
 .rs-delta.up { color: var(--home); background: color-mix(in srgb, var(--home) 14%, transparent); }
 .rs-mini { display: flex; gap: 28px; margin-top: 18px; flex-wrap: wrap; }
@@ -4086,8 +4296,8 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .alm-ie-ph { flex: none; width: 52px; height: 52px; border-radius: var(--r-chip); background: #050505; border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
 .alm-ie-ph img { width: 100%; height: 100%; object-fit: contain; }
 .alm-ie-pct { --tone: #34d399; display: flex; align-items: center; gap: 16px; margin: 18px 0 12px; }
-.alm-ie-pct b { font-family: var(--font-num); font-weight: 800; font-size: clamp(40px, 9vw, 56px); line-height: 1; letter-spacing: -.04em; color: var(--tone); display: inline-flex; align-items: center; text-shadow: 0 0 26px color-mix(in srgb, var(--tone) 40%, transparent); font-variant-numeric: tabular-nums; }
-.alm-ie-pct b i { font-style: normal; font-size: .5em; margin-left: 2px; }
+.alm-ie-pct b { font-family: var(--font-num); font-weight: 800; font-size: clamp(40px, 9vw, 56px); line-height: 1; letter-spacing: -.04em; color: var(--tone); display: inline-flex; align-items: baseline; text-shadow: 0 0 26px color-mix(in srgb, var(--tone) 40%, transparent); font-variant-numeric: tabular-nums; }
+.alm-ie-pct b i { font-style: normal; font-size: .62em; margin-left: 2px; }
 .alm-ie-track { flex: 1; height: var(--bar-h); border-radius: var(--bar-r); background: rgba(255,255,255,.1); overflow: hidden; }
 .alm-ie-fill { display: block; height: 100%; border-radius: var(--r-pill); background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 60%, #000), var(--tone)); transition: width .2s ease; }
 .alm-ie-range { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,.12); cursor: pointer; margin-bottom: 12px; }
@@ -4827,24 +5037,28 @@ html[data-saver='1'] .side-beast-vid { display: none; }
 .plans-toggle[data-b='anual'] .pt-ind { transform: translateX(100%); }
 .plans-save-badge { font-size: var(--fs-2xs); font-weight: 800; color: var(--ok); background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.3); padding: 6px 12px; border-radius: var(--r-pill); white-space: nowrap; }
 
-/* Rejilla de planes: 3 columnas IGUALES, misma altura (stretch). Pro se destaca por BORDE+badge oro y
-   un realce sutil, NO por tamaño → cero solapes/desalineación (lo que se veía roto). */
-.planes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; margin-top: 46px; }
-@media (max-width: 820px) { .planes-grid { grid-template-columns: 1fr; max-width: 460px; margin: 46px auto 0; } }
+/* Rejilla de planes (Juan, 28-jun): Pro es la COLUMNA GRANDE — más ANCHA (1.4fr) y más ALTA. align-items:start
+   → cada tarjeta toma su alto por contenido (NO misma altura): Pro tiene más features → es la más alta, y al
+   ser más ancha + sobresalir arriba se ve a simple vista que "vale más". */
+.planes-grid { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 20px; align-items: start; margin-top: 56px; }
+@media (max-width: 820px) { .planes-grid { grid-template-columns: 1fr; max-width: 460px; margin: 46px auto 0; } .plan-card.best { margin-top: 0; } }
 .plan-card { position: relative; display: flex; flex-direction: column; padding: 30px 26px; border-radius: var(--card-r-lg); background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid var(--line); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: transform .26s var(--ease-out), border-color .2s, box-shadow .26s; }
 .plan-card:hover { transform: translateY(-4px); border-color: var(--line-strong); }
 /* Pro DESTACA también por TAMAÑO: margin-top negativo + stretch → es más alto y "sobresale" arriba, sin
    solapar a los lados (bottoms alineados). Así no parecen los 3 iguales. */
-.plan-card.best { margin-top: -24px; padding: 46px 28px 32px; border-color: rgba(var(--brand-rgb),.55); background: linear-gradient(180deg, rgba(var(--brand-rgb),.14), rgba(var(--brand-rgb),.02) 55%, transparent); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.4), 0 40px 90px -42px rgba(var(--brand-rgb),.6); }
-.plan-card.best:hover { transform: translateY(-4px); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.55), 0 46px 100px -40px rgba(var(--brand-rgb),.7); }
+.plan-card.best { margin-top: -36px; padding: 56px 36px 42px; border-color: rgba(var(--brand-rgb),.6); background: linear-gradient(180deg, rgba(var(--brand-rgb),.2), rgba(var(--brand-rgb),.03) 55%, transparent); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.5), 0 54px 120px -36px rgba(var(--brand-rgb),.8); }
+.plan-card.best:hover { transform: translateY(-5px); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),.65), 0 60px 130px -34px rgba(var(--brand-rgb),.9); }
 .plan-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); padding: 5px 14px; border-radius: var(--r-pill); background: linear-gradient(180deg, var(--gold-soft), var(--gold-deep)); color: var(--accent-ink); font-weight: 800; font-size: var(--fs-2xs); white-space: nowrap; box-shadow: 0 8px 20px -8px rgba(var(--brand-rgb),.6); }
 .plan-name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); color: #fff; }
-.plan-card.best .plan-name { color: var(--gold); }
+.plan-card.best .plan-name { color: var(--gold); font-size: var(--fs-2xl); letter-spacing: -.01em; }
 .plan-price { display: flex; align-items: baseline; gap: 6px; margin: 12px 0 2px; min-height: 56px; }
 /* Precio SÓLIDO (sin background-clip:text → nunca queda invisible, como pasaba con el "59" del Pro). */
 .plan-price b { font-family: var(--font-num); font-weight: 800; font-size: clamp(40px, 5vw, 54px); color: #fff; letter-spacing: var(--num-spacing); line-height: 1; font-variant-numeric: tabular-nums; }
-/* Mismo TAMAÑO de precio en los 3 (Juan): el Pro destaca por altura+oro, no por número más grande. Solo glow. */
-.plan-card.best .plan-price b { text-shadow: 0 0 50px rgba(var(--brand-rgb),.3); }
+/* Pro: precio MÁS GRANDE además del glow → refuerza "vale más" (Juan, 28-jun: la columna grande). */
+.plan-card.best .plan-price b { font-size: clamp(52px, 6.4vw, 72px); text-shadow: 0 0 50px rgba(var(--brand-rgb),.35); }
+.plan-card.best .plan-price { min-height: 72px; }
+.plan-card.best .plan-feats li { font-size: var(--fs-base); }
+.plan-card.best .plan-cta { padding: 16px; font-size: var(--fs-base); }
 .plan-price i { font-style: normal; font-size: var(--fs-base); color: var(--muted); font-weight: 600; }
 .plan-was { align-self: center; color: var(--faint); text-decoration: line-through; font-family: var(--font-num); font-size: var(--fs-lg); font-weight: 700; }
 .plan-billnote { font-size: var(--fs-3xs); color: var(--faint); margin-bottom: 14px; min-height: 14px; }
@@ -4877,3 +5091,96 @@ html[data-saver='1'] .side-beast-vid { display: none; }
    perfecta (se mitiga alineando celdas a la derecha); gana el "1" limpio y único. */
 .app { --num-figs: proportional-nums; }
 .app, .app * { font-variant-numeric: var(--num-figs) !important; }
+
+/* ════════ PREPARAR MAÑANA (Juan, 28-jun) ════════ pestaña forward que sale de Caja. Mismos tokens que el
+   cockpit: oscuro + lima, estado = TAG (no botón), € vía <Money>, CTAs reales en lima. */
+.prep { padding: clamp(8px, 1.4vw, 22px) clamp(8px, 1.4vw, 18px) 40px; max-width: 1180px; margin: 0 auto; }
+.prep-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.prep-h-tx h1 { font-family: var(--font-display); font-weight: var(--title-weight, 650); font-size: var(--fs-2xl); letter-spacing: -.02em; }
+.prep-h-tx p { color: var(--muted); font-size: var(--fs-sm); margin-top: 5px; max-width: 560px; line-height: 1.45; }
+/* segmentado Lista / Por proveedor */
+.prep-toggle { display: inline-flex; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 4px; gap: 2px; flex: none; }
+.prep-toggle button { border: 0; background: transparent; color: var(--muted); font-family: var(--font); font-weight: 600; font-size: var(--fs-sm); padding: 7px 16px; border-radius: var(--r-pill); cursor: pointer; transition: background .2s ease, color .2s ease; }
+.prep-toggle button.on { background: var(--brand); color: var(--accent-ink, #16240a); }
+/* resumen */
+.prep-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-bottom: 16px; background: rgba(10,10,14,.5); border: 1px solid var(--line); border-radius: var(--card-r); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.prep-strip .ps { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 8px; position: relative; }
+.prep-strip .ps + .ps::before { content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: var(--line); }
+.prep-strip .ps-v { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 3vw, 34px); }
+.prep-strip .ps-v.ok { color: var(--ok); }
+.prep-strip .ps-l { font-size: var(--fs-2xs); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+/* tarjeta lista */
+.prep-card, .prep-sup { background: rgba(12,12,16,.6); border: 1px solid var(--line); border-radius: var(--card-r); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 24px 56px -40px rgba(0,0,0,.8); }
+.prep-it { display: flex; align-items: center; gap: 14px; padding: 13px clamp(12px, 1.4vw, 18px); border-top: 1px solid var(--line); }
+.prep-it:first-child { border-top: 0; }
+.prep-it.done { opacity: .72; }
+.prep-th { width: 50px; height: 50px; border-radius: var(--r-chip); overflow: hidden; flex: none; background: var(--bg-2, #0b0b0e); border: 1px solid var(--line-strong, rgba(255,255,255,.12)); }
+.prep-th.sm { width: 38px; height: 38px; border-radius: var(--r-chip); }
+.prep-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.prep-grow { flex: 1; min-width: 0; }
+.prep-nm { font-weight: 650; font-size: var(--fs-base); color: #fff; letter-spacing: -.01em; }
+.prep-meta { color: var(--muted); font-size: var(--fs-xs); margin-top: 2px; font-family: var(--font-num); }
+/* MISMO sistema que el resto de barras (Juan, lo repite hace días): grosor/radio del token único --bar-h/--bar-r,
+   no hardcodeado → responden al control "Grosor de barras" y combinan con las demás. */
+.prep-bar { display: block; height: var(--bar-h); border-radius: var(--bar-r); background: rgba(255,255,255,.08); overflow: hidden; margin-top: 8px; max-width: 420px; }
+.prep-bar > i { display: block; height: 100%; border-radius: var(--bar-r); }
+.prep-bar.b-bad > i { background: linear-gradient(90deg, #ff2424, #ff6a6a); }
+.prep-bar.b-warn > i { background: linear-gradient(90deg, var(--warn), #ffd98a); }
+.prep-bar.b-ok > i { background: linear-gradient(90deg, #10b981, #6ee7b7); }
+/* stepper de cantidad */
+.prep-qty { display: inline-flex; align-items: center; gap: 9px; background: rgba(255,255,255,.05); border: 1px solid var(--line-strong, rgba(255,255,255,.12)); border-radius: var(--r-chip); padding: 5px 9px; flex: none; }
+.prep-qty[data-off='1'] { opacity: .4; pointer-events: none; }
+.prep-qty .pq-lab { color: var(--faint); font-size: var(--fs-2xs); }
+.prep-qty button { width: 24px; height: 24px; border-radius: var(--r-input); border: 0; background: rgba(255,255,255,.08); color: #fff; font-size: var(--fs-base); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.prep-qty button:hover { background: rgba(255,255,255,.16); }
+.prep-qty b { min-width: 58px; text-align: center; font-weight: 650; font-size: var(--fs-sm); font-family: var(--font-num); }
+/* estado = SOLO LECTURA (tag con punto, NUNCA botón) */
+.prep-st { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: var(--fs-xs); white-space: nowrap; flex: none; }
+.prep-st::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.prep-st.alta { color: #ff5656; } .prep-st.alta::before { background: #ff2e2e; box-shadow: 0 0 9px rgba(255,46,46,.9); }
+.prep-st.media { color: var(--warn); } .prep-st.media::before { background: var(--warn); }
+.prep-st.ok { color: var(--ok); } .prep-st.ok::before { background: var(--ok); }
+/* CTA real (clicable) → sí tiene pinta de botón */
+.prep-foot { display: flex; align-items: center; gap: 14px; padding: 14px clamp(12px, 1.4vw, 18px); border-top: 1px solid var(--line); flex-wrap: wrap; }
+.prep-cta { display: inline-flex; align-items: center; gap: 9px; background: var(--brand); color: var(--accent-ink, #16240a); font-family: var(--font); font-weight: 700; font-size: var(--fs-sm); border: 0; border-radius: var(--r-chip); padding: 11px 18px; cursor: pointer; transition: transform .12s ease, filter .2s ease; }
+.prep-cta:hover { filter: brightness(1.06); } .prep-cta:active { transform: scale(.97); }
+.prep-cta.sm { font-size: var(--fs-xs); padding: 9px 14px; }
+.prep-cta svg { width: 17px; height: 17px; }
+.prep-foot-note { margin-left: auto; color: var(--faint); font-size: var(--fs-xs); }
+/* € dentro del botón lima → tinta oscura para que se lea */
+.money.onbrand, .money.onbrand .money-u { color: var(--accent-ink, #16240a); }
+/* vista por proveedor */
+.prep-prov { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.prep-sup-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.prep-sup-h b { font-weight: 650; font-size: var(--fs-base); }
+.prep-sup-tot { margin-left: auto; font-family: var(--font-num); font-weight: 650; }
+.prep-foot.sm { padding: 12px 16px; }
+.prep-empty { padding: 40px 18px; text-align: center; color: var(--muted); font-size: var(--fs-sm); background: rgba(10,10,14,.4); border: 1px dashed var(--line-strong, rgba(255,255,255,.14)); border-radius: var(--card-r); }
+
+/* Caja: al quitar Stock para mañana, Platos ocupa el ANCHO COMPLETO de la fila inferior (Juan, 28-jun). */
+.caja-full .ck-extra-1 { grid-template-columns: 1fr; }
+.caja-full .ck-extra-1 .ck-plato-bar { max-width: none; }
+
+/* ════════ Caja: UN rectángulo con 4 KPIs equidistantes + Caja cuadrada en barra discreta (Juan, 28-jun) ════════ */
+.caja-full .ck-statrow-top { margin: 0; justify-content: space-between; }
+.caja-full .ck-statrow-top .rstat { flex: 1 1 0; min-width: 0; }
+.caja-full .ck-statrow-top .rstat-val { font-size: clamp(24px, 2.7vw, 38px); }
+/* total de HOY: lima (cabecera) pero MISMO alto y baseline que los otros 3 → alineado y equidistante */
+.rs-hoy .rstat-val, .rs-hoy .rstat-val i { color: var(--brand); }
+/* barra Caja cuadrada: ancha y discreta (importante pero sin gritar) */
+.caja-full .ck-cuadre-bar { display: flex; align-items: center; gap: 12px; padding: 12px clamp(16px, 2vw, 24px);
+  border-radius: var(--card-r); background: rgba(255,255,255,.035); border: 1px solid var(--line); }
+.ck-cuadre-bar .ck-cuadre-ic { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: rgba(52,211,153,.16); border: 1px solid rgba(52,211,153,.42); flex: none; }
+.ck-cuadre-bar .ck-cuadre-ic svg { width: 14px; height: 14px; }
+.ck-cuadre-bar b { font-weight: 650; font-size: var(--fs-base); color: var(--ok); }
+.ck-cuadre-bar .ccb-sub { color: var(--muted); font-size: var(--fs-sm); }
+.ck-cuadre-bar.warn { background: rgba(245,179,65,.07); border-color: rgba(245,179,65,.3); }
+.ck-cuadre-bar.warn .ck-cuadre-ic { background: rgba(245,179,65,.16); border-color: rgba(245,179,65,.45); }
+.ck-cuadre-bar.warn b { color: var(--warn); }
+/* método de pago: ICONO (billete/tarjeta/casa) en vez del cuadradito (Juan, 28-jun) */
+.day-row .lbl .m-ic { width: 17px; height: 17px; display: inline-grid; place-items: center; flex: none; background: none; border-radius: 0; box-shadow: none; }
+.day-row .lbl .m-ic svg { width: 100%; height: 100%; }
+.day-row.on .lbl .m-ic { box-shadow: none; }
+
+/* "por método" tras el título de Caja del día (ya no repite el total) */
+.turno-name .turno-tag { font-size: var(--fs-sm); color: var(--faint); font-weight: 500; margin-left: 2px; }

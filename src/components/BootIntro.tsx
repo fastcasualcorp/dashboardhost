@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import { gsap } from 'gsap'
 import { playSweep } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
@@ -18,10 +18,20 @@ function savedBeast() {
   }
 }
 
+// Hex (#c6ff00) → "198,255,0" para alimentar var(--brand-rgb) en la intro (que vive FUERA de .app, así que
+// no le llega el data-accent). El glow, el anillo y el bloom del logo siguen el color de la bestia/acento.
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+  const n = parseInt(full, 16)
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`
+}
+
 export default function BootIntro({ onDone }: { onDone: () => void }) {
   const root = useRef<HTMLDivElement>(null)
   const finished = useRef(false)
   const beast = savedBeast()
+  const accentRgb = hexToRgb(beast.color) // glow + partículas + anillo de la intro = color de acento de la bestia
   // Nombre del local del cliente (multi-tenant) → la intro es "LOGO × [local]".
   const local = (() => { try { return localStorage.getItem('rebell-profile-name') || '' } catch { return '' } })()
 
@@ -76,11 +86,11 @@ export default function BootIntro({ onDone }: { onDone: () => void }) {
   }, [onDone])
 
   return (
-    <div className="boot boot-reveal" ref={root} role="presentation">
-      {/* Fondo: bloom cálido + glitter WebGL SIEMPRE. La intro es one-shot (~2s) → no es gasto continuo, así
-         que no la gateamos por Salón frío ni reduced-motion (en reduced-motion la intro acaba en 140ms igual). */}
+    <div className="boot boot-reveal" ref={root} role="presentation" style={{ ['--brand-rgb' as string]: accentRgb, ['--brand' as string]: beast.color } as CSSProperties}>
+      {/* Fondo: bloom de ACENTO + glitter WebGL del color de acento. La intro es one-shot (~2s) → no es gasto
+         continuo, así que no la gateamos por Salón frío ni reduced-motion (en reduced-motion acaba en 140ms). */}
       <div className="br-glow" aria-hidden="true" />
-      <GlitterBG />
+      <GlitterBG color={beast.color} />
       <div className="br-stack">
         <div className="br-beast" aria-hidden="true">
           <img src={beast.img} alt="" draggable={false} />

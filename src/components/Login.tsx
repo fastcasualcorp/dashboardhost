@@ -18,7 +18,7 @@ const BGS = ['/img/login-bg.jpg', '/img/login-bg-2.jpg', '/img/login-bg-3.jpg', 
 export type Profile = { id: string; name: string; sub: string; beast: string }
 
 export const PROFILES: Profile[] = [
-  { id: 'bertamirans', name: 'Bertamiráns', sub: 'REBELL', beast: 'lion' },
+  { id: 'bertamirans', name: 'Bertamiráns', sub: 'REBELL', beast: 'tiger' },
   { id: 'madrid', name: 'Madrid Centro', sub: 'REBELL', beast: 'panda' },
   { id: 'barcelona', name: 'Barcelona', sub: 'REBELL', beast: 'fox' },
   { id: 'central', name: 'Administración', sub: 'Central', beast: 'panther' },

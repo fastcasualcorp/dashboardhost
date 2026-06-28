@@ -51,7 +51,23 @@ export type Mesa = {
   merged?: Mesa[] // si es un BANCO fusionado: guarda las mesas originales para poder "Separar"
 }
 
-const KEY = 'rebell-salon-v1'
+const KEY_BASE = 'rebell-salon-v1'
+
+/* Caché del plano POR LOCAL. Antes era UNA sola key global → al cambiar de local, el TPV/Salón mostraba las
+   mesas del local anterior (fuga entre negocios). Ahora la key combina DOS dimensiones para separar en
+   cualquier caso: el local real de la sesión (localId vía app_metadata) Y el perfil elegido en el selector
+   "¿Quién abre caja?" (`rebell-profile-last`). Así, aunque varios locales del selector compartan una misma
+   sesión Supabase (mismo localId), cada uno tiene su propio plano. Sin nada → 'anon'. (Juan, 30-jun) */
+function salonScope(): string {
+  let prof: string | null = null
+  try {
+    prof = localStorage.getItem('rebell-profile-last')
+  } catch {
+    /* sin localStorage */
+  }
+  return `${localId() || 'anon'}__${prof || 'x'}`
+}
+const salonKey = () => `${KEY_BASE}:${salonScope()}`
 
 // Plano de arranque (para que no esté vacío): unas mesas colocadas con gracia.
 export const DEFAULT_SALON: Mesa[] = [
@@ -65,7 +81,18 @@ export const DEFAULT_SALON: Mesa[] = [
 
 export function loadSalon(): Mesa[] {
   try {
-    const raw = localStorage.getItem(KEY)
+    const k = salonKey()
+    let raw = localStorage.getItem(k)
+    // Migración una vez: si este local aún no tiene caché propia pero existe la antigua key GLOBAL, la adopta
+    // para ESTE local y borra la global (era la que filtraba el plano entre locales). (Juan, 30-jun)
+    if (!raw) {
+      const legacy = localStorage.getItem(KEY_BASE)
+      if (legacy) {
+        localStorage.setItem(k, legacy)
+        localStorage.removeItem(KEY_BASE)
+        raw = legacy
+      }
+    }
     if (raw) {
       const arr = JSON.parse(raw)
       if (Array.isArray(arr) && arr.length) return arr as Mesa[]
@@ -78,7 +105,7 @@ export function loadSalon(): Mesa[] {
 
 export function saveSalon(mesas: Mesa[]) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(mesas))
+    localStorage.setItem(salonKey(), JSON.stringify(mesas))
   } catch {
     /* sin localStorage */
   }

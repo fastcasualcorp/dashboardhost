@@ -10,7 +10,7 @@ import { Card, SectionHeader, Stat, StatRow, KpiTile, BarRow, BarChart, Donut, B
 import { ACCENTS, type AccentKey } from './../components/SettingsPanel'
 import { SFX } from '../lib/sfx'
 import { SFX_LIST, getSfxVolume, setSfxVolume, play, playSweep, playGlitch, type SfxName } from '../lib/sound'
-import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, RADIUS_TOKENS, RADIUS_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadRadius, saveRadius, applyRadius, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT, loadBar, saveBar, applyBar, BAR_MIN, BAR_MAX, BAR_DEFAULT } from '../lib/designTokens'
+import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, RADIUS_TOKENS, RADIUS_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadRadius, saveRadius, applyRadius, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT, loadBar, saveBar, applyBar, BAR_MIN, BAR_MAX, BAR_DEFAULT, loadIntensity, saveIntensity, applyIntensity, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, loadScale, saveScale, applyScale, setUiScale, SCALE_MIN, SCALE_MAX, SCALE_DEFAULT } from '../lib/designTokens'
 import { toggleAudit, stopAudit, isAuditing } from '../lib/radiusAudit'
 
 type Theme = 'dark' | 'light'
@@ -66,6 +66,8 @@ function DesignSystemEditor() {
   const [numW, setNumW] = useState<number>(() => loadNumW())
   const [titleW, setTitleW] = useState<number>(() => loadTitleW())
   const [barH, setBarH] = useState<number>(() => loadBar())
+  const [intensity, setIntensity] = useState<number>(() => loadIntensity())
+  const [scale, setScale] = useState<number>(() => loadScale())
   const [rad, setRad] = useState<Record<string, number>>(() => loadRadius())
   const [audit, setAudit] = useState<boolean>(() => isAuditing())
   const [saved, setSaved] = useState(false)
@@ -77,31 +79,45 @@ function DesignSystemEditor() {
   const liveNumW = useRef(numW)
   const liveTitleW = useRef(titleW)
   const liveBarH = useRef(barH)
+  const liveIntensity = useRef(intensity)
+  const liveScale = useRef(scale)
   const liveRad = useRef(rad)
-  const setBH = (v: number) => { liveBarH.current = v; setBarH(v); applyBar(v) }
+  // TODOS los setters APLICAN y GUARDAN al instante (Juan, 28-jun): los cambios persisten sin depender del
+  // botón "Aplicar" → lo que tocas se queda guardado aunque recargues o cambies de local.
+  const setBH = (v: number) => { liveBarH.current = v; setBarH(v); applyBar(v); saveBar(v) }
+  // Intensidad de color: en vivo (satura el panel al instante). 1 = normal.
+  const setInt = (v: number) => { liveIntensity.current = v; setIntensity(v); applyIntensity(v); saveIntensity(v) }
+  // Tamaño de la interfaz: en vivo (zoom del contenido). setUiScale aplica + guarda + avisa al mando flotante.
+  const setSc = (v: number) => { liveScale.current = v; setScale(v); setUiScale(v) }
   // Radios: en vivo (cambia --r-input/--r-chip/--card-r en .app → toda la app se redondea al instante).
-  const setR = (k: string, v: number) => { const next = { ...liveRad.current, [k]: v }; liveRad.current = next; setRad(next); applyRadius(next) }
+  const setR = (k: string, v: number) => { const next = { ...liveRad.current, [k]: v }; liveRad.current = next; setRad(next); applyRadius(next); saveRadius(next) }
   // Modo auditor: pinta cada elemento del color de su token de radio (rojo = fuera del sistema). Se limpia al salir.
   const onAudit = () => { const on = toggleAudit(); setAudit(on); play(on ? 'toggle' : 'tap', 0.5) }
   useEffect(() => () => { stopAudit() }, [])
+  // Sincroniza el slider de tamaño cuando se cambia desde el mando flotante (o "Ajustar a pantalla").
+  useEffect(() => {
+    const onScale = (e: Event) => { const v = (e as CustomEvent<number>).detail; liveScale.current = v; setScale(v) }
+    window.addEventListener('rebell:uiscale', onScale)
+    return () => window.removeEventListener('rebell:uiscale', onScale)
+  }, [])
   // Anchura de fuente: en vivo (solo transform → cero reflow). Estira los números-héroe.
-  const setW = (v: number) => { liveWide.current = v; setWide(v); applyWide(v) }
+  const setW = (v: number) => { liveWide.current = v; setWide(v); applyWide(v); saveWide(v) }
   // Tracking (espaciado entre cifras): en vivo, controla --num-spacing.
-  const setTr = (v: number) => { liveTrack.current = v; setTrack(v); applyTrack(v) }
+  const setTr = (v: number) => { liveTrack.current = v; setTrack(v); applyTrack(v); saveTrack(v) }
   // Peso de números y de títulos (por uso): en vivo.
-  const setNW = (v: number) => { liveNumW.current = v; setNumW(v); applyNumW(v) }
-  const setTW = (v: number) => { liveTitleW.current = v; setTitleW(v); applyTitleW(v) }
+  const setNW = (v: number) => { liveNumW.current = v; setNumW(v); applyNumW(v); saveNumW(v) }
+  const setTW = (v: number) => { liveTitleW.current = v; setTitleW(v); applyTitleW(v); saveTitleW(v) }
   // Tipografía: mientras ARRASTRAS solo se mueve la muestra (setType) → cero reflow de la app = fluido.
   // Al SOLTAR (commitType) entra en toda la app de una vez (un solo cambio, sin "golpes").
   const dragType = (k: string, v: number) => { const next = { ...liveType.current, [k]: v }; liveType.current = next; setType(next) }
-  const commitType = () => applyType(liveType.current)
+  const commitType = () => { applyType(liveType.current); saveType(liveType.current) }
   // Botones: en vivo (en Canon no se ven CTAs reales → no salta nada, y el botón-demo cambia al momento).
-  const setB = (k: string, v: number) => { const next = { ...liveBtn.current, [k]: v }; liveBtn.current = next; setBtn(next); applyBtn(next) }
-  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveRadius(liveRad.current); saveWide(liveWide.current); saveTrack(liveTrack.current); saveNumW(liveNumW.current); saveTitleW(liveTitleW.current); saveBar(liveBarH.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
+  const setB = (k: string, v: number) => { const next = { ...liveBtn.current, [k]: v }; liveBtn.current = next; setBtn(next); applyBtn(next); saveBtn(next) }
+  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveRadius(liveRad.current); saveWide(liveWide.current); saveTrack(liveTrack.current); saveNumW(liveNumW.current); saveTitleW(liveTitleW.current); saveBar(liveBarH.current); saveIntensity(liveIntensity.current); saveScale(liveScale.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
   const reset = () => {
-    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveRad.current = { ...RADIUS_DEFAULTS }; liveWide.current = WIDE_DEFAULT; liveTrack.current = TRACK_DEFAULT; liveNumW.current = NUMW_DEFAULT; liveTitleW.current = TITLEW_DEFAULT; liveBarH.current = BAR_DEFAULT
-    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setRad({ ...RADIUS_DEFAULTS }); setWide(WIDE_DEFAULT); setTrack(TRACK_DEFAULT); setNumW(NUMW_DEFAULT); setTitleW(TITLEW_DEFAULT); setBarH(BAR_DEFAULT)
-    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyRadius(RADIUS_DEFAULTS); applyWide(WIDE_DEFAULT); applyTrack(TRACK_DEFAULT); applyNumW(NUMW_DEFAULT); applyTitleW(TITLEW_DEFAULT); applyBar(BAR_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveRadius(RADIUS_DEFAULTS); saveWide(WIDE_DEFAULT); saveTrack(TRACK_DEFAULT); saveNumW(NUMW_DEFAULT); saveTitleW(TITLEW_DEFAULT); saveBar(BAR_DEFAULT)
+    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveRad.current = { ...RADIUS_DEFAULTS }; liveWide.current = WIDE_DEFAULT; liveTrack.current = TRACK_DEFAULT; liveNumW.current = NUMW_DEFAULT; liveTitleW.current = TITLEW_DEFAULT; liveBarH.current = BAR_DEFAULT; liveIntensity.current = INTENSITY_DEFAULT; liveScale.current = SCALE_DEFAULT
+    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setRad({ ...RADIUS_DEFAULTS }); setWide(WIDE_DEFAULT); setTrack(TRACK_DEFAULT); setNumW(NUMW_DEFAULT); setTitleW(TITLEW_DEFAULT); setBarH(BAR_DEFAULT); setIntensity(INTENSITY_DEFAULT); setScale(SCALE_DEFAULT)
+    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyRadius(RADIUS_DEFAULTS); applyWide(WIDE_DEFAULT); applyTrack(TRACK_DEFAULT); applyNumW(NUMW_DEFAULT); applyTitleW(TITLEW_DEFAULT); applyBar(BAR_DEFAULT); applyIntensity(INTENSITY_DEFAULT); applyScale(SCALE_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveRadius(RADIUS_DEFAULTS); saveWide(WIDE_DEFAULT); saveTrack(TRACK_DEFAULT); saveNumW(NUMW_DEFAULT); saveTitleW(TITLEW_DEFAULT); saveBar(BAR_DEFAULT); saveIntensity(INTENSITY_DEFAULT); saveScale(SCALE_DEFAULT)
     play('toggle', 0.5)
   }
   return (
@@ -210,6 +226,45 @@ function DesignSystemEditor() {
           <input type="range" min={BAR_MIN} max={BAR_MAX} step={1} value={barH}
             onChange={(e) => setBH(parseInt(e.target.value))} aria-label="Grosor de barras" />
           <span className="ds-px tnum">{barH}px</span>
+        </div>
+      </div>
+
+      <div className="ds-row ds-row-wide">
+        <div className="ds-meta">
+          <b>Intensidad de color</b>
+          <small>vibración de los colores del panel</small>
+        </div>
+        <div className="ds-sample" style={{ width: 120 }}>
+          <span style={{ display: 'flex', height: 22, borderRadius: 100, overflow: 'hidden', filter: intensity <= 1.001 ? 'none' : `saturate(${intensity})` }}>
+            <i style={{ flex: 1, background: 'var(--ok)' }} />
+            <i style={{ flex: 1, background: 'var(--gold)' }} />
+            <i style={{ flex: 1, background: 'var(--card)' }} />
+            <i style={{ flex: 1, background: 'var(--warn)' }} />
+          </span>
+        </div>
+        <div className="ds-ctrl">
+          <input type="range" min={INTENSITY_MIN} max={INTENSITY_MAX} step={0.05} value={intensity}
+            onChange={(e) => setInt(parseFloat(e.target.value))} aria-label="Intensidad de color" />
+          <span className="ds-px tnum">{Math.round(intensity * 100)}%</span>
+        </div>
+      </div>
+
+      <div className="ds-row ds-row-wide">
+        <div className="ds-meta">
+          <b>Tamaño de la interfaz</b>
+          <small>agranda o encoge TODO el contenido para que quepa a tu medida (el menú no se toca)</small>
+        </div>
+        <div className="ds-sample" style={{ width: 120 }}>
+          <span style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 6, height: 30 }}>
+            <i style={{ display: 'block', width: 10, height: 10 * scale, background: 'var(--gold)', borderRadius: 3 }} />
+            <i style={{ display: 'block', width: 14, height: 18 * scale, background: 'var(--gold-soft, var(--gold))', borderRadius: 3 }} />
+            <i style={{ display: 'block', width: 10, height: 13 * scale, background: 'var(--gold)', borderRadius: 3 }} />
+          </span>
+        </div>
+        <div className="ds-ctrl">
+          <input type="range" min={SCALE_MIN} max={SCALE_MAX} step={0.02} value={scale}
+            onChange={(e) => setSc(parseFloat(e.target.value))} aria-label="Tamaño de la interfaz" />
+          <span className="ds-px tnum">{Math.round(scale * 100)}%</span>
         </div>
       </div>
 

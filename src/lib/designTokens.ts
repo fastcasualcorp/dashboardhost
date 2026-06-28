@@ -75,6 +75,20 @@ export const BAR_MIN = 8
 export const BAR_MAX = 34
 export const BAR_DEFAULT = 20
 
+// INTENSIDAD de color del panel (Juan 30-jun): satura los colores del área de contenido. 1 = normal.
+const INTENSITY_KEY = 'rebell-intensity-v1'
+export const INTENSITY_MIN = 1
+export const INTENSITY_MAX = 1.6
+export const INTENSITY_DEFAULT = 1
+
+// TAMAÑO de la interfaz (Juan 28-jun): zoom del ÁREA DE CONTENIDO para que cada usuario ajuste a su pantalla
+// hasta que le quede "a medida". Usa `zoom` (no transform) → REFLUYE, así que sigue siendo responsive.
+// 1 = tamaño base; <1 encoge (cabe más de un golpe), >1 agranda. El menú lateral no se toca (es el "marco").
+const SCALE_KEY = 'rebell-uiscale-v1'
+export const SCALE_MIN = 0.8
+export const SCALE_MAX = 1.2
+export const SCALE_DEFAULT = 1
+
 const read = (k: string, def: Record<string, number>): Record<string, number> => {
   try {
     const r = localStorage.getItem(k)
@@ -158,6 +172,49 @@ export const loadBar = () => readNum(BAR_KEY, BAR_MIN, BAR_MAX, BAR_DEFAULT)
 export const saveBar = (v: number) => { try { localStorage.setItem(BAR_KEY, String(v)) } catch { /* */ } }
 export function applyBar(v: number) { const app = appEl(); if (app) app.style.setProperty('--bar-h', v + 'px') }
 
+// INTENSIDAD: satura SOLO el panel de contenido (.panel-main). La barra lateral y los overlays (scrim de
+// mesa, modales) cuelgan de .app por PORTAL → no se ven afectados, así que filtrar .panel-main es seguro
+// (no rompe el position:fixed de los overlays). Por DEFECTO 1 = SIN filtro → cero capa, cero coste/calor
+// (regla de ahorro de energía de Juan); la capa de saturación solo se crea al subir el slider.
+const panelEl = () => document.querySelector('.panel-main') as HTMLElement | null
+export const loadIntensity = () => readNum(INTENSITY_KEY, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT)
+export const saveIntensity = (v: number) => { try { localStorage.setItem(INTENSITY_KEY, String(v)) } catch { /* */ } }
+export function applyIntensity(v: number) { const el = panelEl(); if (el) el.style.filter = v <= 1.001 ? '' : `saturate(${v})` }
+
+// TAMAÑO: fija --ui-scale en .app; el CSS hace `zoom: var(--ui-scale)` sobre .panel-content (y compensa el
+// alto en las vistas a pantalla completa para que no quede hueco). 1 = sin tocar (cero coste).
+export const loadScale = () => readNum(SCALE_KEY, SCALE_MIN, SCALE_MAX, SCALE_DEFAULT)
+export const saveScale = (v: number) => { try { localStorage.setItem(SCALE_KEY, String(v)) } catch { /* */ } }
+export function applyScale(v: number) { const app = appEl(); if (app) app.style.setProperty('--ui-scale', String(v)) }
+// Cambia el tamaño desde CUALQUIER control (Canon o el mando flotante) y AVISA al resto para que se
+// sincronicen (los dos sliders muestran el mismo %). Aplica + guarda + emite evento.
+export function setUiScale(v: number) {
+  const clamped = Math.max(SCALE_MIN, Math.min(SCALE_MAX, v))
+  applyScale(clamped)
+  saveScale(clamped)
+  try { window.dispatchEvent(new CustomEvent('rebell:uiscale', { detail: clamped })) } catch { /* */ }
+}
+// "AJUSTAR A PANTALLA": calcula el % al que TODO el contenido de la vista actual cabe en el alto de la
+// pantalla, sin scroll (lo que aquí tenemos validado que se ve perfecto). Mide en bruto (--ui-scale=1),
+// divide alto-disponible / alto-que-pide, y lo deja redondeado y dentro de los topes.
+export function autoFitScale(): number {
+  const app = appEl()
+  const content = document.querySelector('.panel-content') as HTMLElement | null
+  if (!app || !content) return loadScale()
+  const prev = getComputedStyle(app).getPropertyValue('--ui-scale').trim() || '1'
+  app.style.setProperty('--ui-scale', '1') // medir en bruto
+  // Mide el contenido REAL de la vista. En Caja (inmersiva) es .ck-content; en el resto, el propio
+  // panel-content. (Así evitamos el alto fantasma del .wrap, que falseaba la medida.)
+  const target = (content.querySelector('.ck-content') as HTMLElement | null) || content
+  const required = target.scrollHeight // alto natural del contenido a escala 1
+  const avail = window.innerHeight
+  app.style.setProperty('--ui-scale', prev) // restaurar (el llamante aplica el valor final)
+  if (!required || !avail) return loadScale()
+  let s = (avail - 6) / required // -6px de respiro para que no roce el borde
+  s = Math.max(SCALE_MIN, Math.min(SCALE_MAX, s))
+  return Math.round(s * 100) / 100
+}
+
 // Al arrancar la app: re-aplica lo guardado para que el diseño persista entre recargas.
 export function applySavedDesign() {
   applyType(loadType())
@@ -168,4 +225,6 @@ export function applySavedDesign() {
   applyNumW(loadNumW())
   applyTitleW(loadTitleW())
   applyBar(loadBar())
+  applyIntensity(loadIntensity())
+  applyScale(loadScale())
 }

@@ -157,15 +157,17 @@ export function Stat({
   label,
   tone = 'gold',
   count = true,
+  className = '',
 }: {
   value: ReactNode
   unit?: string
   label: string
   tone?: 'gold' | 'green'
   count?: boolean
+  className?: string
 }) {
   return (
-    <div className="rstat">
+    <div className={'rstat' + (className ? ' ' + className : '')}>
       <b className={'rstat-val' + (tone === 'green' ? ' g' : '')}>
         {count ? <CountValue value={value} /> : value}
         {unit && <i>{unit}</i>}
@@ -178,6 +180,28 @@ export function Stat({
 /* Fila de Stats con separadores finos verticales (el patrón del hero de la Caja). */
 export function StatRow({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rstat-row ${className}`}>{children}</div>
+}
+
+/* CIFRA INLINE única (€, %, h, kg…) — número + unidad pequeña apoyada en la BASELINE, color de acento.
+   El gemelo inline de <Stat>: ÚSALA para CUALQUIER cifra dentro de texto/filas → imposible descuadrar una
+   nueva (regla de Juan: "todo componentes únicos"). El canon vive en .money / .rstat-val. */
+export function Money({
+  value,
+  unit = '€',
+  tone,
+  className = '',
+}: {
+  value: ReactNode
+  unit?: string
+  tone?: 'ink' | 'muted'
+  className?: string
+}) {
+  return (
+    <span className={'money' + (tone ? ' money-' + tone : '') + (className ? ' ' + className : '')}>
+      <span className="money-num tnum">{value}</span>
+      {unit ? <i className="money-u">{unit}</i> : null}
+    </span>
+  )
 }
 
 /* Fila con barra de proporción (efectivo/tarjeta/categorías…). */
