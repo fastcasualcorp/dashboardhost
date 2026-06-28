@@ -278,13 +278,10 @@ export default function Caja() {
           </div>
 
           <div className="ck-content">
-            {/* identidad arriba-izquierda, flotando a la altura de los botones de tema/sonido */}
-            <div className="ck-ident">
-              <span className="ck-flag" aria-hidden="true" />
-              <div className="ck-ident-tx"><b>REBELL · Bertamiráns</b><span>A Coruña · España</span></div>
-            </div>
+            {/* La identidad del local (bandera + nombre) ahora vive SIEMPRE en la cabecera (Shell), visible en
+                todas las pestañas → aquí ya no se repite. */}
 
-            {/* navegador de fecha: tira de días (separados por línea fina, como el StatRow). Va DEBAJO de la identidad */}
+            {/* navegador de fecha: tira de días (separados por línea fina, como el StatRow) */}
             <div className="ck-datenav">
               <span className="ckd-spacer" aria-hidden="true" />
               <div className="ckd-nav">

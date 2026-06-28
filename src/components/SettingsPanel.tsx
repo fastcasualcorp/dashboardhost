@@ -95,10 +95,11 @@ export default function SettingsPanel({
           <span className="sp-k">Email</span>
           <span className="sp-v">rebell@bertamirans.com</span>
         </div>
-        <button className="sp-field sp-field-btn" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))}>
+        {/* El cambio de plan se hace desde la PASTILLA de plan de la cabecera (siempre visible). Aquí solo info. */}
+        <div className="sp-field">
           <span className="sp-k">Plan</span>
-          <span className="sp-v gold">FAT SMASH Pro <span className="sp-plan-go">Cambiar →</span></span>
-        </button>
+          <span className="sp-v gold">FAT SMASH Pro</span>
+        </div>
         <button className={'sp-action' + (pwOpen ? ' on' : '')} onClick={() => setPwOpen((o) => !o)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="5" y="11" width="14" height="9" rx="2" />

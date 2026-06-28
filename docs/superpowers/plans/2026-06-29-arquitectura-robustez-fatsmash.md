@@ -1,5 +1,10 @@
 # Plan de robustez/arquitectura FAT SMASH (post-auditoría 28-jun)
 
+## ✅ PASO 0 — acordado con Juan (arrancar por aquí, antes del resto del plan)
+
+1. **"Modo demo vs real" con un interruptor:** los datos inventados solo en modo DEMO (escaparate para vender); el cliente real SIEMPRE lee de su base de datos. Mata el bloqueante #1 (datos falsos) sin perder la demo bonita. Hoy ya existe `isDemoMode()`/`setDemoMode()` → ampliarlo para que las secciones lean de Supabase cuando NO es demo.
+2. **Arrancar el plan #1 (datos reales):** es la madre de todo. Montar la PRIMERA entidad de verdad — **Caja leyendo de Supabase con aislamiento por negocio (`local_id` + RLS)** — como plantilla para replicar en el resto de secciones.
+
 # Plan de acción por fases — FAT SMASH
 
 > **REGLA DE ORO DE TODO EL PLAN: NINGUNA tarea degrada la estética premium.** Todo es "fontanería" por debajo (cómo se cargan, guardan y protegen los datos). El diseño, los colores, las animaciones y el motion se quedan EXACTAMENTE igual. Donde haya esqueletos de carga nuevos (lazy), respetan los tokens actuales. Verificación visual con Playwright antes/después en cada fase para probar que la piel no se ha movido un píxel.

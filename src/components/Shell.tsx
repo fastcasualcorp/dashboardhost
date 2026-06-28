@@ -333,6 +333,13 @@ export default function Shell() {
     play('tap')
   }
 
+  // Identidad del LOCAL para la cabecera persistente (visible en TODAS las pestañas → el dueño con varios
+  // locales sabe siempre en cuál está). Nombre/ciudad del perfil guardado; plan visible y clicable.
+  const localName = (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-profile-name')) || 'Bertamiráns'
+  const localId = (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-profile')) || 'bertamirans'
+  const LOCAL_CITY: Record<string, string> = { bertamirans: 'A Coruña · España', madrid: 'Madrid · España', barcelona: 'Barcelona · España', central: 'Sede central · España' }
+  const localCity = LOCAL_CITY[localId] || 'España'
+
   return (
     <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent} data-resizing={resizing ? '1' : undefined} style={{ ['--den' as string]: density, ['--side-w' as string]: sideW + 'px' }}>
       <div className="bg-aura" />
@@ -406,7 +413,19 @@ export default function Shell() {
               <path d="M3 6h18M3 12h18M3 18h18" />
             </svg>
           </button>
+          {/* Identidad del local SIEMPRE visible (todas las pestañas) — el cliente sabe en qué local está. */}
+          <div className="top-ident">
+            <span className="ti-flag" aria-hidden="true" />
+            <div className="ti-tx">
+              <b>REBELL · {localName}</b>
+              <span>{localCity}</span>
+            </div>
+          </div>
           <div className="top-actions">
+            {/* Plan SIEMPRE visible y clicable (movido desde Ajustes) → abre la pantalla de Planes. */}
+            <button className="plan-pill" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Tu plan · ver y cambiar">
+              <span className="plan-pill-ic" aria-hidden="true">◆</span> Plan <b>Pro</b>
+            </button>
             {isDemoMode() && (
               <button className="demo-pill" onClick={() => setDemoMode(false)} title="Estás viendo datos de ejemplo. Pulsa para volver a los datos reales.">
                 <span className="demo-dot" /> MODO DEMO

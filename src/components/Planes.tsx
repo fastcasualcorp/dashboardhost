@@ -16,7 +16,7 @@ const fmtN = (n: number) => Math.round(n).toLocaleString('es-ES')
 // CALCULADORA DE ROI: el dueño mueve su facturación → ve EN VIVO lo que Pro le devuelve al mes/año.
 // "Vender el plan con su propio retorno" (norte de producto de Juan, 28-jun).
 function RoiCalc() {
-  const MIN = 3000, MAX = 80000
+  const MIN = 3000, MAX = 1500000
   const [rev, setRev] = useState(18000)
   const total = LEVERS.reduce((s, l) => s + rev * l.pct, 0)
   const roi = total / PRO_PRICE
@@ -33,12 +33,12 @@ function RoiCalc() {
           <span className="roi-revval"><b>{fmtN(rev)}</b><i>€</i></span>
         </div>
         <input
-          id="roi-rev" className="roi-range" type="range" min={MIN} max={MAX} step={500} value={rev}
+          id="roi-rev" className="roi-range" type="range" min={MIN} max={MAX} step={1000} value={rev}
           onChange={(e) => setRev(parseInt(e.target.value))}
           style={{ ['--p' as string]: pct + '%' }}
           aria-label="Tu facturación mensual"
         />
-        <div className="roi-scale"><span>3.000 €</span><span>80.000 €</span></div>
+        <div className="roi-scale"><span>3.000 €</span><span>1,5 M €</span></div>
       </div>
       <div className="roi-result">
         <div className="roi-big">
