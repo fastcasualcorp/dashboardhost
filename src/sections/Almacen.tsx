@@ -42,6 +42,9 @@ const PROD_BY: Record<string, Prod> = Object.fromEntries(PROD.map((p) => [p.id, 
 type Item = Almacen['items'][number]
 
 const e0 = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 0 })
+// Parseo número desde "5,6 kg" → 5.6 · y formato es-ES con coma decimal.
+const numOf = (s: string | number) => { const n = parseFloat(String(s).replace(',', '.').replace(/[^\d.]/g, '')); return isFinite(n) ? n : 0 }
+const fmtNum = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-ES', { maximumFractionDigits: 1 })
 const cadOf = (it: Item) => it.cad ?? PROD_BY[it.pid]?.cad ?? 30
 const cadInfo = (d: number): { t: string; tone: 'red' | 'amber' | 'green'; lbl: string } =>
   d <= 2 ? { t: `${d}d`, tone: 'red', lbl: 'Caduca ya' }
@@ -74,7 +77,7 @@ export default function Almacen() {
   const [draft, setDraft] = useState<Draft>({ nombre: '', tipo: 'seco' })
   const [picker, setPicker] = useState(false) // catálogo de productos para cargar
   const [editPid, setEditPid] = useState<string | null>(null) // producto cuyo stock se está ajustando
-  const [idraft, setIdraft] = useState<{ nivel: number; actual: string; umbral: string }>({ nivel: 0, actual: '', umbral: '' })
+  const [idraft, setIdraft] = useState<{ actual: number; max: number; umbral: number }>({ actual: 0, max: 100, umbral: 0 })
 
   const sel = alms.find((a) => a.id === selId) ?? alms[0]
 
@@ -125,15 +128,22 @@ export default function Almacen() {
     updateAlmacenes((list) => list.map((a) => (a.id === sel.id ? { ...a, items: [...a.items, { pid, nivel: 92, actual: `0 ${p.unit}`, umbral: `0 ${p.unit}` }] } : a)))
     play('success', 0.5)
   }
-  // Ajustar el stock de un producto a mano (recepción / inventario). Abre el editor con sus valores.
+  // Ajustar el stock a mano (recepción / inventario). El % SALE de actual ÷ capacidad (con referencia,
+  // ya no un slider suelto). Si el producto no tenía capacidad, se deriva de su nivel actual. (Juan 28-jun)
   function openItem(it: Item) {
     setEditPid(it.pid)
-    setIdraft({ nivel: Math.round(it.nivel), actual: it.actual, umbral: it.umbral })
+    const a = numOf(it.actual)
+    const u = numOf(it.umbral)
+    const m = it.max && it.max > 0 ? it.max : (it.nivel > 0 ? Math.round((a / (it.nivel / 100)) * 10) / 10 : Math.max(a, u, 1) * 2)
+    setIdraft({ actual: a, max: m > 0 ? m : 1, umbral: u })
     play('tap', 0.5, 1.1)
   }
   function saveItem() {
     if (!editPid) return
-    setItemStock(sel.id, editPid, { nivel: Math.max(0, Math.min(100, idraft.nivel)), actual: idraft.actual.trim() || '—', umbral: idraft.umbral.trim() || '—' })
+    const unit = PROD_BY[editPid]?.unit ?? ''
+    const max = Math.max(0.1, idraft.max)
+    const nivel = Math.max(0, Math.min(100, Math.round((idraft.actual / max) * 100)))
+    setItemStock(sel.id, editPid, { nivel, actual: `${fmtNum(idraft.actual)} ${unit}`.trim(), umbral: `${fmtNum(idraft.umbral)} ${unit}`.trim(), max })
     setEditPid(null); play('success', 0.5, 1.1)
   }
   function quitarItem() {
@@ -142,6 +152,8 @@ export default function Almacen() {
     setEditPid(null); play('toggle', 0.5)
   }
   const editProd = editPid ? PROD_BY[editPid] : null
+  const editMax = Math.max(0.1, idraft.max) // capacidad (referencia del %)
+  const editPct = Math.max(0, Math.min(100, Math.round((idraft.actual / editMax) * 100))) // % = actual ÷ capacidad
 
   const selAlert = alertasDe(sel)
   const selCaducar = porCaducarDe(sel)
@@ -313,24 +325,29 @@ export default function Almacen() {
                 <button className="vtpv-dr-close" onClick={() => setEditPid(null)} aria-label="Cerrar"><Xmark /></button>
               </div>
 
-              <div className="alm-ie-pct" style={{ ['--tone' as string]: toneColor(estadoDe(idraft.nivel).tone) } as CSSProperties}>
-                <b>{Math.round(idraft.nivel)}<i>%</i></b>
-                <span className="alm-ie-track"><span className="alm-ie-fill" style={{ width: idraft.nivel + '%' }} /></span>
+              <div className="alm-ie-pct" style={{ ['--tone' as string]: toneColor(estadoDe(editPct).tone) } as CSSProperties}>
+                <b>{editPct}<i>%</i></b>
+                <span className="alm-ie-track"><span className="alm-ie-fill" style={{ width: editPct + '%' }} /></span>
               </div>
-              <input className="alm-ie-range" type="range" min={0} max={100} step={1} value={idraft.nivel}
-                onChange={(e) => setIdraft({ ...idraft, nivel: parseInt(e.target.value) })} aria-label="Nivel de stock" />
+              {/* el slider mueve la CANTIDAD real (0 → capacidad); el % sale solo. Debajo: cuánto hay de cuánto. */}
+              <input className="alm-ie-range" type="range" min={0} max={editMax} step={editMax / 100} value={idraft.actual}
+                onChange={(e) => setIdraft({ ...idraft, actual: Math.round(parseFloat(e.target.value) * 10) / 10 })} aria-label="Stock actual" />
+              <div className="alm-ie-readout"><b>{fmtNum(idraft.actual)}</b> de <b>{fmtNum(editMax)}</b> {editProd.unit}</div>
               <div className="alm-ie-quick">
-                <button onClick={() => setIdraft({ ...idraft, nivel: 100 })}>📦 Recepción · 100%</button>
-                <button onClick={() => setIdraft({ ...idraft, nivel: Math.min(100, idraft.nivel + 25) })}>＋25%</button>
-                <button onClick={() => setIdraft({ ...idraft, nivel: Math.max(0, idraft.nivel - 25) })}>−25%</button>
+                <button onClick={() => setIdraft({ ...idraft, actual: editMax })}>📦 Lleno · recepción</button>
+                <button onClick={() => setIdraft({ ...idraft, actual: Math.min(editMax, idraft.actual + editMax * 0.25) })}>＋25%</button>
+                <button onClick={() => setIdraft({ ...idraft, actual: Math.max(0, idraft.actual - editMax * 0.25) })}>−25%</button>
               </div>
 
               <div className="alm-ie-fields">
                 <label className="eb-field"><span>Stock actual <i className="alm-ie-unit">({editProd.unit})</i></span>
-                  <input value={idraft.actual} onChange={(e) => setIdraft({ ...idraft, actual: e.target.value })} placeholder={`p. ej. 24 ${editProd.unit}`} />
+                  <input type="number" inputMode="decimal" min={0} value={idraft.actual} onChange={(e) => setIdraft({ ...idraft, actual: numOf(e.target.value) })} />
                 </label>
-                <label className="eb-field"><span>Umbral mínimo</span>
-                  <input value={idraft.umbral} onChange={(e) => setIdraft({ ...idraft, umbral: e.target.value })} placeholder={`p. ej. 10 ${editProd.unit}`} />
+                <label className="eb-field"><span>Capacidad máx. <i className="alm-ie-unit">({editProd.unit})</i></span>
+                  <input type="number" inputMode="decimal" min={0} value={idraft.max} onChange={(e) => setIdraft({ ...idraft, max: numOf(e.target.value) })} />
+                </label>
+                <label className="eb-field"><span>Umbral mínimo <i className="alm-ie-unit">({editProd.unit})</i></span>
+                  <input type="number" inputMode="decimal" min={0} value={idraft.umbral} onChange={(e) => setIdraft({ ...idraft, umbral: numOf(e.target.value) })} />
                 </label>
               </div>
 

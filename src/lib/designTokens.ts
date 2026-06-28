@@ -37,8 +37,15 @@ const WIDE_KEY = 'rebell-fontwide-v1'
 // (Inter se ve más fina/estrecha que Clash → así se puede ensanchar hasta verse premium tipo SF Pro
 // "wide"). 1.0 = sin estirar. Pedido de Juan (28-jun): meterlo como control vivo en Canon.
 export const WIDE_MIN = 1.0
-export const WIDE_MAX = 1.12
+export const WIDE_MAX = 1.30
 export const WIDE_DEFAULT = 1.0
+
+// Espaciado entre caracteres (tracking) de los números-héroe → controla --num-spacing en vivo.
+// Juan lo llama "interlineado": cuánto aire hay entre cifras. 0 = neutro.
+const TRACK_KEY = 'rebell-fonttrack-v1'
+export const TRACK_MIN = -4
+export const TRACK_MAX = 3
+export const TRACK_DEFAULT = 0
 
 const read = (k: string, def: Record<string, number>): Record<string, number> => {
   try {
@@ -86,9 +93,25 @@ export function applyWide(v: number) {
   if (app) app.style.setProperty('--font-wide', String(v))
 }
 
+export function loadTrack(): number {
+  try {
+    const r = parseFloat(localStorage.getItem(TRACK_KEY) || '')
+    if (r >= TRACK_MIN && r <= TRACK_MAX) return r
+  } catch { /* sin localStorage */ }
+  return TRACK_DEFAULT
+}
+export function saveTrack(v: number) {
+  try { localStorage.setItem(TRACK_KEY, String(v)) } catch { /* */ }
+}
+export function applyTrack(v: number) {
+  const app = appEl()
+  if (app) app.style.setProperty('--num-spacing', v + 'px')
+}
+
 // Al arrancar la app: re-aplica lo guardado para que el diseño persista entre recargas.
 export function applySavedDesign() {
   applyType(loadType())
   applyBtn(loadBtn())
   applyWide(loadWide())
+  applyTrack(loadTrack())
 }

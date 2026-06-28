@@ -14,7 +14,7 @@ import { supabase } from './supabase'
 import { isDemoMode } from './demo'
 
 export type Tipo = 'obrador' | 'refrigerado' | 'congelado' | 'seco'
-export type Item = { pid: string; nivel: number; actual: string; umbral: string; cad?: number }
+export type Item = { pid: string; nivel: number; actual: string; umbral: string; cad?: number; max?: number }
 export type Almacen = { id: string; nombre: string; tipo: Tipo; foto: string; valor: number; ocupacion: number; items: Item[] }
 
 export const FOTO: Record<Tipo, string> = {
