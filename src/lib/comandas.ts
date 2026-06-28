@@ -35,7 +35,8 @@ function seed(now: number): Comanda[] {
 }
 
 let seq = 40
-let comandas: Comanda[] = seed(Date.now())
+// REAL: el tablero arranca VACÍO (la nube/realtime manda); la SEMILLA es solo DEMO (escaparate).
+let comandas: Comanda[] = isDemoMode() ? seed(Date.now()) : []
 
 function emit() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:comandas'))

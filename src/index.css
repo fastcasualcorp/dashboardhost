@@ -2902,6 +2902,12 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .vtpv-tot-nums b.gold { color: var(--gold); font-size: var(--fs-base); }
 .vtpv-empty { padding: 40px; text-align: center; color: var(--faint); font-size: var(--fs-sm); }
 
+/* Estado vacío honesto de Pedidos (real sin pedidos): emoji + título + apunte centrados */
+.ped-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 24px; text-align: center; }
+.ped-empty-emoji { font-size: 34px; line-height: 1; opacity: 0.9; }
+.ped-empty b { font-size: var(--fs-base); color: var(--ink); }
+.ped-empty span { max-width: 46ch; color: var(--faint); font-size: var(--fs-sm); line-height: 1.5; }
+
 /* ── Ventas TPV · rediseño canon §6 ── */
 .vtpv-export {
   display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--r-pill); cursor: pointer;

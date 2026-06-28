@@ -4,14 +4,20 @@ import { Card, SectionHeader, KpiTile, Badge, Grid } from '../components/ui'
 import { imgFor } from '../lib/products'
 import { eur0 } from '../lib/data'
 import { play } from '../lib/sound'
+import { isDemoMode } from '../lib/demo'
+import { useComandas, type Comanda } from '../lib/comandas'
+import { useVentas, ventasHoyCount } from '../lib/ventas'
 
-/* Reparto unificado por plataforma: pedidos + ingresos en un solo panel con tarta (donut + glow). */
-const PLAT_STATS: { plat: Plat; name: string; ped: number; ing: number }[] = [
+/* Reparto unificado por plataforma: pedidos + ingresos en un solo panel con tarta (donut + glow).
+   DEMO = escaparate con datos de ejemplo. REAL = se deriva de las comandas reales (cocina/online);
+   el delivery (Glovo/Uber/Just Eat) requiere integración de agregador → hasta entonces, estado vacío honesto. */
+const PLAT_STATS: PlatStat[] = [
   { plat: 'Local', name: 'Local / TPV', ped: 32, ing: 742 },
   { plat: 'Glovo', name: 'Glovo', ped: 26, ing: 486 },
   { plat: 'Uber Eats', name: 'Uber Eats', ped: 16, ing: 321 },
   { plat: 'Just Eat', name: 'Just Eat', ped: 10, ing: 238 },
 ]
+type PlatStat = { plat: Plat; name: string; ped: number; ing: number }
 
 /* ── Identidad de cada plataforma (color de marca + LOGO oficial; glifo de reserva) ──
    `logo` = SVG oficial de la marca en /public/img/brands/. Si el archivo no está, cae al glifo
@@ -85,27 +91,51 @@ const tot = (o: Order) => sub(o) + o.envio
 
 const ESTADOS: Estado[] = ['En cocina', 'En reparto', 'Entregado']
 
+/* ── REAL: deriva los pedidos de las comandas vivas (cocina / online / sala) ── */
+const SRC_TO_PLAT: Record<string, Plat> = { Sala: 'Local', Online: 'Local', Glovo: 'Glovo', 'Uber Eats': 'Uber Eats', 'Just Eat': 'Just Eat' }
+const hhmm = (t: number) => new Date(t).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+function comandaToOrder(c: Comanda): Order {
+  const plat = SRC_TO_PLAT[c.src] ?? 'Local'
+  const estado: Estado = c.status === 'lista' ? 'En reparto' : 'En cocina'
+  return {
+    num: '#' + String(c.n).padStart(4, '0'), hora: hhmm(c.born), plat,
+    cliente: c.mesa ? c.mesa : c.src === 'Online' ? 'Pedido online' : c.src,
+    tel: '—', dir: c.mesa ? `Sala · ${c.mesa}` : c.src,
+    items: c.items.map((i) => ({ name: i.name, qty: i.qty, price: 0 })),
+    envio: 0, comision: 0, pago: '—', repartidor: '—', eta: '—', estado,
+  }
+}
+function realPlatStats(cs: Comanda[]): PlatStat[] {
+  const m = new Map<Plat, number>()
+  for (const c of cs) {
+    const p = SRC_TO_PLAT[c.src] ?? 'Local'
+    m.set(p, (m.get(p) ?? 0) + 1)
+  }
+  return [...m.entries()].map(([plat, ped]) => ({ plat, name: plat === 'Local' ? 'Local / TPV' : plat, ped, ing: ped }))
+}
+
 /* Reparto por plataforma: tarta premium INTERACTIVA (igual que la de Caja) → al pasar por un quesito,
-   brilla, los demás se atenúan y el centro indica a qué plataforma corresponde. */
-function PlatBreakdown() {
+   brilla, los demás se atenúan y el centro indica a qué plataforma corresponde.
+   `money`: en DEMO mide por € (escaparate); en REAL mide por nº de pedidos (las comandas no llevan importe). */
+function PlatBreakdown({ stats, money }: { stats: PlatStat[]; money: boolean }) {
   const [hov, setHov] = useState<Plat | null>(null)
-  const totalIng = PLAT_STATS.reduce((s, p) => s + p.ing, 0)
-  const totalPed = PLAT_STATS.reduce((s, p) => s + p.ped, 0)
-  const maxIng = Math.max(...PLAT_STATS.map((p) => p.ing))
+  const totalIng = stats.reduce((s, p) => s + p.ing, 0) || 1
+  const totalPed = stats.reduce((s, p) => s + p.ped, 0)
+  const maxIng = Math.max(1, ...stats.map((p) => p.ing))
   const r = 30, C = 2 * Math.PI * r, GAP = 13
   let acc = 0
-  const active = hov ? PLAT_STATS.find((p) => p.plat === hov) ?? null : null
+  const active = hov ? stats.find((p) => p.plat === hov) ?? null : null
   return (
     <Card>
       <div className="card-head">
         <h3>Reparto por plataforma</h3>
-        <Badge tone="muted">hoy · {totalPed} ped · {eur0(totalIng)} €</Badge>
+        <Badge tone="muted">hoy · {totalPed} ped{money ? ` · ${eur0(stats.reduce((s, p) => s + p.ing, 0))} €` : ''}</Badge>
       </div>
       <div className="ped-plat" onPointerLeave={() => setHov(null)}>
         <div className={'day-donut' + (hov ? ' hov' : '')}>
           <svg viewBox="0 0 84 84">
             <circle className="dd-track" cx="42" cy="42" r={r} fill="none" strokeWidth="9.5" />
-            {PLAT_STATS.map((p) => {
+            {stats.map((p) => {
               const seg = (p.ing / totalIng) * C
               const len = Math.max(1, seg - GAP)
               const off = -(acc + GAP / 2)
@@ -123,7 +153,7 @@ function PlatBreakdown() {
           </div>
         </div>
         <div className="ped-legend">
-          {PLAT_STATS.map((p) => {
+          {stats.map((p) => {
             const logo = PLATFORMS[p.plat].logo
             return (
               <div className={'ped-leg-row' + (hov === p.plat ? ' on' : '')} key={p.plat} style={{ ['--seg' as string]: PLATFORMS[p.plat].color }} onPointerEnter={() => setHov(p.plat)}>
@@ -132,7 +162,7 @@ function PlatBreakdown() {
                   {p.name}
                 </span>
                 <span className="ped-leg-bar"><span style={{ width: (p.ing / maxIng) * 100 + '%', background: PLATFORMS[p.plat].color }} /></span>
-                <span className="ped-leg-val"><b className="tnum">{eur0(p.ing)} €</b><i className="tnum">{p.ped} ped</i></span>
+                <span className="ped-leg-val">{money ? <b className="tnum">{eur0(p.ing)} €</b> : null}<i className="tnum">{p.ped} ped</i></span>
               </div>
             )
           })}
@@ -142,7 +172,27 @@ function PlatBreakdown() {
   )
 }
 
+/* REAL sin pedidos: estado vacío honesto + apunte de que el delivery llega con la integración. */
+function DeliveryEmpty() {
+  return (
+    <Card>
+      <div className="card-head">
+        <h3>Reparto por plataforma</h3>
+        <Badge tone="muted">hoy · 0 ped</Badge>
+      </div>
+      <div className="ped-empty">
+        <span className="ped-empty-emoji">🛵</span>
+        <b>Aún no hay pedidos hoy</b>
+        <span>Los pedidos de sala y online entran aquí en vivo. El delivery (Glovo · Uber Eats · Just Eat) aparece al conectar tu integración de agregador.</span>
+      </div>
+    </Card>
+  )
+}
+
 export default function Pedidos() {
+  const demo = isDemoMode()
+  const comandas = useComandas()
+  useVentas() // re-render cuando entran ventas reales (KPI "pedidos hoy")
   const [sel, setSel] = useState<Order | null>(null)
   const [statusMap, setStatusMap] = useState<Record<string, Estado>>({})
   const stOf = (o: Order) => statusMap[o.num] ?? o.estado
@@ -151,42 +201,58 @@ export default function Pedidos() {
     setStatusMap((m) => ({ ...m, [num]: e }))
   }
 
+  // DEMO = escaparate (datos de ejemplo). REAL = comandas/ventas reales (o vacío honesto).
+  const money = demo // las comandas reales no llevan importe → en real no se muestra €
+  const orders = demo ? ORDERS : [...comandas].sort((a, b) => b.born - a.born).map(comandaToOrder)
+  const platStats = demo ? PLAT_STATS : realPlatStats(comandas)
+  const enCocina = demo ? 6 : comandas.filter((c) => c.status !== 'lista').length
+  const enReparto = demo ? 3 : comandas.filter((c) => c.status === 'lista').length
+  const pedidosHoy = demo ? 84 : ventasHoyCount()
+
   return (
     <div className="section">
-      <SectionHeader title="Pedidos" subtitle="Delivery · últimos pedidos" right={<Badge tone="amber">⚡ 6 en cocina</Badge>} />
+      <SectionHeader title="Pedidos" subtitle="Delivery · últimos pedidos" right={<Badge tone="amber">⚡ {enCocina} en cocina</Badge>} />
 
       <Grid cols={4} className="kpi-grid">
-        <KpiTile label="Pedidos hoy" value="84" unit="ped." delta="+12%" foot="vs ayer" trend="up" />
-        <KpiTile label="En cocina" value="6" unit="ped." delta="+2" foot="hace 1 min" trend="flat" />
-        <KpiTile label="En reparto" value="3" unit="ped." delta="-1" foot="vs hora pico" trend="down" />
-        <KpiTile label="Tiempo medio" value="24" unit="min" delta="-3 m" foot="vs ayer" trend="up" />
+        <KpiTile label="Pedidos hoy" value={String(pedidosHoy)} unit="ped." delta={demo ? '+12%' : undefined} foot={demo ? 'vs ayer' : 'reales'} trend="up" />
+        <KpiTile label="En cocina" value={String(enCocina)} unit="ped." delta={demo ? '+2' : undefined} foot={demo ? 'hace 1 min' : 'ahora'} trend="flat" />
+        <KpiTile label="En reparto" value={String(enReparto)} unit="ped." delta={demo ? '-1' : undefined} foot={demo ? 'vs hora pico' : 'listos'} trend="down" />
+        <KpiTile label="Tiempo medio" value={demo ? '24' : '—'} unit={demo ? 'min' : ''} delta={demo ? '-3 m' : undefined} foot={demo ? 'vs ayer' : 'sin datos'} trend="up" />
       </Grid>
 
-      <PlatBreakdown />
+      {platStats.length > 0 ? <PlatBreakdown stats={platStats} money={money} /> : <DeliveryEmpty />}
 
       <Card>
         <div className="card-head">
           <h3>Cola de pedidos</h3>
-          <Badge tone="muted">últimos 84 · toca un pedido para ver el detalle</Badge>
+          <Badge tone="muted">{orders.length ? `${orders.length} pedido${orders.length === 1 ? '' : 's'} · toca para ver el detalle` : 'sin pedidos ahora mismo'}</Badge>
         </div>
-        <div className="ord-list">
-          {ORDERS.map((o) => (
-            <button key={o.num} className="ord-row" style={{ ['--plat' as string]: PLATFORMS[o.plat].color }} onClick={() => setSel(o)}>
-              <span className="ord-accent" />
-              <span className="ord-thumb">{imgFor(o.items[0].name) ? <img src={imgFor(o.items[0].name)} alt="" loading="lazy" /> : null}</span>
-              <span className="ord-num tnum">{o.num}</span>
-              <span className="ord-hora tnum">{o.hora}</span>
-              <PlatChip plat={o.plat} />
-              <span className="ord-cli">{o.cliente}</span>
-              <span className="ord-right">
-                <span className="ord-items tnum">{o.items.reduce((s, i) => s + i.qty, 0)} art.</span>
-                <span className="ord-total tnum">{eur(tot(o))} €</span>
-                <Badge tone={estadoTone[stOf(o)]}>{stOf(o)}</Badge>
-                <svg className="ord-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-              </span>
-            </button>
-          ))}
-        </div>
+        {orders.length ? (
+          <div className="ord-list">
+            {orders.map((o) => (
+              <button key={o.num} className="ord-row" style={{ ['--plat' as string]: PLATFORMS[o.plat].color }} onClick={() => setSel(o)}>
+                <span className="ord-accent" />
+                <span className="ord-thumb">{imgFor(o.items[0]?.name) ? <img src={imgFor(o.items[0].name)} alt="" loading="lazy" /> : null}</span>
+                <span className="ord-num tnum">{o.num}</span>
+                <span className="ord-hora tnum">{o.hora}</span>
+                <PlatChip plat={o.plat} />
+                <span className="ord-cli">{o.cliente}</span>
+                <span className="ord-right">
+                  <span className="ord-items tnum">{o.items.reduce((s, i) => s + i.qty, 0)} art.</span>
+                  {money ? <span className="ord-total tnum">{eur(tot(o))} €</span> : null}
+                  <Badge tone={estadoTone[stOf(o)]}>{stOf(o)}</Badge>
+                  <svg className="ord-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="ped-empty">
+            <span className="ped-empty-emoji">🍔</span>
+            <b>Sin pedidos ahora mismo</b>
+            <span>Cada comanda de sala, TPV u online aparecerá aquí en cuanto entre.</span>
+          </div>
+        )}
       </Card>
 
       {/* ── Detalle del pedido ── */}
@@ -230,7 +296,7 @@ export default function Pedidos() {
                   <div className="od-cli-name">{sel.cliente}</div>
                   <div className="od-line"><Pin /> {sel.dir}</div>
                   {sel.tel !== '—' && <div className="od-line"><Phone /> {sel.tel}</div>}
-                  <div className="od-line"><Bike /> {sel.repartidor}{sel.eta !== '—' && sel.eta !== 'Entregado' ? ` · llega en ${sel.eta}` : ''}</div>
+                  {sel.repartidor !== '—' && <div className="od-line"><Bike /> {sel.repartidor}{sel.eta !== '—' && sel.eta !== 'Entregado' ? ` · llega en ${sel.eta}` : ''}</div>}
                 </div>
 
                 {sel.notas && <div className="od-note"><b>Nota del cliente</b><span>{sel.notas}</span></div>}
@@ -242,20 +308,22 @@ export default function Pedidos() {
                       <span className="od-item-th">{imgFor(it.name) ? <img src={imgFor(it.name)} alt="" loading="lazy" /> : null}</span>
                       <span className="od-item-q tnum">{it.qty}×</span>
                       <span className="od-item-n">{it.name}</span>
-                      <span className="od-item-p tnum">{eur(it.price * it.qty)} €</span>
+                      {money ? <span className="od-item-p tnum">{eur(it.price * it.qty)} €</span> : null}
                     </div>
                   ))}
                 </div>
 
-                <div className="od-tot">
-                  <div className="od-tr"><span>Subtotal</span><b className="tnum">{eur(sub(sel))} €</b></div>
-                  {sel.envio > 0 && <div className="od-tr"><span>Envío</span><b className="tnum">{eur(sel.envio)} €</b></div>}
-                  {sel.comision > 0 && <div className="od-tr neg"><span>Comisión {sel.plat}</span><b className="tnum">−{eur(sel.comision)} €</b></div>}
-                  <div className="od-tr big"><span>Total</span><b className="tnum">{eur(tot(sel))} €</b></div>
-                  {sel.comision > 0 && <div className="od-net"><span>Neto para REBELL</span><b className="tnum">{eur(tot(sel) - sel.comision)} €</b></div>}
-                </div>
+                {money && (
+                  <div className="od-tot">
+                    <div className="od-tr"><span>Subtotal</span><b className="tnum">{eur(sub(sel))} €</b></div>
+                    {sel.envio > 0 && <div className="od-tr"><span>Envío</span><b className="tnum">{eur(sel.envio)} €</b></div>}
+                    {sel.comision > 0 && <div className="od-tr neg"><span>Comisión {sel.plat}</span><b className="tnum">−{eur(sel.comision)} €</b></div>}
+                    <div className="od-tr big"><span>Total</span><b className="tnum">{eur(tot(sel))} €</b></div>
+                    {sel.comision > 0 && <div className="od-net"><span>Neto para REBELL</span><b className="tnum">{eur(tot(sel) - sel.comision)} €</b></div>}
+                  </div>
+                )}
 
-                <div className="od-pago"><Card2 /> {sel.pago}</div>
+                {sel.pago !== '—' && <div className="od-pago"><Card2 /> {sel.pago}</div>}
               </div>
             </motion.div>
           </motion.div>
