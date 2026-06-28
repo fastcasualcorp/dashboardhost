@@ -9,9 +9,9 @@
   --bg: #08080a; --bg-2: #0d0d10; --surface: #141417; --surface-2: #1a1a1e;
   --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.13);
   /* ── MARCA (theming): cambia estas 4 (o el data-accent) y se reviste TODO el dashboard ── */
-  /* LIMA = color principal de marca (Juan, 29-jun): chartreuse ELÉCTRICO e intenso para llamar la atención.
-     El ORO clásico sigue disponible como opción (data-accent='gold'). */
-  --brand: #c4fa1c; --brand-soft: #dbff63; --brand-deep: #9ad400; --brand-rgb: 196,250,28;
+  /* LIMA = color principal de marca (Juan, 29-jun): chartreuse ELÉCTRICO PURO y PLANO (sin degradados:
+     los 3 tonos son el mismo → cualquier gradiente de marca se ve color sólido). El ORO sigue como opción. */
+  --brand: #c6ff00; --brand-soft: #c6ff00; --brand-deep: #c6ff00; --brand-rgb: 198,255,0;
   /* El ORO deriva de la marca AQUÍ (en :root) para que también valga FUERA de .app (login/intro, Planes,
      página QR). var(--brand) se resuelve en el punto de uso → los temas data-accent lo siguen recoloreando. */
   --gold: var(--brand); --gold-soft: var(--brand-soft); --gold-deep: var(--brand-deep); --cash: var(--brand);
@@ -1248,7 +1248,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .bc-val { font-size: var(--fs-3xs); color: var(--faint); font-weight: 600; }
 .bc-bar { width: 100%; max-width: 38px; border-radius: 7px 7px 3px 3px; min-height: 4px; }
 .bc-bar.c-gold { background: linear-gradient(180deg, var(--gold-soft), var(--gold-deep)); }
-.bc-bar.c-gold.hot { background: linear-gradient(180deg, #fff, var(--gold)); box-shadow: 0 0 18px -4px rgba(var(--brand-rgb),.5); }
+.bc-bar.c-gold.hot { background: var(--gold); filter: brightness(1.12); box-shadow: 0 0 18px -4px rgba(var(--brand-rgb),.5); }
 .bc-bar.c-blue { background: linear-gradient(180deg, #6db4ff, #2f7fd6); }
 .bc-bar.c-green { background: linear-gradient(180deg, #6ee7b7, #1fae7c); }
 .bc-bar.c-amber { background: linear-gradient(180deg, #f5c976, #d99820); }
@@ -1621,7 +1621,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
    Cada preset redefine el trío --gold. Los gradientes premium fijan
    --accent-grad (lo usan los CTA). --accent-ink = color de texto sobre el botón. */
 /* Cada preset redefine la MARCA (--brand* + --brand-rgb) → reviste TODO: oro (alias), glows y auras. */
-.app[data-accent='lima']      { --brand:#c4fa1c; --brand-soft:#dbff63; --brand-deep:#9ad400; --brand-rgb:196,250,28; --accent-ink:#16240a; } /* lima eléctrico (default de marca) */
+.app[data-accent='lima']      { --brand:#c6ff00; --brand-soft:#c6ff00; --brand-deep:#c6ff00; --brand-rgb:198,255,0; --accent-ink:#16240a; } /* lima ELÉCTRICO PURO y PLANO (sin degradados) */
 .app[data-accent='gold']      { --brand:#ffbf10; --brand-soft:#ffd45e; --brand-deep:#e8ab0c; --brand-rgb:255,191,16; --accent-ink:#1a1404; } /* ORO clásico (opción que Juan quiere conservar) */
 .app[data-accent='azul']      { --brand:#4aa3ff; --brand-soft:#7dc0ff; --brand-deep:#2b86e0; --brand-rgb:74,163,255; --accent-ink:#fff; }
 .app[data-accent='verde']     { --brand:var(--ok); --brand-soft:#6ee7b7; --brand-deep:#10b981; --brand-rgb:52,211,153; --accent-ink:#04251a; }

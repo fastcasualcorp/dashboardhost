@@ -10,7 +10,7 @@ export type FontKey = 'clash'
 export type AccentKey = 'lima' | 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
 
 export const ACCENTS: { key: AccentKey; name: string; css: string; premium?: boolean }[] = [
-  { key: 'lima', name: 'Lima', css: 'linear-gradient(135deg,#dbff63,#9ad400)' },
+  { key: 'lima', name: 'Lima', css: '#c6ff00' },
   { key: 'gold', name: 'Oro', css: 'linear-gradient(135deg,#ffd45e,#e8ab0c)' },
   { key: 'azul', name: 'Azul', css: 'linear-gradient(135deg,#7dc0ff,#2b86e0)' },
   { key: 'verde', name: 'Verde', css: 'linear-gradient(135deg,#6ee7b7,#10b981)' },
