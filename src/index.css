@@ -9,8 +9,9 @@
   --bg: #08080a; --bg-2: #0d0d10; --surface: #141417; --surface-2: #1a1a1e;
   --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.13);
   /* ── MARCA (theming): cambia estas 4 (o el data-accent) y se reviste TODO el dashboard ── */
-  /* LIMA = color principal de marca (Juan, 29-jun): chartreuse vivo para llamar la atención. */
-  --brand: #c4f135; --brand-soft: #d9fa72; --brand-deep: #9fd31a; --brand-rgb: 196,241,53;
+  /* LIMA = color principal de marca (Juan, 29-jun): chartreuse ELÉCTRICO e intenso para llamar la atención.
+     El ORO clásico sigue disponible como opción (data-accent='gold'). */
+  --brand: #c4fa1c; --brand-soft: #dbff63; --brand-deep: #9ad400; --brand-rgb: 196,250,28;
   /* El ORO deriva de la marca AQUÍ (en :root) para que también valga FUERA de .app (login/intro, Planes,
      página QR). var(--brand) se resuelve en el punto de uso → los temas data-accent lo siguen recoloreando. */
   --gold: var(--brand); --gold-soft: var(--brand-soft); --gold-deep: var(--brand-deep); --cash: var(--brand);
@@ -72,23 +73,11 @@
      sombra → crispy, sin halo sucio. Una sola fuente de verdad para todas las líneas divisorias. */
   --sep: linear-gradient(180deg, transparent, rgba(var(--brand-rgb),.05) 14%, rgba(var(--brand-rgb),.62) 50%, rgba(var(--brand-rgb),.05) 86%, transparent);
   --sep-h: linear-gradient(90deg, transparent, rgba(var(--brand-rgb),.05) 14%, rgba(var(--brand-rgb),.62) 50%, rgba(var(--brand-rgb),.05) 86%, transparent);
-  --font-display: 'Clash Grotesk', sans-serif;
-  --font: 'Clash Grotesk', -apple-system, system-ui, sans-serif;
-  --font-num: 'Clash Grotesk', sans-serif;
+  /* Clash Display = ÚNICA tipografía oficial (Juan, 29-jun). Inter y Roundo eliminadas. */
+  --font-display: 'Clash Display', sans-serif;
+  --font: 'Clash Display', -apple-system, system-ui, sans-serif;
+  --font-num: 'Clash Display', sans-serif;
   --num-spacing: -1px; --num-weight: 600;
-}
-.app[data-type='inter'] {
-  --font-display: 'Inter', sans-serif; --font: 'Inter', sans-serif; --font-num: 'Inter', sans-serif;
-  /* Inter pesa ÓPTICAMENTE menos que Clash a igual número → bajo Inter usamos Inter HEAVY (900) en los
-     números héroe y apretamos el tracking para que el número gigante se vea grueso y premium (Juan, 28-jun:
-     "lo quiero en Inter 28pt Heavy"). El 900 se carga en index.html. */
-  --num-spacing: 0px; --num-weight: 900;
-  --body-weight: 500;
-}
-.app[data-type='roundo'] {
-  --font-display: 'Roundo', sans-serif; --font: 'Roundo', sans-serif; --font-num: 'Roundo', sans-serif;
-  --num-spacing: -1px; --num-weight: 600;
-  --body-weight: 400;
 }
 
 
@@ -1632,6 +1621,8 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
    Cada preset redefine el trío --gold. Los gradientes premium fijan
    --accent-grad (lo usan los CTA). --accent-ink = color de texto sobre el botón. */
 /* Cada preset redefine la MARCA (--brand* + --brand-rgb) → reviste TODO: oro (alias), glows y auras. */
+.app[data-accent='lima']      { --brand:#c4fa1c; --brand-soft:#dbff63; --brand-deep:#9ad400; --brand-rgb:196,250,28; --accent-ink:#16240a; } /* lima eléctrico (default de marca) */
+.app[data-accent='gold']      { --brand:#ffbf10; --brand-soft:#ffd45e; --brand-deep:#e8ab0c; --brand-rgb:255,191,16; --accent-ink:#1a1404; } /* ORO clásico (opción que Juan quiere conservar) */
 .app[data-accent='azul']      { --brand:#4aa3ff; --brand-soft:#7dc0ff; --brand-deep:#2b86e0; --brand-rgb:74,163,255; --accent-ink:#fff; }
 .app[data-accent='verde']     { --brand:var(--ok); --brand-soft:#6ee7b7; --brand-deep:#10b981; --brand-rgb:52,211,153; --accent-ink:#04251a; }
 .app[data-accent='rosa']      { --brand:#ff5c8a; --brand-soft:#ff8fae; --brand-deep:#e0457a; --brand-rgb:255,92,138; --accent-ink:#fff; }

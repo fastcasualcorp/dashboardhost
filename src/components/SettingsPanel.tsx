@@ -4,19 +4,14 @@ import { BEASTS } from '../lib/beasts'
 import { supabase, isCentral } from '../lib/supabase'
 import { usePower, setSaverManual } from '../lib/power'
 import { isDemoMode, setDemoMode } from '../lib/demo'
-import LogoMark, { type LogoVariant } from './LogoMark'
 
-export type FontKey = 'clash' | 'inter' | 'roundo'
-export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
-
-const FONTS: { key: FontKey; name: string; meta: string; stack: string }[] = [
-  { key: 'clash', name: 'Clash Grotesk', meta: 'grotesca · principal', stack: "'Clash Grotesk', sans-serif" },
-  { key: 'inter', name: 'Inter', meta: 'neutra · legible', stack: "'Inter', sans-serif" },
-  { key: 'roundo', name: 'Roundo', meta: 'redondeada · amable', stack: "'Roundo', sans-serif" },
-]
+// Clash Display = única tipografía oficial (Juan, 29-jun). FontKey se conserva por compatibilidad de tipos.
+export type FontKey = 'clash'
+export type AccentKey = 'lima' | 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
 
 export const ACCENTS: { key: AccentKey; name: string; css: string; premium?: boolean }[] = [
-  { key: 'gold', name: 'Lima', css: 'linear-gradient(135deg,#d9fa72,#9fd31a)' },
+  { key: 'lima', name: 'Lima', css: 'linear-gradient(135deg,#dbff63,#9ad400)' },
+  { key: 'gold', name: 'Oro', css: 'linear-gradient(135deg,#ffd45e,#e8ab0c)' },
   { key: 'azul', name: 'Azul', css: 'linear-gradient(135deg,#7dc0ff,#2b86e0)' },
   { key: 'verde', name: 'Verde', css: 'linear-gradient(135deg,#6ee7b7,#10b981)' },
   { key: 'rosa', name: 'Rosa', css: 'linear-gradient(135deg,#ff8fae,#e0457a)' },
@@ -33,43 +28,22 @@ const Check = () => (
 )
 
 export default function SettingsPanel({
-  font,
-  onFont,
   accent,
   onAccent,
   beast,
   onBeast,
-  density,
-  onDensity,
-  present,
-  onPresent,
   comments,
   onComments,
   onCanon,
-  logoVar,
-  onLogo,
 }: {
-  font: FontKey
-  onFont: (f: FontKey) => void
   accent: AccentKey
   onAccent: (a: AccentKey) => void
   beast: string
   onBeast: (id: string) => void
-  density: number
-  onDensity: (d: number) => void
-  present: boolean
-  onPresent: () => void
   comments: boolean
   onComments: () => void
   onCanon: () => void
-  logoVar: LogoVariant
-  onLogo: (v: LogoVariant) => void
 }) {
-  const DENSITIES: { v: number; name: string }[] = [
-    { v: 0.9, name: 'Compacto' },
-    { v: 1, name: 'Normal' },
-    { v: 1.15, name: 'Cómodo' },
-  ]
   const [pwOpen, setPwOpen] = useState(false)
   const { saver, manual: saverManual } = usePower()
 
@@ -118,24 +92,6 @@ export default function SettingsPanel({
             <button className="sp-save" type="button">Guardar contraseña</button>
           </div>
         )}
-      </div>
-
-      <div className="sp-section">
-        <button className={'sp-comments' + (present ? ' on' : '')} onClick={onPresent}>
-          <span className="spc-ic">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 5h18M4 5v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5M12 16v5M8 21h8" />
-              <path d="M8 11l2.5-2.5L13 11l3-3" />
-            </svg>
-          </span>
-          <span className="spc-txt">
-            <b>Modo presentación</b>
-            <small>{present ? 'Activo · las cifras se encienden al entrar' : 'Power-up + count-up al entrar en cada sección'}</small>
-          </span>
-          <span className="spc-sw" aria-hidden="true">
-            <span className="spc-knob" />
-          </span>
-        </button>
       </div>
 
       <div className="sp-section">
@@ -214,24 +170,6 @@ export default function SettingsPanel({
       <div className="sp-section">
         <div className="lab">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" />
-            <path d="M7 12h10" />
-          </svg>
-          Logo del programa
-        </div>
-        <div className="sp-logos">
-          {(['b', 'a'] as LogoVariant[]).map((v) => (
-            <button key={v} className={'sp-logo-tile' + (logoVar === v ? ' on' : '')} onClick={() => onLogo(v)} aria-pressed={logoVar === v}>
-              <LogoMark variant={v} className="sp-logo-prev" />
-              <span>{v === 'b' ? 'Con barras' : 'Solo texto'}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="sp-section">
-        <div className="lab">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="13.5" cy="6.5" r="2.5" />
             <circle cx="17.5" cy="12" r="2.5" />
             <circle cx="8.5" cy="7.5" r="2.5" />
@@ -279,46 +217,6 @@ export default function SettingsPanel({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="sp-section">
-        <div className="lab">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-          </svg>
-          Densidad
-          <span className="lab-hint">se recuerda en esta pantalla</span>
-        </div>
-        <div className="sp-density">
-          {DENSITIES.map((d) => (
-            <button key={d.v} className={'den-opt' + (Math.abs(density - d.v) < 0.02 ? ' on' : '')} onClick={() => onDensity(d.v)}>
-              {d.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="sp-section">
-        <div className="lab">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 7V5h16v2M9 19h6M12 5v14" />
-          </svg>
-          Tipografía
-        </div>
-        {FONTS.map((f) => (
-          <button key={f.key} className={'font-opt' + (font === f.key ? ' on' : '')} onClick={() => onFont(f.key)} style={{ fontFamily: f.stack }}>
-            <span className="fo-l">
-              <span className="fo-name">{f.name}</span>
-              <span className="fo-meta">{f.meta}</span>
-            </span>
-            <span className="fo-right">
-              <span className="fo-sample">1.787€</span>
-              <span className="fo-check">
-                <Check />
-              </span>
-            </span>
-          </button>
-        ))}
       </div>
 
       <div className="sp-section">

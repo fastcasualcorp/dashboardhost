@@ -6,15 +6,15 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
 import { NAV, ALL_ITEMS, itemById } from '../nav'
 import { reduceMotion } from '../lib/data'
-import { play, playBeast, playPowerup, preloadSfx, setAudio } from '../lib/sound'
-import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
+import { play, playBeast, preloadSfx, setAudio } from '../lib/sound'
+import SettingsPanel, { type AccentKey } from './SettingsPanel'
 import CommentLayer from './CommentLayer'
 import ErrorBoundary from './ErrorBoundary'
 import Clock from './Clock'
 import HealthDot from './HealthDot'
 import WalletHoy from './WalletHoy'
 import DeployBadge from './DeployBadge'
-import LogoMark, { type LogoVariant } from './LogoMark'
+import LogoMark from './LogoMark'
 import { beastById } from '../lib/beasts'
 import { isDemoMode, setDemoMode } from '../lib/demo'
 import { renderSection } from '../sections/registry'
@@ -42,7 +42,6 @@ export default function Shell() {
     }
     return 'caja'
   })
-  const [font, setFont] = useState<FontKey>('inter') // Inter = fuente principal (Juan 28-jun)
   const [audioOn, setAudioOn] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [commentsOn, setCommentsOn] = useState(() => {
@@ -62,7 +61,7 @@ export default function Shell() {
   })
   const [accent, setAccent] = useState<AccentKey>(() => {
     const a = typeof localStorage !== 'undefined' ? localStorage.getItem('rebell-accent') : null
-    return (a as AccentKey) || 'gold'
+    return (a as AccentKey) || 'lima' // LIMA = acento por defecto de marca (Juan, 29-jun)
   })
   const [beast, setBeast] = useState<string>(() => {
     try {
@@ -70,25 +69,6 @@ export default function Shell() {
     } catch {
       return 'lion'
     }
-  })
-  // Variante del logo FAT SMASH: 'b' (con barras, por defecto) o 'a' (solo lettering).
-  const [logoVar, setLogoVar] = useState<LogoVariant>(() => {
-    try {
-      return (localStorage.getItem('rebell-logo') as LogoVariant) === 'a' ? 'a' : 'b'
-    } catch {
-      return 'b'
-    }
-  })
-  function changeLogo(v: LogoVariant) {
-    setLogoVar(v)
-    try { localStorage.setItem('rebell-logo', v) } catch { /* sin localStorage */ }
-    play('tap', 0.5, 1.1)
-  }
-  // Densidad ajustable (compacto/normal/cómodo) → multiplica los tamaños fluidos.
-  // localStorage es por-dispositivo, así que se recuerda en cada pantalla (pedido de Juan).
-  const [density, setDensity] = useState<number>(() => {
-    const v = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('rebell-density') || '') : NaN
-    return v >= 0.8 && v <= 1.3 ? v : 1
   })
   // Ancho del menú lateral AJUSTABLE arrastrando su borde (Juan, 28-jun). Gobierna --side-w,
   // del que ya cuelgan el margen del contenido, la actionbar y el plano del TPV → todo lo sigue.
@@ -121,26 +101,6 @@ export default function Shell() {
     setSideW(264)
     try { localStorage.setItem('rebell-sidew', '264') } catch { /* sin localStorage */ }
     play('toggle')
-  }
-  // Modo presentación: al entrar en cualquier sección suena un power-up coordinado con el count-up de las cifras.
-  const [present, setPresent] = useState<boolean>(() => typeof localStorage !== 'undefined' && localStorage.getItem('rebell-present') === '1')
-  function togglePresent() {
-    setPresent((p) => {
-      const n = !p
-      try { localStorage.setItem('rebell-present', n ? '1' : '0') } catch { /* sin localStorage */ }
-      if (n) playPowerup(0.5)
-      else play('toggle', 0.4)
-      return n
-    })
-  }
-  function changeDensity(d: number) {
-    setDensity(d)
-    try {
-      localStorage.setItem('rebell-density', String(d))
-    } catch {
-      /* sin localStorage */
-    }
-    play('tap')
   }
   useEffect(() => {
     preloadSfx()
@@ -305,8 +265,6 @@ export default function Shell() {
       const SEMIS = [0, 2, 4, 5, 7]
       const rate = Math.pow(2, SEMIS[((idx % 5) + 5) % 5] / 12)
       play('nav', 0.38, rate)
-      // Modo presentación: el "marcador se enciende" → power-up coordinado con el count-up de las cifras.
-      if (present) window.setTimeout(() => playPowerup(0.5), 90)
     }
     setDrawer(false)
   }
@@ -315,10 +273,6 @@ export default function Shell() {
     setAudioOn(next)
     setAudio(next)
     if (next) play('tap')
-  }
-  function changeFont(f: FontKey) {
-    setFont(f)
-    play('nav')
   }
   function openSettings() {
     setSettingsOpen((o) => !o)
@@ -334,7 +288,7 @@ export default function Shell() {
   const localCity = LOCAL_CITY[localId] || 'España'
 
   return (
-    <div className="app" data-type={font === 'clash' ? undefined : font} data-theme={theme} data-accent={accent} data-resizing={resizing ? '1' : undefined} style={{ ['--den' as string]: density, ['--side-w' as string]: sideW + 'px' }}>
+    <div className="app" data-theme={theme} data-accent={accent} data-resizing={resizing ? '1' : undefined} style={{ ['--side-w' as string]: sideW + 'px' }}>
       <div className="bg-aura" />
       <div className="grain" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg">
@@ -348,7 +302,7 @@ export default function Shell() {
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
         {/* Logo del programa (FAT SMASH), bien visible encima del león (Juan 28-jun). Versión negativa para fondo oscuro. */}
-        <LogoMark variant={logoVar} className="side-logo" />
+        <LogoMark variant="b" className="side-logo" />
         <button
           className={'side-brand' + (settingsOpen ? ' open' : '')}
           onClick={openSettings}
@@ -454,12 +408,8 @@ export default function Shell() {
                 <Canon
                   accent={accent}
                   onAccent={changeAccent}
-                  font={font}
-                  onFont={changeFont}
                   theme={theme}
                   onTheme={toggleTheme}
-                  density={density}
-                  onDensity={changeDensity}
                 />
               </Suspense>
             ) : (
@@ -489,16 +439,10 @@ export default function Shell() {
           <>
             <div className="sp-scrim" onClick={() => setSettingsOpen(false)} />
             <SettingsPanel
-              font={font}
-              onFont={changeFont}
               accent={accent}
               onAccent={changeAccent}
               beast={beast}
               onBeast={changeBeast}
-              density={density}
-              onDensity={changeDensity}
-              present={present}
-              onPresent={togglePresent}
               comments={commentsOn}
               onComments={() => {
                 setCommentsOn((c) => !c)
@@ -509,8 +453,6 @@ export default function Shell() {
                 setSettingsOpen(false)
                 selectSection('canon')
               }}
-              logoVar={logoVar}
-              onLogo={changeLogo}
             />
           </>
         )}

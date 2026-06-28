@@ -7,7 +7,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from 'react'
 import { Card, SectionHeader, Stat, StatRow, KpiTile, BarRow, BarChart, Donut, Badge, Grid, DataTable } from '../components/ui'
-import { ACCENTS, type AccentKey, type FontKey } from './../components/SettingsPanel'
+import { ACCENTS, type AccentKey } from './../components/SettingsPanel'
 import { SFX } from '../lib/sfx'
 import { SFX_LIST, getSfxVolume, setSfxVolume, play, playSweep, playGlitch, type SfxName } from '../lib/sound'
 import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, RADIUS_TOKENS, RADIUS_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadRadius, saveRadius, applyRadius, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT, loadBar, saveBar, applyBar, BAR_MIN, BAR_MAX, BAR_DEFAULT } from '../lib/designTokens'
@@ -38,17 +38,6 @@ function SfxMixer() {
     </div>
   )
 }
-
-const FONTS: { key: FontKey; name: string }[] = [
-  { key: 'clash', name: 'Clash' },
-  { key: 'inter', name: 'Inter' },
-  { key: 'roundo', name: 'Roundo' },
-]
-const DENS: { v: number; name: string }[] = [
-  { v: 0.9, name: 'Compacto' },
-  { v: 1, name: 'Normal' },
-  { v: 1.15, name: 'Cómodo' },
-]
 
 // Fichas de color: usan var(--x) → recolorean en vivo al cambiar el tema.
 const COLORS: { name: string; varName: string; hint: string }[] = [
@@ -275,21 +264,13 @@ function DesignSystemEditor() {
 export default function Canon({
   accent,
   onAccent,
-  font,
-  onFont,
   theme,
   onTheme,
-  density,
-  onDensity,
 }: {
   accent: AccentKey
   onAccent: (a: AccentKey) => void
-  font: FontKey
-  onFont: (f: FontKey) => void
   theme: Theme
   onTheme: () => void
-  density: number
-  onDensity: (d: number) => void
 }) {
   return (
     <div className="section canon">
@@ -329,26 +310,6 @@ export default function Canon({
             <button className="canon-seg-btn wide" onClick={onTheme}>
               {theme === 'dark' ? '🌙 Noche' : '☀️ Día'}
             </button>
-          </div>
-          <div className="canon-dial">
-            <div className="canon-dlab">Tipografía</div>
-            <div className="canon-seg">
-              {FONTS.map((f) => (
-                <button key={f.key} className={'canon-seg-btn' + (font === f.key ? ' on' : '')} onClick={() => onFont(f.key)}>
-                  {f.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="canon-dial">
-            <div className="canon-dlab">Densidad</div>
-            <div className="canon-seg">
-              {DENS.map((d) => (
-                <button key={d.v} className={'canon-seg-btn' + (Math.abs(density - d.v) < 0.02 ? ' on' : '')} onClick={() => onDensity(d.v)}>
-                  {d.name}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </Card>
