@@ -130,7 +130,7 @@ body {
 .island.warn { color: var(--warn); } .island.warn .idot { background: var(--warn); box-shadow: 0 0 0 3px rgba(245,179,65,.18); }
 .island.ok { color: var(--ok); } .island.ok .idot { background: var(--ok); box-shadow: 0 0 0 3px rgba(52,211,153,.18); }
 .island b { font-weight: 800; }
-.tnum { font-variant-numeric: tabular-nums; }
+.tnum { /* figuras unificadas por la regla maestra (.app *). Antes imponía tabular → "1" con pie. */ }
 
 .wrap {
   position: relative; z-index: 2; width: 100%;
@@ -4825,10 +4825,15 @@ html[data-saver='1'] .side-beast-vid { display: none; }
 .plan-cta:disabled { opacity: .5; cursor: default; }
 .planes-foot { text-align: center; color: var(--faint); font-size: var(--fs-xs); margin-top: 26px; }
 
-/* ── "1" SIN PIE (Juan 28-jun): Inter pone un PIE al "1" SOLO con figuras tabulares (tnum).
-   En los números HÉROE (grandes y visibles) usamos figuras PROPORCIONALES → el "1" queda
-   limpio como el Inter real. Las tablas/timers pequeños conservan tnum para alinear columnas. */
-.ck-total, .ck-total .odonum, .odo, .odonum, .rstat-val, .ckc-hero, .ck-num, .vtpv-bignum, .fg-val,
-.alm-ie-pct b, .alm-pcard-pct, .roi-big-num, .roi-revval, .day-donut-c b, .whp-total {
-  font-variant-numeric: proportional-nums !important;
-}
+/* ════════════════════════════════════════════════════════════════════
+   FIGURAS NUMÉRICAS — FUENTE ÚNICA E INVIOLABLE (Juan 28-jun, vía /revisor)
+   Inter sirve un "1" DISTINTO según la figura: CON pie en tabular-nums (el pie
+   rellena el ancho fijo), SIN pie en proportional-nums. Para que el "1" sea
+   IDÉNTICO en TODO el dashboard, forzamos figuras PROPORCIONALES a CADA elemento
+   (aplicación DIRECTA con el universal, no por herencia) → ninguna `tabular-nums`
+   suelta —presente o futura— puede reintroducir el "1" con pie. UNA regla manda
+   sobre las ~40 dispersas. Token --num-figs por si algún día se quiere un toggle.
+   Precio aceptado por Juan: las columnas de cifras pierden la alineación tabular
+   perfecta (se mitiga alineando celdas a la derecha); gana el "1" limpio y único. */
+.app { --num-figs: proportional-nums; }
+.app, .app * { font-variant-numeric: var(--num-figs) !important; }
