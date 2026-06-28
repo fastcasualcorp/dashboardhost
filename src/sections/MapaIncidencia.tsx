@@ -1081,7 +1081,7 @@ export default function MapaIncidencia() {
       ctx.textAlign = 'right'
       ctx.fillStyle = INK; ctx.font = '800 40px "Clash Grotesk", Inter, sans-serif'
       ctx.fillText(`${LOCAL.rating.toFixed(1)}★`, W - 76, y + 70)
-      ctx.fillStyle = '#7CEF5A'; ctx.font = '700 22px Inter, sans-serif'
+      ctx.fillStyle = '#34d399'; ctx.font = '700 22px Inter, sans-serif'
       ctx.fillText(`${dominancia}% dominancia`, W - 76, y + 104)
       ctx.textAlign = 'left'
       // 4) RIVALES (por amenaza)
@@ -1089,7 +1089,7 @@ export default function MapaIncidencia() {
       ctx.fillStyle = GOLD; ctx.font = '800 18px Inter, sans-serif'
       ctx.fillText('RIVALES · ORDENADOS POR AMENAZA', 56, y)
       y += 22
-      const TH: Record<string, [string, string]> = { hi: ['#ff5c5c', 'ALTA'], mid: ['#f5b341', 'MEDIA'], lo: ['#7CEF5A', 'BAJA'] }
+      const TH: Record<string, [string, string]> = { hi: ['#ff5c5c', 'ALTA'], mid: ['#f5b341', 'MEDIA'], lo: ['#34d399', 'BAJA'] }
       const filas = (visibles.length ? visibles : rivalesAmenaza).slice(0, 5)
       const rowH = 94
       for (const r of filas) {

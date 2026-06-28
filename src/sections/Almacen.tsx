@@ -53,7 +53,7 @@ const cadInfo = (d: number): { t: string; tone: 'red' | 'amber' | 'green'; lbl: 
         : { t: d > 360 ? '1a+' : `${Math.round(d / 30)}m`, tone: 'green', lbl: 'Larga' }
 const estadoDe = (nivel: number): { t: string; tone: 'red' | 'amber' | 'green' } =>
   nivel < 30 ? { t: 'Crítico', tone: 'red' } : nivel < 55 ? { t: 'Bajo', tone: 'amber' } : { t: 'OK', tone: 'green' }
-const toneColor = (tone: 'red' | 'amber' | 'green') => (tone === 'red' ? '#ff5c5c' : tone === 'amber' ? '#f5b341' : '#7CEF5A')
+const toneColor = (tone: 'red' | 'amber' | 'green') => (tone === 'red' ? '#ff5c5c' : tone === 'amber' ? '#f5b341' : '#34d399')
 const alertasDe = (a: Almacen) => a.items.filter((i) => i.nivel < 55).length
 const porCaducarDe = (a: Almacen) => a.items.filter((i) => cadOf(i) <= 5).length
 
