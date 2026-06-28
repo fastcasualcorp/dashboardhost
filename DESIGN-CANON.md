@@ -64,7 +64,10 @@ tema claro: oro PROFUNDO rgba(176,124,8,…) @.66 (sobre blanco el oro brillante
 
 ### Forma · Sombra · Easing
 ```
-Radios: tarjeta 18px · card grande 20–26px · pill 100px · chip/botón 9–14px · input 9–11px
+Radios (TOKENS, fuente única — prohibido valor a ojo, lo veta stylelint):
+  input/celda  --r-input 10  ·  chip/botón pequeño  --r-chip 12  ·  botón CTA  --btn-radius 14
+  panel  --card-r 18  ·  panel grande/modal  --card-r-lg 22  ·  XL  --card-r-xl 26  ·  pastilla  --r-pill 100
+  (radios compuestos —pestañas, notch, barras— son formas intencionales, no llevan token)
 Sombra base (neutra): 0 2px 10px -4px rgba(0,0,0,.4), 0 22px 48px -30px rgba(0,0,0,.7)
                        + inset 0 1px 0 rgba(255,255,255,.04)  (luz cenital)
 --ease / --ease-out: cubic-bezier(.23,1,.32,1)   ← entradas, settle (el de Juan)
