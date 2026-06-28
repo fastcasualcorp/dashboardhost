@@ -1,8 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Card, SectionHeader, KpiTile, BarRow, Badge, Grid } from '../components/ui'
+import { Card, SectionHeader, KpiTile, Badge, Grid } from '../components/ui'
 import { imgFor } from '../lib/products'
+import { eur0 } from '../lib/data'
 import { play } from '../lib/sound'
+
+/* Reparto unificado por plataforma: pedidos + ingresos en un solo panel con tarta (donut + glow). */
+const PLAT_STATS: { plat: Plat; name: string; ped: number; ing: number }[] = [
+  { plat: 'Local', name: 'Local / TPV', ped: 32, ing: 742 },
+  { plat: 'Glovo', name: 'Glovo', ped: 26, ing: 486 },
+  { plat: 'Uber Eats', name: 'Uber Eats', ped: 16, ing: 321 },
+  { plat: 'Just Eat', name: 'Just Eat', ped: 10, ing: 238 },
+]
 
 /* ── Identidad de cada plataforma (color de marca + LOGO oficial; glifo de reserva) ──
    `logo` = SVG oficial de la marca en /public/img/brands/. Si el archivo no está, cae al glifo
@@ -96,33 +105,50 @@ export default function Pedidos() {
         <KpiTile label="Tiempo medio" value="24" unit="min" delta="-3 m" foot="vs ayer" trend="up" />
       </Grid>
 
-      <Grid cols={2}>
-        <Card>
-          <div className="card-head">
-            <h3>Reparto por plataforma</h3>
-            <Badge tone="muted">hoy · 84 pedidos</Badge>
-          </div>
-          <div className="bar-rows">
-            <BarRow label="Local / TPV" value={32} max={32} color="local" amount="32 ped." />
-            <BarRow label="Glovo" value={26} max={32} color="glovo" amount="26 ped." />
-            <BarRow label="Uber Eats" value={16} max={32} color="ubereats" amount="16 ped." />
-            <BarRow label="Just Eat" value={10} max={32} color="justeat" amount="10 ped." />
-          </div>
-        </Card>
-
-        <Card>
-          <div className="card-head">
-            <h3>Ingresos por plataforma</h3>
-            <Badge tone="muted">hoy · 1.787,40 €</Badge>
-          </div>
-          <div className="bar-rows">
-            <BarRow label="Local / TPV" value={742} max={742} color="local" amount="742,00 €" />
-            <BarRow label="Glovo" value={486} max={742} color="glovo" amount="486,40 €" />
-            <BarRow label="Uber Eats" value={321} max={742} color="ubereats" amount="321,00 €" />
-            <BarRow label="Just Eat" value={238} max={742} color="justeat" amount="238,00 €" />
-          </div>
-        </Card>
-      </Grid>
+      {(() => {
+        const totalIng = PLAT_STATS.reduce((s, p) => s + p.ing, 0)
+        const totalPed = PLAT_STATS.reduce((s, p) => s + p.ped, 0)
+        const maxIng = Math.max(...PLAT_STATS.map((p) => p.ing))
+        const C = 2 * Math.PI * 46
+        let off = 0
+        return (
+          <Card>
+            <div className="card-head">
+              <h3>Reparto por plataforma</h3>
+              <Badge tone="muted">hoy · {totalPed} ped · {eur0(totalIng)} €</Badge>
+            </div>
+            <div className="ped-plat">
+              <div className="ped-donut">
+                <svg viewBox="0 0 120 120" className="ped-donut-svg" aria-hidden="true">
+                  <circle cx="60" cy="60" r="46" className="ped-donut-bg" />
+                  {PLAT_STATS.map((p) => {
+                    const len = (p.ing / totalIng) * C
+                    const seg = <circle key={p.plat} cx="60" cy="60" r="46" className="ped-donut-seg" stroke={PLATFORMS[p.plat].color} strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-off} />
+                    off += len
+                    return seg
+                  })}
+                </svg>
+                <div className="ped-donut-c"><b className="tnum">{totalPed}</b><span>pedidos</span></div>
+              </div>
+              <div className="ped-legend">
+                {PLAT_STATS.map((p) => {
+                  const logo = PLATFORMS[p.plat].logo
+                  return (
+                    <div className="ped-leg-row" key={p.plat}>
+                      <span className="ped-leg-name">
+                        {logo ? <span className="rs-canal-logo"><img src={logo} alt="" /></span> : <span className="ped-leg-dot" style={{ background: PLATFORMS[p.plat].color }} />}
+                        {p.name}
+                      </span>
+                      <span className="ped-leg-bar"><span style={{ width: (p.ing / maxIng) * 100 + '%', background: PLATFORMS[p.plat].color }} /></span>
+                      <span className="ped-leg-val"><b className="tnum">{eur0(p.ing)} €</b><i className="tnum">{p.ped} ped</i></span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </Card>
+        )
+      })()}
 
       <Card>
         <div className="card-head">

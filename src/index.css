@@ -1395,6 +1395,26 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .plat-chip .plat-logo-plate { display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 5px; padding: 2px 4px; flex: none; }
 .plat-chip .plat-logo-plate img { height: 11px; width: auto; max-width: 60px; display: block; object-fit: contain; }
 .plat-chip.lg .plat-logo-plate img { height: 14px; max-width: 78px; }
+/* Reparto por plataforma UNIFICADO: tarta (donut) con glow + leyenda con logos */
+.ped-plat { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; padding: 10px 6px; }
+@media (max-width: 620px) { .ped-plat { grid-template-columns: 1fr; justify-items: stretch; gap: 20px; } }
+.ped-donut { position: relative; width: clamp(132px, 15vw, 172px); aspect-ratio: 1; flex: none; justify-self: center; }
+.ped-donut-svg { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 0 18px color-mix(in srgb, var(--brand) 26%, transparent)) drop-shadow(0 8px 20px rgba(0,0,0,.45)); }
+.ped-donut-bg { fill: none; stroke: rgba(255,255,255,.06); stroke-width: 15; }
+.ped-donut-seg { fill: none; stroke-width: 15; transition: stroke-dasharray .5s var(--ease-out, cubic-bezier(.23,1,.32,1)); }
+.ped-donut-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ped-donut-c b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(30px, 3.6vw, 42px); color: var(--ink); line-height: 1; }
+.ped-donut-c span { font-size: var(--fs-2xs); color: var(--muted); text-transform: uppercase; letter-spacing: .09em; margin-top: 3px; }
+.ped-legend { display: flex; flex-direction: column; gap: 13px; }
+.ped-leg-row { display: grid; grid-template-columns: 132px 1fr auto; align-items: center; gap: 13px; }
+@media (max-width: 480px) { .ped-leg-row { grid-template-columns: 1fr auto; } .ped-leg-bar { display: none; } }
+.ped-leg-name { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--ink); }
+.ped-leg-dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.ped-leg-bar { height: var(--bar-h, 12px); border-radius: var(--bar-r); background: rgba(255,255,255,.06); overflow: hidden; }
+.ped-leg-bar > span { display: block; height: 100%; border-radius: 100px; }
+.ped-leg-val { text-align: right; display: flex; flex-direction: column; line-height: 1.15; min-width: 84px; }
+.ped-leg-val b { font-family: var(--font-num); font-weight: 700; color: var(--ink); font-size: var(--fs-sm); }
+.ped-leg-val i { font-style: normal; font-size: var(--fs-2xs); color: var(--muted); }
 .plat-chip.lg { font-size: var(--fs-sm); padding: 7px 15px 7px 11px; }
 .plat-chip.lg svg { width: 17px; height: 17px; }
 
