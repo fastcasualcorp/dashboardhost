@@ -109,8 +109,9 @@ export default function Pedidos() {
         const totalIng = PLAT_STATS.reduce((s, p) => s + p.ing, 0)
         const totalPed = PLAT_STATS.reduce((s, p) => s + p.ped, 0)
         const maxIng = Math.max(...PLAT_STATS.map((p) => p.ing))
-        const C = 2 * Math.PI * 46
-        let off = 0
+        // MISMA tarta premium que la de Caja del día (r=30, cabo redondo, gaps, glow) → estética consistente
+        const r = 30, C = 2 * Math.PI * r, GAP = 13
+        let acc = 0
         return (
           <Card>
             <div className="card-head">
@@ -118,17 +119,21 @@ export default function Pedidos() {
               <Badge tone="muted">hoy · {totalPed} ped · {eur0(totalIng)} €</Badge>
             </div>
             <div className="ped-plat">
-              <div className="ped-donut">
-                <svg viewBox="0 0 120 120" className="ped-donut-svg" aria-hidden="true">
-                  <circle cx="60" cy="60" r="46" className="ped-donut-bg" />
+              <div className="day-donut">
+                <svg viewBox="0 0 84 84">
+                  <circle className="dd-track" cx="42" cy="42" r={r} fill="none" strokeWidth="9.5" />
                   {PLAT_STATS.map((p) => {
-                    const len = (p.ing / totalIng) * C
-                    const seg = <circle key={p.plat} cx="60" cy="60" r="46" className="ped-donut-seg" stroke={PLATFORMS[p.plat].color} strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-off} />
-                    off += len
-                    return seg
+                    const seg = (p.ing / totalIng) * C
+                    const len = Math.max(1, seg - GAP)
+                    const off = -(acc + GAP / 2)
+                    acc += seg
+                    return (
+                      <circle key={p.plat} className="dd-seg" cx="42" cy="42" r={r} fill="none" stroke={PLATFORMS[p.plat].color} strokeWidth="9.5" strokeLinecap="round"
+                        strokeDasharray={`${len.toFixed(2)} ${(C - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" style={{ ['--seg' as string]: PLATFORMS[p.plat].color }} />
+                    )
                   })}
                 </svg>
-                <div className="ped-donut-c"><b className="tnum">{totalPed}</b><span>pedidos</span></div>
+                <div className="day-donut-c"><b className="tnum">{totalPed}</b><span>pedidos</span></div>
               </div>
               <div className="ped-legend">
                 {PLAT_STATS.map((p) => {
