@@ -97,7 +97,7 @@ function persistDebounced() {
   // OJO: el query-builder de supabase-js es LAZY — solo lanza la petición al hacer await/.then().
   // Sin el .then() la escritura NO se enviaba (el stock nunca persistía). (bug pre-existente)
   _saveTimer = setTimeout(() => {
-    void sb.from('inventario').upsert({ local_id: lid, data: almacenes, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) console.warn('[almacen] persist:', error.message) })
+    void sb.from('inventario').upsert({ local_id: lid, data: almacenes, updated_at: new Date().toISOString() }).then(({ error }) => { if (error && import.meta.env.DEV) console.warn('[almacen] persist:', error.message) })
   }, 3000)
 }
 // Exportada para que el KDS (lib/comandas) arranque la sync del stock aunque NADIE
@@ -119,7 +119,7 @@ async function initSync() {
     emit()
   } else {
     // .then() obligatorio: sin él el builder lazy NO envía la petición (el blob no se sembraba).
-    void supabase.from('inventario').upsert({ local_id: lid, data: almacenes }).then(({ error }) => { if (error) console.warn('[almacen] seed:', error.message) }) // 1ª vez: sembrar
+    void supabase.from('inventario').upsert({ local_id: lid, data: almacenes }).then(({ error }) => { if (error && import.meta.env.DEV) console.warn('[almacen] seed:', error.message) }) // 1ª vez: sembrar
   }
 }
 

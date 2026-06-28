@@ -4,7 +4,7 @@ import { play } from '../lib/sound'
 import { selectorFor, describe, pickAt, stableAnchor } from '../lib/anchor'
 import { supabase, hasSupabase } from '../lib/supabase'
 
-// id de navegador para agrupar una tanda de notas (que Claude lea SOLO las tuyas)
+// id de navegador para agrupar una tanda de notas (para leer SOLO las de este equipo)
 function clientId(): string {
   try {
     let c = localStorage.getItem('rebell-cmt-client')
@@ -19,12 +19,12 @@ function clientId(): string {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   MODO COMENTARIOS — Juan deja notas ancladas por toda la página y yo
-   (Claude) las reviso luego y las clavo todas de una. Se activa desde el
-   panel de perfil. Cada nota se ancla a un elemento (selector + instancia +
-   offset normalizado) → sobrevive al re-render y a la recarga. Puede llevar
-   una CAPTURA pegada (Cmd/Ctrl+V) como referencia. "Exportar" baja un JSON
-   con todo (textos + capturas) que Claude lee y corrige con talcual.
+   MODO COMENTARIOS — herramienta interna de revisión: deja notas ancladas
+   por toda la página para repasarlas después. Se activa desde el panel de
+   perfil. Cada nota se ancla a un elemento (selector + instancia + offset
+   normalizado) → sobrevive al re-render y a la recarga. Puede llevar una
+   CAPTURA pegada (Cmd/Ctrl+V) como referencia. "Exportar" baja un JSON con
+   todo (textos + capturas) para procesarlas en una sola pasada.
    ════════════════════════════════════════════════════════════════ */
 
 export type Cmt = {
@@ -218,8 +218,8 @@ export default function CommentLayer({ on, setOn, active }: { on: boolean; setOn
     if (f && f.type.startsWith('image/')) compress(f).then((d) => update(id, { img: d })).catch(() => {})
   }
 
-  // Envío a la nube: si hay Supabase, las notas viajan a `design_comments` y
-  // Claude las lee directamente (sin export manual). Si no, cae al JSON descargable.
+  // Envío a la nube: si hay Supabase, las notas viajan a `design_comments`
+  // (revisión centralizada, sin export manual). Si no, cae al JSON descargable.
   async function enviar() {
     if (!hasSupabase || !supabase) {
       exportar()
@@ -405,7 +405,7 @@ export default function CommentLayer({ on, setOn, active }: { on: boolean; setOn
               Salir
             </button>
             <button className="cm-bar-fix" onClick={enviar} disabled={!list.length}>
-              {sent === 'ok' ? '✓ Enviado a Claude' : sent === 'file' ? '✓ Descargado' : hasSupabase ? 'Enviar a Claude' : 'Exportar para Claude'}
+              {sent === 'ok' ? '✓ Enviado' : sent === 'file' ? '✓ Descargado' : hasSupabase ? 'Enviar' : 'Exportar'}
             </button>
           </div>
         </div>

@@ -21,6 +21,11 @@ export default defineConfig({
     __BUILD_SHA__: JSON.stringify(BUILD_SHA),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
   },
+  build: {
+    // BLINDAJE: sin sourcemaps en prod → nadie reconstruye el código fuente desde
+    // el navegador (DevTools solo ve el bundle minificado, sin comentarios).
+    sourcemap: false,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

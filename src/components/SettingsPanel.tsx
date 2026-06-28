@@ -188,7 +188,7 @@ export default function SettingsPanel({
           </span>
           <span className="spc-txt">
             <b>Modo comentarios</b>
-            <small>{comments ? 'Activo · deja notas por la página' : 'Deja notas ancladas para que Claude las clave'}</small>
+            <small>{comments ? 'Activo · deja notas por la página' : 'Deja notas ancladas sobre el panel para revisarlas luego'}</small>
           </span>
           <span className="spc-sw" aria-hidden="true">
             <span className="spc-knob" />

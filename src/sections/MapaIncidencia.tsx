@@ -13,7 +13,7 @@ import { LOCAL } from '../lib/local'
 /* Mapa de Incidencia — rastrea la competencia en un mapa 3D estilo videojuego (Mapbox GL:
    edificios extruidos y EXAGERADOS, vista inclinada, atmósfera, vuelo cinematográfico, sin
    nombres de lugares), con radio configurable, marcadores-carta por rival y un "Radar IA".
-   v1 con datos de DEMO; con Google Places + Edge Function (Claude) serán reales. Diseño REBELL
+   v1 con datos de DEMO; con Google Places + Edge Function serán reales. Diseño REBELL
    (oro sobre casi-negro). Token público en VITE_MAPBOX_TOKEN.
    La ubicación del local sale de `lib/local` (fuente única) → ya NO está hardcodeada (multi-tenant). */
 
