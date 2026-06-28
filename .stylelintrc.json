@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "declaration-property-value-disallowed-list": [
+      {
+        "/color$/": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i", "/#f5a524/i", "/#f8716a/i"],
+        "background": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
+        "background-color": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
+        "fill": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"],
+        "stroke": ["/#1a1404/i", "/#1a1206/i", "/#34d399/i", "/#ffbf10/i", "/#7cef5a/i"]
+      },
+      {
+        "message": "Anti-deriva (Juan): ese color YA tiene token — usa var(--accent-ink) / var(--ok) / var(--brand), no el hex a pelo. Cambiar un token debe cambiar TODO."
+      }
+    ]
+  }
+}
