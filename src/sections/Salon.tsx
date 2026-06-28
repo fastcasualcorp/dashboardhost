@@ -555,7 +555,8 @@ export default function Salon() {
   // ── Pan/zoom del lienzo con el ratón (vista manual) ──
   function canvasDown(e: RPE<HTMLDivElement>) {
     setSel(null)
-    if (servicio) return
+    // Pan SIEMPRE disponible (también en servicio, no solo editando) → moverse libre por el plano
+    // sin tener que pulsar "Editar sala". Por comodidad (Juan 28-jun). El zoom con rueda ya iba siempre.
     const t = viewRef.current ?? fit
     pan.current = { px: e.clientX, py: e.clientY, ox: t.ox, oy: t.oy }
   }
