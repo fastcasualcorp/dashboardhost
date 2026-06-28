@@ -276,7 +276,7 @@ export function Donut({ value, label, sub, tone = 'gold' }: { value: number; lab
     <div className="donut-wrap">
       <div className="donut">
         <svg viewBox="0 0 84 84">
-          <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="8" />
+          <circle className="donut-track" cx="42" cy="42" r={r} fill="none" strokeWidth="8" />
           <circle className={`donut-arc dt-${tone}`} cx="42" cy="42" r={r} fill="none" strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 42 42)" />
         </svg>
         <div className="donut-c">
