@@ -97,7 +97,7 @@ export default function SettingsPanel({
         </div>
         <div className="sp-field">
           <span className="sp-k">Plan</span>
-          <span className="sp-v gold">REBELL Pro</span>
+          <span className="sp-v gold">FAT SMASH Pro</span>
         </div>
         <button className={'sp-action' + (pwOpen ? ' on' : '')} onClick={() => setPwOpen((o) => !o)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

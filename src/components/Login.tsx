@@ -4,6 +4,7 @@ import { play, playBeast, preloadSfx } from '../lib/sound'
 import { beastById } from '../lib/beasts'
 import { reduceMotion } from '../lib/data'
 import { supabase, hasSupabase } from '../lib/supabase'
+import LogoMark from './LogoMark'
 import { registrarAcceso } from '../lib/acceso'
 
 // Fondos de cocina que rotan en bucle (pantalla de carga estilo videojuego),
@@ -169,7 +170,7 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
       <div className="login-flicker" aria-hidden="true" />
       <div className="login-content">
       <div className="login-top">
-        <span className="lg-word">REBELL</span>
+        <LogoMark variant="b" className="lg-logo" />
       </div>
 
       <motion.h1

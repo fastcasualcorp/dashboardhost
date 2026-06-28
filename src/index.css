@@ -2157,6 +2157,10 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .login-top { display: flex; align-items: center; gap: 11px; }
 .lg-mark { width: 34px; height: 34px; }
 .lg-word { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); letter-spacing: .4px; }
+/* Logo FAT SMASH en el login (máscara teñida con el acento) */
+.lg-logo { display: block; width: clamp(150px, 40vw, 200px); aspect-ratio: 333.91 / 59.66; background: var(--brand);
+  -webkit-mask: url(/img/logo-b.svg) center / contain no-repeat; mask: url(/img/logo-b.svg) center / contain no-repeat;
+  filter: drop-shadow(0 2px 16px color-mix(in srgb, var(--brand) 30%, transparent)); }
 .login-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 5vw, 40px); letter-spacing: -.01em; }
 .login-grid { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: clamp(20px, 3vw, 44px); max-width: 960px; }
 .pf {
@@ -4804,3 +4808,11 @@ html[data-saver='1'] .side-beast-vid { display: none; }
 .plan-cta:active:not(:disabled) { transform: scale(.98); }
 .plan-cta:disabled { opacity: .5; cursor: default; }
 .planes-foot { text-align: center; color: var(--faint); font-size: var(--fs-xs); margin-top: 26px; }
+
+/* ── "1" SIN PIE (Juan 28-jun): Inter pone un PIE al "1" SOLO con figuras tabulares (tnum).
+   En los números HÉROE (grandes y visibles) usamos figuras PROPORCIONALES → el "1" queda
+   limpio como el Inter real. Las tablas/timers pequeños conservan tnum para alinear columnas. */
+.ck-total, .ck-total .odonum, .odo, .odonum, .rstat-val, .ckc-hero, .ck-num, .vtpv-bignum, .fg-val,
+.alm-ie-pct b, .alm-pcard-pct, .roi-big-num, .roi-revval, .day-donut-c b, .whp-total {
+  font-variant-numeric: proportional-nums !important;
+}
