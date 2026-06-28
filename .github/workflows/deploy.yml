@@ -29,6 +29,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Tests (lógica de dinero)
+        run: npm test
+
       - name: Build de producción
         env:
           VITE_SUPABASE_URL: https://pcmzovivezvuccoevwjh.supabase.co
