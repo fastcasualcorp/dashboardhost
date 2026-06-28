@@ -20,12 +20,13 @@ export default function WaterfallPL({ facturacion, personal, foodCost, gastos }:
   const pct = (n: number) => Math.round((n / max) * 1000) / 10
   const rm = reduceMotion()
 
+  const neg = (n: number) => (n ? '−' + eur0(n) : eur0(0)) // sin coste → "0 €", nunca "−0 €"
   // bottom = base de la barra (saldo tras restar) · h = altura (lo que vale el paso)
   const cols: { key: Tone; label: string; amount: number; bottom: number; h: number; signed: string }[] = [
     { key: 'fact', label: 'Facturación', amount: facturacion, bottom: 0, h: facturacion, signed: eur0(facturacion) },
-    { key: 'personal', label: 'Personal', amount: personal, bottom: facturacion - personal, h: personal, signed: '−' + eur0(personal) },
-    { key: 'food', label: 'Food cost', amount: foodCost, bottom: facturacion - personal - foodCost, h: foodCost, signed: '−' + eur0(foodCost) },
-    { key: 'gastos', label: 'Gastos fijos', amount: gastos, bottom: neto, h: gastos, signed: '−' + eur0(gastos) },
+    { key: 'personal', label: 'Personal', amount: personal, bottom: facturacion - personal, h: personal, signed: neg(personal) },
+    { key: 'food', label: 'Food cost', amount: foodCost, bottom: facturacion - personal - foodCost, h: foodCost, signed: neg(foodCost) },
+    { key: 'gastos', label: 'Gastos fijos', amount: gastos, bottom: neto, h: gastos, signed: neg(gastos) },
     { key: 'neto', label: 'Neto', amount: neto, bottom: 0, h: neto, signed: eur0(neto) },
   ]
 

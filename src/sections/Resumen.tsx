@@ -39,8 +39,8 @@ function dataFor(key: string) {
   // 'mes' usa la facturación mensual ÚNICA (misma que el P&L y Coste → el héroe y el P&L ya NO se contradicen)
   const ventas = key === 'hoy' ? 1787 : key === 'mes' || key === 'mesant' ? VENTAS_MES : Math.round(1426 * days * (0.95 + (days % 4) * 0.012))
   const pedidos = Math.round(ventas / 21.28)
-  const ticket = ventas / pedidos
-  const margen = Math.min(72, 60 + Math.round(Math.log2(days + 1)))
+  const ticket = pedidos ? ventas / pedidos : 0 // sin pedidos → 0 (no NaN)
+  const margen = ventas ? Math.min(72, 60 + Math.round(Math.log2(days + 1))) : 0
   return { ventas, pedidos, ticket, margen, chart: seriesFor(key, ventas) }
 }
 
@@ -81,19 +81,22 @@ export default function Resumen() {
   const plFood = Math.round(VENTAS_MES * fcPct)
   const plGastos = gastosMes() // = Gastos fijos (fuente única gastos, total con IVA)
   const plNeto = VENTAS_MES - plPersonal - plFood - plGastos
-  const plPct = (n: number) => Math.round((n / VENTAS_MES) * 1000) / 10
+  // % sobre facturación: indefinido si no hay ventas → 0 numérico / "—" en texto (nunca Infinity)
+  const plPct = (n: number) => (VENTAS_MES ? Math.round((n / VENTAS_MES) * 1000) / 10 : 0)
+  const plPctTxt = (n: number) => (VENTAS_MES ? plPct(n) + '%' : '—')
   const filasPL = [
-    { concepto: 'Facturación', importe: `${eur0(VENTAS_MES)},00 €`, pct: <Badge tone="gold">100%</Badge> },
-    { concepto: 'Coste de personal', importe: `${eur0(plPersonal)} €`, pct: <Badge tone="blue">{plPct(plPersonal)}%</Badge> },
-    { concepto: 'Compras (food cost)', importe: `${eur0(plFood)} €`, pct: <Badge tone="amber">{plPct(plFood)}%</Badge> },
-    { concepto: 'Gastos fijos', importe: `${eur0(plGastos)} €`, pct: <Badge tone="muted">{plPct(plGastos)}%</Badge> },
-    { concepto: 'Resultado neto', importe: `${eur0(plNeto)} €`, pct: <Badge tone="green">{plPct(plNeto)}%</Badge> },
+    { concepto: 'Facturación', importe: `${eur0(VENTAS_MES)},00 €`, pct: <Badge tone="gold">{VENTAS_MES ? '100%' : '—'}</Badge> },
+    { concepto: 'Coste de personal', importe: `${eur0(plPersonal)} €`, pct: <Badge tone="blue">{plPctTxt(plPersonal)}</Badge> },
+    { concepto: 'Compras (food cost)', importe: `${eur0(plFood)} €`, pct: <Badge tone="amber">{plPctTxt(plFood)}</Badge> },
+    { concepto: 'Gastos fijos', importe: `${eur0(plGastos)} €`, pct: <Badge tone="muted">{plPctTxt(plGastos)}</Badge> },
+    { concepto: 'Resultado neto', importe: `${eur0(plNeto)} €`, pct: <Badge tone="green">{plPctTxt(plNeto)}</Badge> },
   ]
   const rangeLow = range.label.toLowerCase()
-  // "Salud del negocio" (0-100): margen + ticket vs objetivo. Etiqueta y tono por tramo.
-  const score = Math.max(20, Math.min(98, Math.round(d.margen * 0.9 + (d.ticket / 19.5) * 28)))
-  const scoreLabel = score >= 85 ? 'Excelente' : score >= 70 ? 'Buena' : score >= 50 ? 'Estable' : 'Atención'
-  const scoreTone: 'green' | 'amber' | 'red' = score >= 70 ? 'green' : score >= 50 ? 'amber' : 'red'
+  const hasVentas = d.ventas > 0
+  // "Salud del negocio" (0-100): margen + ticket vs objetivo. Sin ventas → 0 (no NaN). Etiqueta y tono por tramo.
+  const score = hasVentas ? Math.max(20, Math.min(98, Math.round(d.margen * 0.9 + (d.ticket / 19.5) * 28))) : 0
+  const scoreLabel = !hasVentas ? 'Sin ventas' : score >= 85 ? 'Excelente' : score >= 70 ? 'Buena' : score >= 50 ? 'Estable' : 'Atención'
+  const scoreTone: 'green' | 'amber' | 'red' = !hasVentas ? 'red' : score >= 70 ? 'green' : score >= 50 ? 'amber' : 'red'
 
   return (
     <div className="section">
@@ -106,7 +109,7 @@ export default function Resumen() {
           <div className="rs-big">
             <b className="rs-amount tnum"><CountValue value={eur0(d.ventas)} /></b>
             <span className="rs-unit">€</span>
-            <span className="rs-delta up">▲ +9,0%</span>
+            {hasVentas && <span className="rs-delta up">▲ +9,0%</span>}
           </div>
           <div className="rs-mini">
             <div className="rs-m"><span>Margen</span><b className="tnum"><CountValue value={d.margen + '%'} /></b></div>
@@ -125,17 +128,17 @@ export default function Resumen() {
         <Badge tone="gold">Junio 2026</Badge>
       </div>
       <Grid cols={4} className="kpi-grid">
-        <KpiTile label="Facturación" value={eur0(VENTAS_MES)} unit="€" delta="+6,3%" foot="vs mes anterior" trend="up" />
-        <KpiTile label="Coste de personal" value={eur0(plPersonal)} unit="€" delta={plPct(plPersonal) + '%'} foot="s/ventas" trend="flat" />
+        <KpiTile label="Facturación" value={eur0(VENTAS_MES)} unit="€" delta={hasVentas ? '+6,3%' : undefined} foot="vs mes anterior" trend="up" />
+        <KpiTile label="Coste de personal" value={eur0(plPersonal)} unit="€" delta={VENTAS_MES ? plPctTxt(plPersonal) : undefined} foot="s/ventas" trend="flat" />
         <KpiTile label="Food cost" value={String(Math.round(fcPct * 100))} unit="%" delta="escandallo" foot="real de la carta" trend="up" />
-        <KpiTile label="Resultado neto" value={eur0(plNeto)} unit="€" delta={plPct(plNeto) + '%'} foot="margen del mes" trend="up" />
+        <KpiTile label="Resultado neto" value={eur0(plNeto)} unit="€" delta={VENTAS_MES ? plPctTxt(plNeto) : undefined} foot="margen del mes" trend="up" />
       </Grid>
 
       {/* CASCADA: cómo la facturación se convierte en beneficio (la estrella del Resumen) */}
       <Card>
         <div className="card-head">
           <h3>De la facturación al beneficio</h3>
-          <Badge tone="green">{plPct(plNeto)}% margen neto</Badge>
+          <Badge tone="green">{plPctTxt(plNeto)} margen neto</Badge>
         </div>
         <WaterfallPL facturacion={VENTAS_MES} personal={plPersonal} foodCost={plFood} gastos={plGastos} />
       </Card>
@@ -144,13 +147,19 @@ export default function Resumen() {
         <Card>
           <div className="card-head">
             <h3>Margen neto</h3>
-            <Badge tone="green">{plPct(plNeto)}% s/facturación</Badge>
+            <Badge tone="green">{plPctTxt(plNeto)} s/facturación</Badge>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.4rem', padding: '0.5rem 0.25rem', flexWrap: 'wrap' }}>
-            <Donut value={Math.round((plNeto / VENTAS_MES) * 100)} label="margen neto" sub="sobre facturación" tone="green" />
+            <Donut value={VENTAS_MES ? Math.round((plNeto / VENTAS_MES) * 100) : 0} label="margen neto" sub="sobre facturación" tone="green" />
             <p className="muted-s" style={{ flex: '1 1 160px', lineHeight: 1.5, margin: 0 }}>
-              Por cada 100 € facturados, <strong style={{ color: 'var(--brand)' }}>{plPct(plNeto)} € son beneficio real</strong> tras costes y gastos.
-              Meta mensual: 20%.
+              {VENTAS_MES ? (
+                <>
+                  Por cada 100 € facturados, <strong style={{ color: 'var(--brand)' }}>{plPct(plNeto)} € son beneficio real</strong> tras costes y gastos.
+                  Meta mensual: 20%.
+                </>
+              ) : (
+                <>Aún no hay ventas registradas este mes. Cuando entren, aquí verás cuánto de cada 100&nbsp;€ es beneficio real.</>
+              )}
             </p>
           </div>
         </Card>
@@ -181,7 +190,7 @@ export default function Resumen() {
           </div>
           <div className="bar-rows">
             {CANALES.map((c) => (
-              <BarRow key={c.l} value={c.v} max={742} color={c.c} amount={eur0(c.v * f) + ' €'}
+              <BarRow key={c.l} value={c.v * f} max={742 * f || 1} color={c.c} amount={eur0(c.v * f) + ' €'}
                 label={<span className="rs-canal-lbl">{c.logo && <span className="rs-canal-logo"><img src={c.logo} alt="" /></span>}{c.l}</span>} />
             ))}
           </div>
@@ -209,7 +218,7 @@ export default function Resumen() {
             ),
             uds: eur0(t.uds * f),
             ventas: eur0(t.ventas * f) + ' €',
-            peso: <Badge tone={i < 2 ? 'gold' : 'muted'}>{Math.round((t.ventas / 1787) * 100)}%</Badge>,
+            peso: <Badge tone={i < 2 ? 'gold' : 'muted'}>{hasVentas ? Math.round((t.ventas / 1787) * 100) + '%' : '—'}</Badge>,
           }))}
         />
       </Card>

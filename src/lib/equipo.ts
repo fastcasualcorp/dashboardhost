@@ -81,6 +81,9 @@ export const costeDia = (e: Emp, di: number) => ((e.turnos[di]?.m ? HORAS_TURNO 
 // ── store reactivo ──
 const KEY = 'rebell-equipo-v1'
 function load(): Emp[] {
+  // REAL: la nube manda → plantilla VACÍA hasta que initSync hidrate desde Supabase.
+  // Evita mezclar ventas reales (0) con plantilla de adorno (P&L con margen −∞). La SEED es solo DEMO.
+  if (!isDemoMode()) return []
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {

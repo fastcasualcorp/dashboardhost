@@ -43,6 +43,8 @@ export const totalGasto = (g: Gasto) => r2(g.base + (g.base * g.iva) / 100)
 
 const KEY = 'rebell-gastos-v1'
 function load(): Gasto[] {
+  // REAL: la nube manda → sin gastos hasta sincronizar. La SEED es solo DEMO (evita P&L incoherente).
+  if (!isDemoMode()) return []
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
