@@ -115,12 +115,21 @@ export default function Caja() {
   const descAmt = dia.descuadre < 0 ? dia.descuadre : -12.4
   const maxUds = Math.max(...dia.topPlatos.map((p) => p.uds), 1)
 
-  // ── Comparar 2 días lado a lado ──
+  // ── Comparar 2 días: eliges AMBAS fechas en la tira; los paneles aparecen REACTIVOS (Juan 28-jun) ──
+  // pongo la 1ª → aparece el panel A · pongo la 2ª → aparece el panel B y enfrenta los números.
   const [cmpOn, setCmpOn] = useState(false)
-  const [fechaB, setFechaB] = useState<Date>(() => addDias(HOY, -1)) // por defecto: ayer (visible en la tira y distinto)
-  const diaB = useMemo(() => cierreDia(fechaB), [fechaB])
-  const cmpD = totalDia - diaB.total // Δ de caja A−B (A usa el total REAL si es hoy)
-  const cmpPct = diaB.total ? (cmpD / diaB.total) * 100 : 0
+  const [cmpA, setCmpA] = useState<Date | null>(null)
+  const [cmpB, setCmpB] = useState<Date | null>(null)
+  // Datos de un día (total REAL si es hoy vía wallet; cierre simulado si es pasado) para el enfrentamiento.
+  const datoDia = (f: Date) => {
+    const d = cierreDia(f)
+    const esHoyF = esMismoDia(f, HOY)
+    const tot = esHoyF ? hoyTotal : d.total
+    const medio = esHoyF && d.tickets ? Math.round((tot / d.tickets) * 100) / 100 : d.medio
+    return { fecha: f, total: tot, tickets: d.tickets, medio }
+  }
+  const datA = cmpA ? datoDia(cmpA) : null
+  const datB = cmpB ? datoDia(cmpB) : null
 
   // Tira de días tipo ANILLO: 9 días CENTRADOS en el día seleccionado → el activo queda nítido en el centro
   // y los extremos se difuminan (mask horizontal, técnica de --sep en eje X). Las flechas rotan ±1 día.
@@ -137,20 +146,24 @@ export default function Caja() {
   function elegirDia(d: Date) {
     if (d.getTime() > HOY.getTime()) return
     if (cmpOn) {
-      // en modo comparar, el clic elige el día B (el que enfrentas al principal)
-      if (esMismoDia(d, fecha) || esMismoDia(d, fechaB)) return
-      setFechaB(d)
-      play('tap')
-    } else {
-      if (esMismoDia(d, fecha)) return
-      setFecha(d)
-      play('tap')
+      // Modo comparar: el clic elige las DOS fechas a enfrentar (1ª → panel A, 2ª → panel B).
+      const sameA = cmpA && esMismoDia(d, cmpA)
+      const sameB = cmpB && esMismoDia(d, cmpB)
+      if (sameA) { setCmpA(cmpB); setCmpB(null); play('tap'); return } // re-clic en A → la quita (B pasa a A)
+      if (sameB) { setCmpB(null); play('tap'); return }                // re-clic en B → la quita
+      if (!cmpA) { setCmpA(d); play('tap') }                           // 1ª fecha → aparece panel A
+      else if (!cmpB) { setCmpB(d); play('toggle', 0.5) }              // 2ª fecha → aparece panel B + enfrentamiento
+      else { setCmpA(cmpB); setCmpB(d); play('tap') }                  // ambos llenos → rota (compara las 2 últimas)
+      return
     }
+    if (esMismoDia(d, fecha)) return
+    setFecha(d)
+    play('tap')
   }
   function toggleCmp() {
     setCmpOn((v) => {
       const nx = !v
-      if (nx && esMismoDia(fechaB, fecha)) setFechaB(addDias(fecha, -1))
+      if (!nx) { setCmpA(null); setCmpB(null) } // al apagar, limpia las dos
       return nx
     })
     play('toggle', 0.5)
@@ -280,14 +293,15 @@ export default function Caja() {
               </button>
               <div className="ckd-strip">
                 {dias.map((d) => {
-                  const sel = esMismoDia(d, fecha)
-                  const selB = cmpOn && esMismoDia(d, fechaB)
+                  // Sin comparar: marca el día activo (oro). Comparando: marca la 1ª (oro) y la 2ª (violeta).
+                  const selA = cmpOn ? !!(cmpA && esMismoDia(d, cmpA)) : esMismoDia(d, fecha)
+                  const selB = cmpOn && !!(cmpB && esMismoDia(d, cmpB))
                   const hoyD = esMismoDia(d, HOY)
                   const fut = d.getTime() > HOY.getTime()
                   // Día futuro → hueco VACÍO (mantiene el ancho para que el seleccionado quede centrado, sin mostrar fechas por venir).
                   if (fut) return <span key={d.getTime()} className="ckd-cell ckd-void" aria-hidden="true" />
                   return (
-                    <button key={d.getTime()} className={'ckd-cell' + (sel ? ' on' : '') + (selB ? ' onB' : '') + (hoyD ? ' today' : '')} onClick={() => elegirDia(d)} aria-pressed={sel || selB}>
+                    <button key={d.getTime()} className={'ckd-cell' + (selA ? ' on' : '') + (selB ? ' onB' : '') + (hoyD ? ' today' : '')} onClick={() => elegirDia(d)} aria-pressed={selA || selB}>
                       <span className="ckd-dow">{DOW[d.getDay()]}</span>
                       <span className="ckd-dnum tnum">{String(d.getDate()).padStart(2, '0')}</span>
                     </button>
@@ -329,24 +343,56 @@ export default function Caja() {
               <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
             </StatRow>
 
-            {/* Comparativa de 2 días: cifras-héroe enfrentadas (A = principal, B = el elegido en la tira) con Δ central */}
+            {/* Comparativa de 2 días: eliges AMBAS fechas en la tira; los paneles aparecen REACTIVOS y se enfrentan
+                las cifras (Caja/Tickets/Ticket medio) con flechas ▲▼ verdes/rojas y el % de diferencia. (Juan 28-jun) */}
             {cmpOn && (
               <div className="ck-compare">
-                <div className="ckc-col">
-                  <span className="ckc-day">{fmtDiaLargo(fecha, HOY)}</span>
-                  <span className="ckc-hero tnum">{eur0(totalDia)}<i>€</i></span>
-                  <span className="ckc-mini"><b className="tnum">{dia.tickets}</b> tickets · <b className="tnum">{eur(medioDia)}</b> € medio</span>
-                </div>
-                <div className="ckc-delta">
-                  <span className={'ckc-dnum ' + (cmpD >= 0 ? 'up' : 'down')}>{cmpD >= 0 ? '▲' : '▼'} {eur0(Math.abs(cmpD))} €</span>
-                  <span className={'ckc-dpct ' + (cmpD >= 0 ? 'up' : 'down')}>{(cmpPct >= 0 ? '+' : '') + cmpPct.toFixed(1)}%</span>
-                  <span className="ckc-dlbl">diferencia</span>
-                </div>
-                <div className="ckc-col b">
-                  <span className="ckc-day">{fmtDiaLargo(fechaB, HOY)}</span>
-                  <span className="ckc-hero tnum">{eur0(diaB.total)}<i>€</i></span>
-                  <span className="ckc-mini"><b className="tnum">{diaB.tickets}</b> tickets · <b className="tnum">{eur(diaB.medio)}</b> € medio</span>
-                </div>
+                {/* Panel A (1ª fecha) */}
+                {datA ? (
+                  <div className="ckc-col" key={'A' + datA.fecha.getTime()}>
+                    <span className="ckc-tag">1ª fecha</span>
+                    <span className="ckc-day">{fmtDiaLargo(datA.fecha, HOY)}</span>
+                    <span className="ckc-hero tnum">{eur0(datA.total)}<i>€</i></span>
+                    <span className="ckc-mini"><b className="tnum">{datA.tickets}</b> tickets · <b className="tnum">{eur(datA.medio)}</b> € medio</span>
+                  </div>
+                ) : (
+                  <div className="ckc-slot"><span className="ckc-slot-n">1</span><span className="ckc-slot-t">Elige la 1ª fecha en la tira</span></div>
+                )}
+
+                {/* Centro: enfrentamiento por métrica (B vs A) con flechas ▲▼ y % */}
+                {datA && datB ? (
+                  <div className="ckc-deltas" key={'D' + datA.fecha.getTime() + datB.fecha.getTime()}>
+                    {[
+                      { lbl: 'Caja', a: datA.total, b: datB.total },
+                      { lbl: 'Tickets', a: datA.tickets, b: datB.tickets },
+                      { lbl: 'Ticket medio', a: datA.medio, b: datB.medio },
+                    ].map((r) => {
+                      const diff = r.b - r.a
+                      const pct = r.a ? (diff / r.a) * 100 : 0
+                      const up = diff >= 0
+                      return (
+                        <div className="ckc-drow" key={r.lbl}>
+                          <span className="ckc-dlbl2">{r.lbl}</span>
+                          <span className={'ckc-dpct ' + (up ? 'up' : 'down')}>{up ? '▲' : '▼'} {(pct >= 0 ? '+' : '') + pct.toFixed(1)}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="ckc-vs" aria-hidden="true">⚖</div>
+                )}
+
+                {/* Panel B (2ª fecha) */}
+                {datB ? (
+                  <div className="ckc-col b" key={'B' + datB.fecha.getTime()}>
+                    <span className="ckc-tag">2ª fecha</span>
+                    <span className="ckc-day">{fmtDiaLargo(datB.fecha, HOY)}</span>
+                    <span className="ckc-hero tnum">{eur0(datB.total)}<i>€</i></span>
+                    <span className="ckc-mini"><b className="tnum">{datB.tickets}</b> tickets · <b className="tnum">{eur(datB.medio)}</b> € medio</span>
+                  </div>
+                ) : (
+                  <div className="ckc-slot"><span className="ckc-slot-n">2</span><span className="ckc-slot-t">Elige la 2ª fecha en la tira</span></div>
+                )}
               </div>
             )}
 

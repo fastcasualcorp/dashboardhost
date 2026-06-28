@@ -4,7 +4,7 @@ import { gsap } from 'gsap'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { CountValue } from '../components/ui'
-import { play, playBeast, playLock, playTick, playSweep, playGlitch, setCountMuted } from '../lib/sound'
+import { play, playBeast, playLock, playSweep, playGlitch, setCountMuted } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
 import { usePower } from '../lib/power'
 import { fetchRivalsCached, type PlaceReview, type PlaceRival } from '../lib/places'
@@ -176,40 +176,15 @@ export default function MapaIncidencia() {
   const anchorRef = useRef(false) // true tras el vuelo de entrada → la rotación orbita el local
   const isoLoadedRef = useRef(false) // isócronas de reparto ya pedidas (no repetir)
   const rivalMarks = useRef<{ r: Rival; el: HTMLElement }[]>([]) // refs para mostrar/ocultar por radio
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({}) // wrapper de cada comparador (para anclarlo a su punto)
-  const comparadosRef = useRef<(Rival & { d: number })[]>([]) // lista viva accesible desde el posicionador
-  const positionRef = useRef<() => boolean>(() => false) // DIBUJA los comparadores (lerp + conector); devuelve si sigue animando. Lo invocan el render del mapa y el bucle de asentamiento
-  const solveRef = useRef<() => void>(() => {}) // RESUELVE el anti-solape con histéresis; SOLO al abrir/cerrar carta o al pararse el mapa (NUNCA por frame → 0 temblor)
-  const armRef = useRef<() => void>(() => {}) // arranca el bucle de asentamiento (rAF auto-parante)
-  const nudgeRef = useRef<Record<string, { x: number; y: number }>>({}) // desplazamiento ANTI-SOLAPE animado por carta (x/y = actual, lerp hacia el offset CONGELADO del solver)
-  const placeRef = useRef<{ off: Record<string, { dx: number; dy: number }> } | null>(null) // LAYOUT CONGELADO: offset (dx,dy) por carta del solver con histéresis; el dibujo SOLO lo lee → en reposo nada recalcula
-  const magRef = useRef<Record<string, { disp: boolean; pulse: number }>>({}) // estado "imantado" por carta (tick + pulso del conector)
-  const leadsRef = useRef<SVGSVGElement | null>(null) // capa SVG de los conectores carta→punto (líneas + nodo hexagonal)
-  const cardLoopRef = useRef(0) // rAF mientras haya cartas abiertas → anclaje + separación animada
+  const comparadosRef = useRef<(Rival & { d: number })[]>([]) // lista viva (los handlers imperativos de marcadores capturan closures viejos)
   const visRef = useRef<(Rival & { d: number; threat: number })[]>([]) // rivales visibles (radio + filtro), con amenaza
   const radioRef = useRef(1000) // radio actual accesible desde el sonar/teclado
   const kbdRef = useRef<{ focus: (n: number) => void; cycle: () => void; step: (d: number) => void }>({ focus: () => {}, cycle: () => {}, step: () => {} })
   const [radio, setRadio] = useState(1000)
-  // Comparadores ABIERTOS (varios a la vez): cada uno es un marcador anclado a su rival que ESCALA con
-  // el zoom (al alejar se hacen pequeños) → puedes abrir varios y verlos todos alejando la cámara.
+  // Comparadores ABIERTOS: tarjetas GRANDES que OCUPAN el recuadro del mapa. Máximo 2 (1 = a pantalla
+  // completa del mapa; 2 = mitad y mitad, responsive). Al abrir un 3º reemplaza al más antiguo. (Juan 28-jun)
+  const MAX_CMP = 2
   const [comparados, setComparados] = useState<(Rival & { d: number })[]>([])
-  // CROMOS enviados al cajón lateral derecho (comparar varias tipo cartas Pokémon). Juan 25-jun.
-  const [enviadas, setEnviadas] = useState<(Rival & { d: number })[]>([])
-  const [flashId, setFlashId] = useState<string | null>(null) // cromo que PARPADEA (ya estaba en el cajón)
-  const flashTimer = useRef(0)
-  const enviarCromo = (r: Rival & { d: number }) => {
-    if (enviadas.some((p) => p.id === r.id)) {
-      // ya está a la derecha → que BRILLE para saber que es ESA la que intentas llevar (Juan 25-jun).
-      setFlashId(null)
-      window.clearTimeout(flashTimer.current)
-      requestAnimationFrame(() => setFlashId(r.id)) // null→id reinicia la animación CSS aunque ya estuviera marcada
-      flashTimer.current = window.setTimeout(() => setFlashId(null), 1100)
-      if (!reduceMotion()) playTick(0.5)
-      return
-    }
-    setEnviadas((prev) => (prev.some((p) => p.id === r.id) ? prev : [...prev, r].slice(-6))) // máx 6 en mano
-    if (!reduceMotion()) play('pop', 0.5, 1.12)
-  }
   const [clock, setClock] = useState('') // timecode en vivo del HUD
   const [armed, setArmed] = useState(false) // modo operación: el HUD se ensambla tras el vuelo
   const [hot, setHot] = useState<string | null>(null) // rival enfocado (cross-highlight mapa↔panel)
@@ -408,62 +383,32 @@ export default function MapaIncidencia() {
   const abrirComparador = (r: Rival & { d: number }) => {
     const cur = comparadosRef.current // ref SIEMPRE actual (los handlers de marcadores capturan closures viejos)
     if (cur.some((p) => p.id === r.id)) { setHot(r.id); return } // ya abierta → solo enfoca
-    const next = [...cur, r]
-    // AUTO-CAJÓN (Juan 25-jun): en el mapa caben hasta 3; al abrir la 4ª, TODAS pasan al cajón de cromos (derecha)
-    // y se ocultan del mapa (4 juntas en el mapa satura). Comparas en grande al lado, como cartas Pokémon.
-    if (next.length > 3) {
-      setEnviadas((prev) => {
-        const merged = [...prev]
-        for (const c of next) if (!merged.some((m) => m.id === c.id)) merged.push(c)
-        return merged.slice(-6)
-      })
-      setComparados([])
-      setHot(null)
-      if (!reduceMotion()) { playLock(0.4); play('pop', 0.5, 1.0) }
-      return
-    }
+    // La tarjeta OCUPA el recuadro del mapa. Máximo 2 (al abrir un 3º, sale el más antiguo → siempre las 2 últimas).
+    const next = [...cur, r].slice(-MAX_CMP)
     const primero = cur.length === 0 // solo ruge al abrir el PRIMERO (evita cacofonía con varios)
     setComparados(next)
-    setHot(r.id) // fija objetivo → enciende su nodo y su línea
+    setHot(r.id) // fija objetivo → enciende su nodo y su línea en el mapa
     playLock(0.45) // "tlk-tlk" de lock-on
     if (primero) playBeast('lion', 0.55) // rugido SOLO al primer enfrentamiento
     play('pop', 0.5, 1.32)
-    // LOCK-ON: el nodo se "arma" (retículo)
+    // LOCK-ON: el nodo se "arma" (retículo) antes de que la tarjeta lo tape
     const mk = rivalMarks.current.find((m) => m.r.id === r.id)
     if (mk && !reduceMotion()) {
       mk.el.classList.add('locking')
       window.setTimeout(() => mk.el.classList.remove('locking'), 640)
     }
-    // Centramos el rival con un paneo suave y un OFFSET hacia abajo → su marcador queda en la mitad inferior y la
-    // carta (que va ENCIMA, modelo ventana) cabe holgada al abrirla. Al hacer zoom luego, se recorta por arriba.
-    const map = mapRef.current
-    if (map && loadedRef.current) map.easeTo({ center: [r.lng, r.lat], offset: [0, 95], duration: 550, essential: true })
   }
-  // "Comparar todos": abre el comparador de TODOS los rivales visibles a la vez y AUTO-ENCUADRA la cámara
-  //  (fitBounds) para verlos juntos sin solape → listo para presentación/captura. Si ya están todos abiertos, limpia.
+  // Botón de acción: si hay tarjetas abiertas → "Cerrar" (vacía); si no → abre las 2 rivales de MAYOR AMENAZA.
   const compararTodos = () => {
+    if (comparados.length > 0) { setComparados([]); setHot(null); play('pop', 0.4, 0.9); return }
     const vis = visRef.current
-    const map = mapRef.current
     if (!vis.length) return
-    // TOGGLE OFF: si ya hay algo abierto (mapa o cajón), "Limpiar" lo vacía todo.
-    if (comparados.length > 0 || enviadas.length > 0) { setComparados([]); setEnviadas([]); setHot(null); play('pop', 0.4, 0.9); return }
-    // Más de 3 rivales → directo al CAJÓN de cromos (el mapa no muestra más de 3). 1-3 → al mapa como antes.
-    if (vis.length > 3) {
-      setEnviadas(vis.slice(0, 6).map((r) => ({ ...r })))
-      setHot(null)
-      playLock(0.4); play('pop', 0.5, 1.12)
-      return
-    }
-    setComparados(vis.map((r) => ({ ...r })))
-    setHot(null)
+    const top = [...vis].sort((a, b) => b.threat - a.threat).slice(0, MAX_CMP).map((r) => ({ ...r }))
+    setComparados(top)
+    setHot(top[0]?.id ?? null)
     playLock(0.4)
+    if (!reduceMotion()) playBeast('lion', 0.5)
     play('pop', 0.5, 1.12)
-    if (map && loadedRef.current) {
-      const bounds = new mapboxgl.LngLatBounds()
-      bounds.extend([LOCAL.lng, LOCAL.lat])
-      vis.forEach((r) => bounds.extend([r.lng, r.lat]))
-      map.fitBounds(bounds, { padding: { top: 150, bottom: 120, left: 90, right: 90 }, maxZoom: 16, pitch: 42, duration: 950, essential: true })
-    }
   }
   // Ajusta el zoom al SOLTAR el slider (durante el arrastre solo crece el círculo → fluido).
   const flyZoom = (m: number) => {
@@ -558,34 +503,6 @@ export default function MapaIncidencia() {
     window.addEventListener('pointermove', onRotMove)
     window.addEventListener('pointerup', onRotUp)
     cc.addEventListener('contextmenu', onCtx)
-
-    // ZOOM con la rueda AUNQUE el ratón esté sobre una carta-comparador (Juan 25-jun: "dentro de una card no me
-    // funciona el zoom"). Las cartas tienen pointer-events:auto y se comían el wheel (scroll del propio body). Lo
-    // INTERCEPTAMOS en captura sobre el contenedor del mapa y lo REENVIAMOS al canvas → Mapbox hace zoom con su
-    // rate ya afinado. El evento sintético tiene como target el canvas (no una carta) → no se vuelve a reenviar.
-    const mapBox = elRef.current?.parentElement // .mapa-3d (contiene el canvas y la capa de cartas)
-    const onCardWheel = (e: WheelEvent) => {
-      const t = e.target as Element | null
-      if (t && typeof t.closest === 'function' && t.closest('.cmp-anchor')) {
-        e.preventDefault()
-        map.getCanvasContainer().dispatchEvent(
-          new WheelEvent('wheel', { deltaY: e.deltaY, deltaX: e.deltaX, deltaMode: e.deltaMode, clientX: e.clientX, clientY: e.clientY, bubbles: true, cancelable: true }),
-        )
-      }
-    }
-    mapBox?.addEventListener('wheel', onCardWheel, { passive: false, capture: true })
-
-    // ANCLAJE EN SINCRONÍA CON LA CÁMARA: reposicionamos los comparadores en CADA frame que dibuja Mapbox
-    // (map.on('render')) → durante paneo/zoom/inercia las cartas siguen el punto en el MISMO frame que el mapa,
-    // sin "patinar" ni saltar (el bucle rAF propio solo desacoplaba y dejaba las cartas un frame por detrás).
-    // El rAF del efecto [comparados] sigue, pero solo para animar el asentamiento/cometa cuando el mapa está QUIETO.
-    const onMapRender = () => { if (comparadosRef.current.length) positionRef.current() }
-    map.on('render', onMapRender)
-    // Al PARARSE el mapa (fin de paneo/zoom/rotación/inercia/vuelo) re-resolvemos el anti-solape con histéresis
-    // (casi siempre devuelve lo mismo) y arrancamos el asentamiento. NUNCA resolvemos por frame → imposible temblar.
-    // Mientras el mapa se mueve, las cartas siguen su ancla con el offset CONGELADO (panean/zoomean con el mapa).
-    const onMapSettle = () => { if (comparadosRef.current.length) { solveRef.current(); armRef.current() } }
-    map.on('moveend', onMapSettle)
 
     // El contenedor puede crecer tras el primer paint → el canvas se quedaría pequeño/negro.
     // `dead` evita que un resize en cola (ResizeObserver o setTimeout) toque el mapa YA destruido (cambio
@@ -911,7 +828,6 @@ export default function MapaIncidencia() {
       window.removeEventListener('pointermove', onRotMove)
       window.removeEventListener('pointerup', onRotUp)
       cc.removeEventListener('contextmenu', onCtx)
-      mapBox?.removeEventListener('wheel', onCardWheel, true)
       ro.disconnect()
       map.remove()
       mapRef.current = null
@@ -1032,30 +948,7 @@ export default function MapaIncidencia() {
     }
   }, [hot])
 
-  // Al abrir/cerrar una carta: RESOLVEMOS el anti-solape una vez (histéresis) y arrancamos el asentamiento
-  // (rAF auto-parante). El solver NO corre por frame → 0 temblor; el rAF se detiene solo en reposo → 0 calor.
-  useEffect(() => {
-    solveRef.current()
-    armRef.current()
-  }, [comparados])
-  // Cancela el bucle al desmontar la sección.
-  useEffect(() => () => { if (cardLoopRef.current) cancelAnimationFrame(cardLoopRef.current) }, [])
-
-  // Al abrir el CAJÓN de cromos (derecha) desplazamos el contenido del mapa a la IZQUIERDA con padding de cámara →
-  // el local y los rivales quedan centrados en el hueco libre, no tapados por los cromos (Juan 25-jun: "el mapa lo
-  // centras a la izquierda al sitio que queda"). Se resetea al cerrar el cajón.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !loadedRef.current) return
-    const id = requestAnimationFrame(() => {
-      const el = document.querySelector('.cromo-deck') as HTMLElement | null
-      const deckW = enviadas.length > 0 && el ? el.getBoundingClientRect().width + 30 : 0 // mide el cajón real (varía en fullscreen)
-      try { map.easeTo({ padding: { right: deckW, left: 0, top: 0, bottom: 0 }, duration: 520, essential: true }) } catch { /* mapa no listo */ }
-    })
-    return () => cancelAnimationFrame(id)
-  }, [enviadas.length])
-
-  // Pinchar FUERA del mapa → ocultar todas las cartas (Juan 25-jun). Solo escucha mientras haya cartas abiertas.
+  // Pinchar FUERA del mapa → cerrar las tarjetas abiertas. Solo escucha mientras haya tarjetas abiertas.
   useEffect(() => {
     if (!comparados.length) return
     const onDown = (e: PointerEvent) => {
@@ -1069,228 +962,8 @@ export default function MapaIncidencia() {
     return () => document.removeEventListener('pointerdown', onDown)
   }, [comparados.length])
 
-  // Ancla cada comparador al PUNTO de su rival y lo ESCALA con el zoom (tamaño anclado al MAPA: como un objeto
-  // del mundo, igual que los edificios) → al alejar se encoge y caben varios sin molestarse; tope 1 (no se hace
-  // enorme) y suelo .36 (legible). Lo coloca encima del marcador (o debajo), dentro del recuadro (clamp). El pico
-  // (--tail-x) apunta a la coordenada real. Pedido de Juan (24-jun: "tamaño anclado al mapa, no fijo en pantalla").
-  // Caja base ANCLADA de cada carta (proyectada a su punto, encima/debajo del marcador, dentro del marco) +
-  // escala k anclada al zoom. Se recalcula barata por frame (sigue al mapa); la usan TANTO el solver como el dibujo.
-  type Box = { id: string; el: HTMLDivElement; px: number; py: number; vw: number; vh: number; left: number; top: number; below: boolean; big: number; vis: number; dC: number; ow: number; off: boolean }
-  const computeBoxes = (): { map: mapboxgl.Map; W: number; H: number; k: number; PAD: number; boxes: Box[] } | null => {
-    const map = mapRef.current
-    const cont = elRef.current?.parentElement as HTMLElement | null // .mapa-3d
-    if (!map || !cont) return null
-    const W = cont.clientWidth, H = cont.clientHeight
-    const PAD = 10, gap = 10
-    // Escala PEGADA AL SUELO (objeto del mundo 3D), pedido de Juan 25-jun: la carta sale a un tamaño ESTÁNDAR en el
-    // encuadre por defecto; al ACERCARTE (zoom in) CRECE para leerla; al ALEJARTE encoge y, cuando es ilegible,
-    // DESAPARECE (fade); al volver a acercarte REAPARECE (sigue seleccionada). Anclamos al zoom por defecto del radio
-    // (zoomFor) → el "estándar" es el mismo sea cual sea el radio. 2^Δzoom = escala real del mundo (doble por nivel).
-    const z = map.getZoom()
-    const STD = 0.46 // tamaño estándar (Juan 25-jun: "70% del actual" → 0.66 × 0.70); todo escala con esto
-    const k = Math.min(8, STD * Math.pow(2, z - zoomFor(radioRef.current))) // al ACERCAR CRECE hasta GIGANTE; tope alto para poder ATRAVESARLA
-    const HIDE = 0.21, FADE = 0.126 // fade-IN al acercarse desde lejos (k bajo = ilegible → esfumar)
-    const visLow = Math.max(0, Math.min(1, (k - HIDE) / FADE)) // se esfuma al ALEJAR / reaparece al acercar
-    const boxes: Box[] = []
-    for (const r of comparadosRef.current) {
-      const el = cardRefs.current[r.id]
-      if (!el) continue
-      const p = map.project([r.lng, r.lat])
-      const ow = el.offsetWidth, oh = el.offsetHeight
-      const vw = ow * k, vh = oh * k // tamaño VISUAL (ya escalado)
-      // Margen de descarte PROPORCIONAL al tamaño: una carta GIGANTE (zoom in) sigue visible aunque su punto se salga
-      // de pantalla (ya te has "metido" dentro de ella); una carta pequeña se descarta en cuanto su punto sale del marco.
-      const margin = 120 + Math.max(vw, vh)
-      const dC = Math.hypot(p.x - W / 2, p.y - H / 2) // distancia del punto al centro (para acotar la disolución)
-      const offscreen = p.x < -margin || p.x > W + margin || p.y < -margin || p.y > H + margin
-      // MODELO VENTANA (Juan 25-jun: "es una ventana; las cosas se esconden en la ventana si te mueves"). La carta va
-      // PEGADA encima de su marcador y se RECORTA contra el borde del recuadro — NO se reposiciona para seguir visible
-      // (nada de "bajar para adecuarse"). Al hacer zoom sube y se OCULTA POR ARRIBA, como un objeto visto por una ventana
-      // (corte de techo de Los Sims = RECORTE, no fade ni movimiento). La DISOLUCIÓN tipo "atravesar" se reserva a la
-      // carta que miras DE FRENTE (centrada): las de los lados se esconden por recorte, no por fade.
-      const over = Math.max(vw / Math.max(1, W), vh / Math.max(1, H)) // 1 = la carta llena el marco
-      const centered = Math.max(0, Math.min(1, 1 - dC / (Math.min(W, H) * 0.42))) // 1 si el punto está centrado, 0 si lejos
-      const dissolve = Math.max(0, Math.min(1, (1.45 - over) / 0.40)) // 1 nítida → 0 atravesada (solo aplica si está centrada)
-      const visHigh = Math.max(dissolve, 1 - centered) // off-center → 1 (solo recorte, sin fade); centrada → se disuelve al llenar
-      const vis = Math.min(visLow, visHigh)
-      const off = vis <= 0.02 || offscreen // se esfumó (atravesar) o el punto se fue de pantalla → no se ve
-      const big = Math.max(0, Math.min(1, (Math.max(vw / Math.max(1, W - 2 * PAD), vh / Math.max(1, H - 2 * PAD)) - 0.85) / 0.30))
-      const top = p.y - gap - vh // ENCIMA del marcador, SIN clamp ni flip → puede salirse por arriba (se recorta)
-      const left = p.x - vw / 2  // centrada en X sobre el marcador, SIN clamp → se recorta por los lados
-      const below = false
-      boxes.push({ id: r.id, el, px: p.x, py: p.y, vw, vh, left, top, below, big, vis, dC, ow, off })
-    }
-    return { map, W, H, k, PAD, boxes }
-  }
-
-  // ── SOLVER (anti-solape con HISTÉRESIS). Es la pieza que mata el temblor. Se llama SOLO al abrir/cerrar carta
-  //    o cuando el mapa se PARA (moveend) — NUNCA por frame. Calcula un offset (dx,dy) CONGELADO por carta y lo
-  //    guarda en placeRef; el dibujo solo lo lee. Claves de estabilidad (literatura: coherencia temporal):
-  //    (1) ORDEN por id (no por top proyectado) → quién cede nunca se intercambia entre solves = 0 swap.
-  //    (2) preferencia ANCLA → POSICIÓN ACTUAL → espiral: la carta vuelve a casa cuando hay sitio, y si no,
-  //        conserva su hueco previo (memoria) en vez de saltar a otro igual de válido.
-  const SEP = 14
-  const solveLayout = () => {
-    const ctx = computeBoxes()
-    if (!ctx) return
-    const { W, H, PAD, boxes } = ctx
-    // VENTANA (Juan 25-jun): el solver SOLO evita solapes; NO clampa al marco (si clampara, al parar el zoom tiraría de
-    // la carta para meterla dentro = el "reposicionar" que Juan NO quiere). Las cartas se recortan contra el borde.
-    const clX = (_b: Box, x: number) => x
-    const clY = (_b: Box, y: number) => y
-    const cx = W / 2, cy = H / 2
-    const sol = boxes.filter((b) => !b.off)
-    const prev = placeRef.current?.off || {}
-    const order = [...sol].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) // ESTABLE → sin swap
-    const placed: { l: number; t: number; vw: number; vh: number }[] = []
-    const pos: Record<string, { l: number; t: number }> = {}
-    const off: Record<string, { dx: number; dy: number }> = {}
-    const hits = (l: number, t: number, b: Box) =>
-      placed.some((p) => l < p.l + p.vw + SEP && l + b.vw + SEP > p.l && t < p.t + p.vh + SEP && t + b.vh + SEP > p.t)
-    for (const b of order) {
-      // Carta GIGANTE (per-carta, no global): SIN anti-solape → flota anclada a su sitio (a esa escala el offset la
-      // desplazaría muchísimo, queja de Juan). No entra en `placed` → no estorba a las pequeñas. Coherente con el dibujo.
-      if (b.big > 0.5) { off[b.id] = { dx: 0, dy: 0 }; continue }
-      const aL = clX(b, b.left), aT = clY(b, b.top) // ancla
-      let L = aL, T = aT, done = false
-      if (!hits(aL, aT, b)) done = true // 1) ANCLA (preferida)
-      if (!done) { // 2) POSICIÓN ACTUAL (histéresis)
-        const po = prev[b.id]
-        if (po) { const cl = clX(b, b.left + po.dx), ct = clY(b, b.top + po.dy); if (!hits(cl, ct, b)) { L = cl; T = ct; done = true } }
-      }
-      if (!done) { // 3) ESPIRAL (abanico simétrico hacia el espacio libre)
-        const a0 = Math.atan2(b.top + b.vh / 2 - cy, b.left + b.vw / 2 - cx)
-        for (let rad = 16; rad <= 720 && !done; rad += 16) {
-          for (let s = 0; s < 24 && !done; s++) {
-            const ang = a0 + (s % 2 ? 1 : -1) * Math.ceil(s / 2) * (Math.PI / 8)
-            const cl = clX(b, b.left + Math.cos(ang) * rad), ct = clY(b, b.top + Math.sin(ang) * rad)
-            if (!hits(cl, ct, b)) { L = cl; T = ct; done = true }
-          }
-        }
-      }
-      pos[b.id] = { l: L, t: T }
-      off[b.id] = { dx: L - b.left, dy: T - b.top }
-      placed.push({ l: L, t: T, vw: b.vw, vh: b.vh })
-    }
-    // ¿el voraz dejó solape? (clústers MUY apretados de 4-5 cartas) → REJILLA centrada, orden estable (px + id).
-    // SOLO cartas pequeñas: las gigantes se saltaron (no tienen `pos` y no participan en la rejilla).
-    const small = sol.filter((b) => !(b.big > 0.5))
-    let residual = false
-    for (let i = 0; i < small.length && !residual; i++) for (let j = i + 1; j < small.length; j++) {
-      const A = small[i], B = small[j], pa = pos[A.id], pb = pos[B.id]
-      if (Math.min(pa.l + A.vw, pb.l + B.vw) - Math.max(pa.l, pb.l) > 1 &&
-          Math.min(pa.t + A.vh, pb.t + B.vh) - Math.max(pa.t, pb.t) > 1) { residual = true; break }
-    }
-    if (residual && small.length > 1) {
-      const cw = small[0].vw, ch = small[0].vh
-      const cols = Math.max(1, Math.min(small.length, Math.floor((W - 2 * PAD + SEP) / (cw + SEP))))
-      const rows = Math.ceil(small.length / cols)
-      const gridW = cols * cw + (cols - 1) * SEP, gridH = rows * ch + (rows - 1) * SEP
-      const startX = Math.max(PAD, (W - gridW) / 2), startY = Math.max(PAD, Math.min((H - gridH) / 2, 18))
-      const byX = [...small].sort((a, b) => a.px - b.px || (a.id < b.id ? -1 : 1))
-      byX.forEach((b, idx) => {
-        const L = clX(b, startX + (idx % cols) * (cw + SEP)), T = clY(b, startY + Math.floor(idx / cols) * (ch + SEP))
-        off[b.id] = { dx: L - b.left, dy: T - b.top }
-      })
-    }
-    placeRef.current = { off } // LAYOUT CONGELADO → el dibujo solo lo lee (en reposo nada recalcula = 0 temblor)
-  }
-
-  // ── DIBUJO (por frame). NO resuelve nada: proyecta el ancla, lee el offset congelado, lo persigue con lerp y
-  //    pinta el conector. Devuelve true si SIGUE animando (lerp sin asentar o cometa vivo) → el bucle decide parar.
-  const positionCards = (): boolean => {
-    const ctx = computeBoxes()
-    if (!ctx) return false
-    const { map, k, boxes } = ctx // W/H/PAD ya no: la carta NO se clampa (modelo ventana, se recorta sola)
-    // Oculta el marcador pequeño SOLO cuando SU carta está bien visible (la info ya está en la carta). Si la carta se
-    // esfumó (alejar, atravesar, o no es la del modo foco), REAPARECE el marcador → el rival nunca se queda sin nada.
-    const openIds = new Set(comparadosRef.current.map((c) => c.id))
-    const visById = new Map(boxes.map((b) => [b.id, b.off ? 0 : b.vis]))
-    rivalMarks.current.forEach(({ r, el }) => { const v = (openIds.has(r.id) && (visById.get(r.id) ?? 0) > 0.5) ? 'hidden' : ''; if (el.style.visibility !== v) el.style.visibility = v })
-    const offs = placeRef.current?.off || {} // offsets CONGELADOS del solver (NO se recalculan aquí → 0 temblor)
-    const moving = map.isMoving() || map.isEasing() || map.isZooming() || map.isRotating()
-    const live = new Set<string>()
-    const segs: string[] = [] // <line>/<polygon>/<circle> del SVG conector, reconstruido por frame (N pequeño)
-    const rm = reduceMotion()
-    const now = performance.now()
-    // Mientras el mapa se MUEVE, la carta se PEGA a su ancla sin retraso (lerp≈1) → no "patina" ni salta. En reposo,
-    // asentamiento suave (.22) hacia el offset congelado. El objetivo ya NO oscila entre frames → no puede temblar.
-    const LERP = moving ? 1 : 0.22
-    let needsMore = false
-    for (const b of boxes) {
-      live.add(b.id)
-      const o = offs[b.id] || { dx: 0, dy: 0 }
-      const tx = o.dx * (1 - b.big), ty = o.dy * (1 - b.big) // el anti-solape se DESVANECE al hacerse gigante (sin tirón al cruzar)
-      const n = nudgeRef.current[b.id] || (nudgeRef.current[b.id] = { x: rm ? tx : 0, y: rm ? ty : 0 })
-      if (rm) { n.x = tx; n.y = ty } // sin animación → directo al sitio
-      else {
-        n.x += (tx - n.x) * LERP
-        n.y += (ty - n.y) * LERP
-        if (Math.abs(tx - n.x) < 0.4) n.x = tx; else needsMore = true // snap al asentar; si no, seguir animando
-        if (Math.abs(ty - n.y) < 0.4) n.y = ty; else needsMore = true
-      }
-      // VENTANA: SIN clamp al marco → la carta va pegada a su punto y se RECORTA contra el borde (no se reposiciona).
-      // Solo un SANITY clamp a ±9999 (muy fuera de cualquier marco) para que un punto proyectado lejísimos a zoom
-      // extremo no genere un translate de millones de px (la carta ya está oculta por opacidad si está fuera).
-      const fl = Math.max(-9999, Math.min(9999, b.left + n.x))
-      const ft = Math.max(-9999, Math.min(9999, b.top + n.y))
-      b.el.style.opacity = b.off ? '0' : b.vis.toFixed(2) // fade por zoom per-carta (esfumar al alejar / al atravesar / fuera de foco)
-      b.el.style.pointerEvents = (b.off || b.vis < 0.5) ? 'none' : 'auto'
-      b.el.style.transform = `translate(${Math.round(fl)}px, ${Math.round(ft)}px) scale(${k.toFixed(3)})` // plano (origin 0 0); billboard 3D retirado (se veía escorado)
-      // ── MAGNETIZE: cuando una carta se desplaza para no solaparse, su conector se TENSA (pulso) y suena un tick.
-      const mg = magRef.current[b.id] || (magRef.current[b.id] = { disp: false, pulse: 0 })
-      const dmag = Math.hypot(n.x, n.y)
-      if (b.big < 0.5 && dmag > 26 && !mg.disp) { mg.disp = true; mg.pulse = now + 460; if (!rm) playTick(0.3) } // solo en pequeñas (al hacerse gigante el offset→0 no es imantación)
-      else if (dmag < 12) mg.disp = false
-      const pulse = Math.max(0, Math.min(1, (mg.pulse - now) / 460)) // 1→0 en 460ms (one-shot)
-      if (pulse > 0.02) needsMore = true // pulso del imán vivo → seguir animando
-      b.el.classList.toggle('cmp-magnet', pulse > 0.02)
-      // ── Conector: línea + nodo hexagonal. Solo en cartas pequeñas; en las GIGANTES el punto queda DENTRO de la carta
-      //    (está centrada en él), así que no hay tether que dibujar.
-      if (!b.off && b.big < 0.5) {
-        const mx = b.px, my = b.py // punto del marcador (coords del contenedor)
-        const ax = Math.max(fl + 14, Math.min(fl + b.vw - 14, mx)) // ancla X en el borde de la carta (alineada al punto)
-        const ay = my <= ft + b.vh / 2 ? ft : ft + b.vh // borde superior o inferior, el que mire al punto
-        const dist = Math.hypot(mx - ax, my - ay)
-        if (dist > 8) {
-          // línea recta carta→punto (estética HUD/cockpit); al imantar se ENGORDA y BRILLA y luego se relaja (tensión).
-          const lw = (1.4 + pulse * 2).toFixed(2), lo = (0.5 + pulse * 0.45).toFixed(2)
-          segs.push(`<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" class="cl-line" style="stroke-width:${lw};opacity:${lo}"/>`)
-          segs.push(`<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.4" class="cl-dot"/>`)
-          // (Cometa del conector RETIRADO 25-jun: animaba en bucle perpetuo → mantenía el rAF vivo = calor en reposo,
-          //  igual que los cometas del mapa que Juan ya quitó. La línea + nodo + pulso del imán se quedan.)
-        }
-        // nodo hexagonal en el punto real del rival (crece un poco al imantar)
-        const R = 6.5 + pulse * 3
-        const hex = Array.from({ length: 6 }, (_, q) => { const a = (Math.PI / 3) * q - Math.PI / 2; return `${(mx + R * Math.cos(a)).toFixed(1)},${(my + R * Math.sin(a)).toFixed(1)}` }).join(' ')
-        segs.push(`<polygon points="${hex}" class="cl-node"/>`)
-      }
-    }
-    if (leadsRef.current) leadsRef.current.innerHTML = segs.join('')
-    for (const id of Object.keys(nudgeRef.current)) if (!live.has(id)) delete nudgeRef.current[id] // limpia cartas cerradas
-    for (const id of Object.keys(magRef.current)) if (!live.has(id)) delete magRef.current[id]
-    return needsMore
-  }
-
-  // Bucle de ASENTAMIENTO (rAF auto-parante): anima el lerp hacia el layout congelado y se DETIENE solo cuando todo
-  // está quieto (mapa parado + lerp asentado + sin cometa) → 0 CPU/GPU en reposo (anti-calor). Durante el movimiento
-  // el dibujo lo conduce map.on('render') (mismo frame que el mapa); aquí solo cubrimos el asentamiento en reposo.
-  const armCardLoop = () => {
-    if (!comparadosRef.current.length || cardLoopRef.current) return
-    const tick = () => {
-      // En segundo plano (pestaña oculta) NO repintamos: paramos el bucle, se re-arma al volver a mover el mapa.
-      if (document.hidden) { cardLoopRef.current = 0; return }
-      const map = mapRef.current
-      const moving = !!map && (map.isMoving() || map.isEasing() || map.isZooming() || map.isRotating())
-      const more = moving ? false : positionRef.current() // si el mapa se mueve, ya dibuja el render; aquí solo asentar
-      cardLoopRef.current = (comparadosRef.current.length && (moving || more)) ? requestAnimationFrame(tick) : 0
-    }
-    cardLoopRef.current = requestAnimationFrame(tick)
-  }
+  // Sync de la lista viva: los handlers imperativos de los marcadores capturan closures viejos → leen este ref.
   comparadosRef.current = comparados
-  positionRef.current = positionCards
-  solveRef.current = solveLayout
-  armRef.current = armCardLoop
 
   const enRango = RIVALES.map((r) => ({ ...r, d: distM(LOCAL.lat, LOCAL.lng, r.lat, r.lng) }))
     .filter((r) => r.d <= radio)
@@ -1498,61 +1171,28 @@ export default function MapaIncidencia() {
         <div className={'mapa-map mapa-3d' + (comparados.length ? ' comparing' : '') + (mShow ? ' ready' : '') + (satellite ? '' : ' mapa-vector')}>
           <div className="mapa-canvas" ref={elRef} />
 
-          {/* Comparadores ANCLADOS al punto de su rival: cada carta sigue la posición en pantalla del marcador
-              (map.project, recalculado en cada frame) con tamaño FIJO (no escala con el zoom) y SIEMPRE dentro
-              del recuadro (clamp); un pico la une al punto. Pedido de Juan (24-jun: "anclados al punto"). */}
-          {comparados.length > 0 && (
-            <div className="cmp-layer">
-              {/* conectores carta→punto (líneas + nodo hexagonal), pintados por positionCards en cada frame */}
-              <svg className="cmp-leads" ref={leadsRef} aria-hidden="true" />
-              {comparados.map((r) => (
-                <div
-                  className="cmp-anchor"
-                  key={r.id}
-                  ref={(el) => { cardRefs.current[r.id] = el }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <Comparador rival={r} onLayout={() => { solveRef.current(); armRef.current() }} onClose={() => setComparados((prev) => prev.filter((p) => p.id !== r.id))} onSend={enviarCromo} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* CAJÓN LATERAL de CROMOS (derecha): cartas FIFA/Pokémon enviadas, lado a lado en VS con gana-stat. */}
+          {/* Tarjetas de competidor: OCUPAN el recuadro del mapa (Juan 28-jun: "que ocupen todo el recuadro").
+              1 abierta = a pantalla completa del mapa · 2 = mitad y mitad (responsive). Overlay en rejilla. */}
           <AnimatePresence>
-            {enviadas.length > 0 && (() => {
-              // gana-stat: mejor valor entre las enviadas (rating/reseñas = más alto; ticket/distancia = más bajo).
-              const wins: Record<string, Record<string, boolean>> = {}
-              if (enviadas.length >= 2) {
-                const maxR = Math.max(...enviadas.map((r) => r.rating))
-                const maxV = Math.max(...enviadas.map((r) => r.reviews))
-                const minP = Math.min(...enviadas.map((r) => r.precio))
-                const minD = Math.min(...enviadas.map((r) => r.d))
-                for (const r of enviadas) wins[r.id] = { rating: r.rating === maxR, reviews: r.reviews === maxV, precio: r.precio === minP, d: r.d === minD }
-              }
-              return (
-                <motion.aside
-                  className="cromo-deck"
-                  initial={{ x: 60, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 60, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-                >
-                  <div className="cromo-deck-head">
-                    <span className="cdh-title">◆ Mis cromos <em>{enviadas.length}</em></span>
-                    {enviadas.length >= 2 && <span className="cdh-vs">VS · lidera el resaltado</span>}
-                    <button className="cdh-clear" onClick={() => setEnviadas([])}>Vaciar</button>
-                  </div>
-                  <div className={'cromo-board cols' + Math.min(2, enviadas.length)}>
-                    <AnimatePresence>
-                      {enviadas.map((r, i) => (
-                        <Cromo key={r.id} rival={r} rank={i + 1} wins={wins[r.id]} flash={flashId === r.id} onRemove={() => setEnviadas((p) => p.filter((x) => x.id !== r.id))} />
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                </motion.aside>
-              )
-            })()}
+            {comparados.length > 0 && (
+              <motion.div
+                className={'cmp-stage cols-' + comparados.length}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {comparados.map((r) => (
+                  <Comparador
+                    key={r.id}
+                    rival={r}
+                    solo={comparados.length === 1}
+                    onClose={() => { setComparados((prev) => prev.filter((p) => p.id !== r.id)); play('pop', 0.4, 0.9) }}
+                  />
+                ))}
+              </motion.div>
+            )}
           </AnimatePresence>
 
           <div className="mapa-hud" aria-hidden="true" />
@@ -1579,7 +1219,6 @@ export default function MapaIncidencia() {
           {/* INTRO HACKER: tapa el instante en que las teselas aún cargan (los edificios funden por debajo) → no se
               ve el mapa "pelado" ni el pop. One-shot al entrar, se desvanece sola; oculta con reduced-motion (CSS). */}
           <div className={'mapa-hacker' + (booting ? '' : ' lifted')} aria-hidden="true">
-            <span className="mh-scan" />
             <div className="mh-term">
               <span className="mh-line">&gt; INICIANDO PROTOCOLO REBELL</span>
               <span className="mh-line">&gt; ACCEDIENDO AL SISTEMA…</span>
@@ -1633,10 +1272,10 @@ export default function MapaIncidencia() {
             <b className="mhr-val">{fmtDist(radio)}</b>
             <div className="mht-acts">
               <button
-                className={'mht-act' + (comparados.length > 0 || enviadas.length > 0 ? ' on' : '')}
+                className={'mht-act' + (comparados.length > 0 ? ' on' : '')}
                 onClick={compararTodos}
                 disabled={!visibles.length}
-              >{comparados.length > 0 || enviadas.length > 0 ? '✕ Limpiar' : '◎ Comparar todos'}</button>
+              >{comparados.length > 0 ? '✕ Cerrar' : '⚔ Comparar 2 top'}</button>
               <button className={'mht-act' + (reparto ? ' on' : '')} onClick={() => { setReparto((r) => !r); play('pop', 0.4, 1.1) }}>🛵 Reparto</button>
               <button className={'mht-act' + (satellite ? ' on' : '')} onClick={toggleSat}>{satellite ? '◼ Vector' : '🛰 Satélite'}</button>
               <button className={'mht-act' + (heat ? ' on' : '')} onClick={() => { setHeat((h) => !h); play('pop', 0.4, 1.05) }}>✦ Calor</button>
@@ -1827,12 +1466,14 @@ const METRICAS: { key: 'rating' | 'reviews' | 'precio'; label: string; max?: num
   { key: 'precio', label: 'Ticket medio', suf: ' €', dec: 2, mejor: 'info' },
 ]
 
-function Comparador({ rival, onClose, onLayout, onSend }: { rival: Rival & { d: number }; onClose: () => void; onLayout?: () => void; onSend?: (r: Rival & { d: number }) => void }) {
+function Comparador({ rival, onClose, solo }: { rival: Rival & { d: number }; onClose: () => void; solo?: boolean }) {
   const root = useRef<HTMLDivElement>(null)
-  // Por defecto se muestra la INFO del rival; el modo COMPARACIÓN (vs tu local) se activa con un botón. (Juan 24-jun)
-  const [mode, setMode] = useState<'info' | 'compare'>('info')
-  const gano = METRICAS.filter((m) => m.mejor === 'alto').reduce((n, m) => n + ((LOCAL as never)[m.key] > (rival as never)[m.key] ? 1 : 0), 0)
-  const totalAlto = METRICAS.filter((m) => m.mejor === 'alto').length
+  // Una sola vista RICA: stats del rival + enfrentamiento VS tu local + reseñas. La tarjeta OCUPA su celda del
+  // recuadro (1 = todo el mapa; 2 = mitad). Sin toggle ni cromos: toda la inteligencia útil de un vistazo. (Juan 28-jun)
+  const altas = METRICAS.filter((m) => m.mejor === 'alto')
+  const gano = altas.reduce((n, m) => n + ((LOCAL as never)[m.key] >= (rival as never)[m.key] ? 1 : 0), 0)
+  const totalAlto = altas.length
+  const verdict = gano > totalAlto - gano ? `Ganas en ${gano} de ${totalAlto}` : gano === totalAlto - gano ? 'Empate técnico' : `Te superan en ${totalAlto - gano} de ${totalAlto}`
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -1844,7 +1485,7 @@ function Comparador({ rival, onClose, onLayout, onSend }: { rival: Rival & { d: 
         gsap.to(o, {
           v: to,
           duration: 0.9,
-          delay: 0.1 + Math.floor(i / 2) * 0.1,
+          delay: 0.1 + Math.floor(i / 2) * 0.08,
           ease: 'power2.out',
           onUpdate: () => {
             el.textContent = o.v.toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + suf
@@ -1857,84 +1498,46 @@ function Comparador({ rival, onClose, onLayout, onSend }: { rival: Rival & { d: 
         { width: (_i: number, el: Element) => (el as HTMLElement).dataset.w || '0%', duration: 0.9, delay: 0.2, ease: 'power3.out', stagger: 0.06 },
       )
     }, root)
-    // La altura de la carta cambia al alternar Info/Comparar → avisa al padre para re-anclarla al punto.
-    const raf = requestAnimationFrame(() => onLayout?.())
-    return () => {
-      ctx.revert()
-      cancelAnimationFrame(raf)
-    }
-  }, [rival, mode, onLayout])
+    return () => ctx.revert()
+  }, [rival])
 
   // Reseñas con ORIGEN: las de Google son reales (Places); Glovo/Uber/Just Eat son muestra (sin API pública).
   const revList: PlaceReview[] = [...(rival.reviewsList ?? []), ...deliveryReviews(rival.id)]
     .map((rv) => ({ ...rv, source: rv.source || 'Google' })) // blindaje: nunca source vacío
-    .slice(0, 5)
+    .slice(0, solo ? 5 : 3)
 
   return (
     <motion.div
-      className="cmp-card cmp-3d cmp-anchored"
+      className={'cmp-card cmp-big' + (solo ? ' cmp-solo-card' : '')}
       ref={root}
-      initial={{ opacity: 0, y: 14, scale: 0.96 }}
+      initial={{ opacity: 0, y: 16, scale: 0.985 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 210, damping: 26 }}
+      exit={{ opacity: 0, y: 12, scale: 0.985 }}
+      transition={{ type: 'spring', stiffness: 240, damping: 28 }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="cmp-head">
-        <div className="cmp-head-dots" aria-hidden="true" />
-        {onSend && <button className="cmp-head-send" onClick={() => onSend(rival)} title="Enviar a cromos">✦ Cromo</button>}
-        {mode === 'info' ? (
-          <>
-            <span className="cmp-kicker">{rival.tipo} · {fmtDist(rival.d)}</span>
-            <div className="cmp-names"><span className="cmp-n cmp-them cmp-solo">{rival.name}</span></div>
-          </>
-        ) : (
-          <>
-            <span className="cmp-kicker">Enfrentamiento · {fmtDist(rival.d)}</span>
-            <div className="cmp-names">
-              <span className="cmp-n cmp-you">{LOCAL.name.split('·')[0].trim()}</span>
-              <span className="cmp-vs">VS</span>
-              <span className="cmp-n cmp-them">{rival.name}</span>
-            </div>
-          </>
-        )}
+        <button className="cmp-x" onClick={onClose} aria-label="Cerrar">✕</button>
+        <span className="cmp-kicker">{rival.tipo} · a {fmtDist(rival.d)}</span>
+        <h3 className="cmp-title">{rival.name}</h3>
+        <div className={'cmp-signal s-' + rival.signal.k}>
+          <span className="cmp-sig-tag">{SIG_LABEL[rival.signal.k]}</span>
+          <span className="cmp-sig-txt">{rival.signal.txt}</span>
+        </div>
       </div>
 
-      {mode === 'info' ? (
-        <div className="cmp-body cmp-info">
-          <div className="ci-stats">
-            <div className="ci-stat"><b data-count={rival.rating} data-dec="1" data-suf="★">0</b><span>Valoración</span></div>
-            <div className="ci-stat"><b data-count={rival.reviews} data-dec="0">0</b><span>Reseñas</span></div>
-            <div className="ci-stat"><b data-count={rival.precio} data-dec="2" data-suf=" €">0</b><span>Ticket medio</span></div>
-            <div className="ci-stat"><b>{fmtDist(rival.d)}</b><span>Distancia</span></div>
-          </div>
-          <div className={'ci-signal s-' + rival.signal.k}>
-            <span className="ci-sig-tag">{SIG_LABEL[rival.signal.k]}</span>
-            <span className="ci-sig-txt">{rival.signal.txt}</span>
-          </div>
-          {revList.length > 0 && (
-            <div className="ci-reviews">
-              <div className="ci-rev-h">Reseñas por plataforma</div>
-              {revList.map((rv, i) => (
-                <div className="ci-rev" key={i}>
-                  <span className={'ci-rev-src ' + srcClass(rv.source)}>{rv.source}</span>
-                  <div className="ci-rev-main">
-                    <div className="ci-rev-top">
-                      {rv.rating != null && (
-                        <span className="ci-rev-stars" aria-label={`${rv.rating} estrellas`}>
-                          <b>{'★'.repeat(Math.round(rv.rating))}</b>{'★'.repeat(Math.max(0, 5 - Math.round(rv.rating)))}
-                        </span>
-                      )}
-                      {rv.when && <span className="ci-rev-when">{rv.when}</span>}
-                    </div>
-                    {rv.text && <div className="ci-rev-txt">{rv.text}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="cmp-body">
+        {/* Stats clave del rival (count-up) */}
+        <div className="ci-stats">
+          <div className="ci-stat"><b data-count={rival.rating} data-dec="1" data-suf="★">0</b><span>Valoración</span></div>
+          <div className="ci-stat"><b data-count={rival.reviews} data-dec="0">0</b><span>Reseñas</span></div>
+          <div className="ci-stat"><b data-count={rival.precio} data-dec="2" data-suf=" €">0</b><span>Ticket medio</span></div>
+          <div className="ci-stat"><b>{fmtDist(rival.d)}</b><span>Distancia</span></div>
         </div>
-      ) : (
-        <div className="cmp-body">
+
+        {/* Enfrentamiento VS tu local: barras Tú/Ellos con el ganador resaltado */}
+        <div className="cmp-duel">
+          <div className="cmp-duel-head"><b>{LOCAL.name.split('·')[0].trim()}</b><span className="cmp-duel-x">VS</span><b className="them">{rival.name.split(' ').slice(0, 2).join(' ')}</b></div>
           {METRICAS.map((m) => {
             const lv = (LOCAL as never)[m.key] as number
             const rv = (rival as never)[m.key] as number
@@ -1959,90 +1562,31 @@ function Comparador({ rival, onClose, onLayout, onSend }: { rival: Rival & { d: 
               </div>
             )
           })}
+          <div className="cmp-verdict">{verdict}</div>
         </div>
-      )}
 
-      <div className="cmp-foot">
-        <span className="cmp-verdict">
-          {mode === 'compare'
-            ? gano > totalAlto - gano ? `Ganas en ${gano} de ${totalAlto}` : gano === totalAlto - gano ? 'Empate técnico' : `Te superan en ${totalAlto - gano} de ${totalAlto}`
-            : rival.tipo}
-        </span>
-        <div className="cmp-foot-btns">
-          <button className="cmp-mode" onClick={() => setMode((m) => (m === 'info' ? 'compare' : 'info'))}>
-            {mode === 'info' ? '⚔ Comparar' : '◁ Info'}
-          </button>
-          <button className="cmp-close" onClick={onClose}>Cerrar</button>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-// ── CROMOS · cartas coleccionables tipo FIFA/Pokémon de cada rival ────────────────────────────
-// Juan 25-jun: "botón enviar → vista lateral derecha para comparar varias, como cromos/cartas Pokémon".
-const TIPO_EMOJI: Record<string, string> = {
-  Hamburguesería: '🍔', 'Fast food': '🍔', Pizzería: '🍕', Parrillada: '🥩', Asador: '🥩',
-  Barbacoa: '🍖', Kebab: '🥙', Restaurante: '🍽️',
-}
-const tipoEmoji = (t: string) => TIPO_EMOJI[t] || '🍽️'
-// Rareza por NOTA (estilo FIFA: oro/plata/bronce). El holo es más fuerte cuanto mejor la carta.
-function rarezaDe(rating: number): { tier: 'oro' | 'plata' | 'bronce'; label: string } {
-  if (rating >= 4.5) return { tier: 'oro', label: 'Legendario' }
-  if (rating >= 4.2) return { tier: 'plata', label: 'Épico' }
-  return { tier: 'bronce', label: 'Raro' }
-}
-
-function Cromo({ rival, rank, wins, flash, onRemove }: { rival: Rival & { d: number }; rank?: number; wins?: Record<string, boolean>; flash?: boolean; onRemove?: () => void }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const rz = rarezaDe(rival.rating)
-  // FOIL HOLOGRÁFICO + tilt 3D: el brillo y la inclinación siguen al ratón (vars CSS, sin re-render).
-  const onMove = (e: React.PointerEvent) => {
-    const el = ref.current; if (!el) return
-    const b = el.getBoundingClientRect()
-    const mx = ((e.clientX - b.left) / b.width) * 100
-    const my = ((e.clientY - b.top) / b.height) * 100
-    el.style.setProperty('--mx', mx.toFixed(1) + '%')
-    el.style.setProperty('--my', my.toFixed(1) + '%')
-    el.style.setProperty('--rx', ((50 - my) / 18).toFixed(2) + 'deg') // inclina arriba/abajo (sutil)
-    el.style.setProperty('--ry', ((mx - 50) / 15).toFixed(2) + 'deg') // inclina izq/dcha (sutil)
-  }
-  const onLeave = () => {
-    const el = ref.current; if (!el) return
-    el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg')
-    el.style.setProperty('--mx', '50%'); el.style.setProperty('--my', '38%')
-  }
-  return (
-    <motion.div
-      ref={ref}
-      className={'cromo r-' + rz.tier + (flash ? ' cromo-flash' : '')}
-      onPointerMove={onMove}
-      onPointerLeave={onLeave}
-      initial={{ opacity: 0, y: 18, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 14, scale: 0.96 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-      layout
-    >
-      <div className="cromo-inner">
-        <div className="cromo-foil" aria-hidden="true" />
-        {onRemove && <button className="cromo-x" onClick={onRemove} aria-label="Quitar de la comparación">✕</button>}
-        <div className="cromo-top">
-          {rank != null && <span className="cromo-rank">#{rank}</span>}
-        </div>
-        <div className="cromo-portrait">
-          <span className="cromo-emoji" aria-hidden="true">{tipoEmoji(rival.tipo)}</span>
-          <div className={'cromo-rating' + (wins?.rating ? ' win' : '')}>
-            <b>{rival.rating.toFixed(1)}</b><i>★</i>
+        {/* Reseñas por plataforma (Google real + delivery muestra) */}
+        {revList.length > 0 && (
+          <div className="ci-reviews">
+            <div className="ci-rev-h">Reseñas por plataforma</div>
+            {revList.map((rv, i) => (
+              <div className="ci-rev" key={i}>
+                <span className={'ci-rev-src ' + srcClass(rv.source)}>{rv.source}</span>
+                <div className="ci-rev-main">
+                  <div className="ci-rev-top">
+                    {rv.rating != null && (
+                      <span className="ci-rev-stars" aria-label={`${rv.rating} estrellas`}>
+                        <b>{'★'.repeat(Math.round(rv.rating))}</b>{'★'.repeat(Math.max(0, 5 - Math.round(rv.rating)))}
+                      </span>
+                    )}
+                    {rv.when && <span className="ci-rev-when">{rv.when}</span>}
+                  </div>
+                  {rv.text && <div className="ci-rev-txt">{rv.text}</div>}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="cromo-name" title={rival.name}>{rival.name}</div>
-        <div className="cromo-sub">{rival.tipo}</div>
-        <div className="cromo-stats">
-          <div className={'cromo-st' + (wins?.reviews ? ' win' : '')}><b>{rival.reviews.toLocaleString('es-ES')}</b><span>Reseñas</span></div>
-          <div className={'cromo-st' + (wins?.precio ? ' win' : '')}><b>{rival.precio.toFixed(0)}€</b><span>Ticket</span></div>
-          <div className={'cromo-st' + (wins?.d ? ' win' : '')}><b>{fmtDist(rival.d)}</b><span>Distancia</span></div>
-        </div>
+        )}
       </div>
     </motion.div>
   )

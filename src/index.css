@@ -589,24 +589,39 @@ body {
 .ck-cmp-toggle.on { background: rgba(167,139,250,.14); border-color: rgba(167,139,250,.5); color: #c4b5fd; }
 
 /* panel comparativa: A (oro) | Δ | B (violeta), separados por el hairline canónico */
-.ck-compare { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); margin: 4px auto 2px; padding: 16px clamp(12px, 2.5vw, 26px); max-width: 760px; width: 100%; border: 1px solid var(--line); border-radius: var(--card-r); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+/* OJO: la Caja es ISLA OSCURA en AMBOS temas → el comparador usa colores FIJOS claros sobre oscuro
+   (no tokens --surface/--ink/--muted que se invierten en tema claro y dejaban el número ilegible). */
+.ck-compare { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(14px, 3vw, 40px); margin: 4px auto 2px; padding: 16px clamp(12px, 2.5vw, 26px); max-width: 760px; width: 100%; border: 1px solid rgba(255,255,255,.1); border-radius: var(--card-r); background: rgba(255,255,255,.045); }
 .ckc-col { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
 .ckc-day { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
 .ckc-col.b .ckc-day { color: #c4b5fd; }
 .ckc-hero { font-family: var(--font-num); font-weight: 600; font-size: clamp(30px, 4.4vw, 44px); line-height: 1; letter-spacing: -.025em; color: #fff; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; }
 .ckc-hero i { font-style: normal; font-size: .82em; font-weight: 600; margin-left: .06em; color: var(--gold); }
 .ckc-col.b .ckc-hero i { color: #c4b5fd; }
-.ckc-mini { font-size: var(--fs-xs); color: var(--muted); }
-.ckc-mini b { color: var(--ink); font-weight: 600; }
-.ckc-delta { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 clamp(4px, 1.5vw, 16px); position: relative; }
-.ckc-delta::before, .ckc-delta::after { content: ''; position: absolute; top: -6px; bottom: -6px; width: 1px; background: var(--sep); }
-.ckc-delta::before { left: calc(-1 * clamp(7px, 1.5vw, 20px)); }
-.ckc-delta::after { right: calc(-1 * clamp(7px, 1.5vw, 20px)); }
-.ckc-dnum { font-family: var(--font-num); font-weight: 700; font-size: clamp(15px, 1.9vw, 20px); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.ckc-mini { font-size: var(--fs-xs); color: rgba(255,255,255,.6); }
+.ckc-mini b { color: #fff; font-weight: 600; }
 .ckc-dpct { font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
-.ckc-dnum.up, .ckc-dpct.up { color: var(--ok); }
-.ckc-dnum.down, .ckc-dpct.down { color: var(--warn); }
-.ckc-dlbl { font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-top: 2px; }
+.ckc-dpct.up { color: var(--ok); }
+.ckc-dpct.down { color: var(--warn); }
+
+/* ── Comparador de fechas REACTIVO (Juan 28-jun): eliges 2 fechas → paneles aparecen animados + deltas por métrica ── */
+.ckc-tag { font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.45); }
+.ck-compare .ckc-col { animation: ckcIn .42s cubic-bezier(.23,1,.32,1) both; }
+@keyframes ckcIn { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ck-compare .ckc-col, .ck-compare .ckc-deltas { animation: none; } }
+/* slot vacío: hueco fantasma "elige fecha" mientras no has elegido ese lado */
+.ckc-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; min-height: 92px; border: 1px dashed rgba(255,255,255,.18); border-radius: var(--card-r); color: rgba(255,255,255,.5); padding: 14px; }
+.ckc-slot-n { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2); font-family: var(--font-num); font-weight: 700; font-size: var(--fs-sm); color: rgba(255,255,255,.7); }
+.ckc-slot-t { font-size: var(--fs-xs); font-weight: 600; max-width: 120px; line-height: 1.3; }
+/* centro: deltas por métrica (Caja/Tickets/Ticket medio) con flecha ▲▼ verde/rojo + % */
+.ckc-deltas { display: flex; flex-direction: column; gap: 9px; padding: 0 clamp(4px, 1.5vw, 14px); position: relative; animation: ckcIn .42s cubic-bezier(.23,1,.32,1) both; }
+.ckc-deltas::before, .ckc-deltas::after { content: ''; position: absolute; top: -6px; bottom: -6px; width: 1px; background: var(--sep); }
+.ckc-deltas::before { left: calc(-1 * clamp(7px, 1.5vw, 18px)); }
+.ckc-deltas::after { right: calc(-1 * clamp(7px, 1.5vw, 18px)); }
+.ckc-drow { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.ckc-dlbl2 { font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+/* ⚖ cuando solo hay una fecha elegida (esperando la 2ª) */
+.ckc-vs { display: grid; place-items: center; font-size: clamp(22px, 3vw, 30px); color: var(--faint); opacity: .7; padding: 0 clamp(4px, 1.5vw, 14px); }
 @media (max-width: 560px) { .ck-compare { gap: 10px; padding: 14px 10px; } .ckc-mini { font-size: var(--fs-2xs); } }
 
 .ck-extra { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 16px; }
@@ -3291,18 +3306,17 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .mapa-hacker { position: absolute; inset: 0; z-index: 20; pointer-events: none; border-radius: inherit; overflow: hidden; background: radial-gradient(120% 90% at 50% 40%, #0a0c10, #050609); opacity: 1; transition: opacity .6s ease, visibility .6s; }
 .mapa-hacker.lifted { opacity: 0; visibility: hidden; }
 .mapa-hacker::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(var(--brand-rgb),.10) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--brand-rgb),.10) 1px, transparent 1px); background-size: 30px 30px; -webkit-mask-image: radial-gradient(120% 90% at 50% 45%, #000, transparent 78%); mask-image: radial-gradient(120% 90% at 50% 45%, #000, transparent 78%); }
-.mapa-hacker .mh-scan { position: absolute; left: 0; right: 0; height: 2px; top: 0; background: linear-gradient(90deg, transparent, rgba(var(--brand-rgb),.95) 50%, transparent); box-shadow: 0 0 18px 3px rgba(var(--brand-rgb),.5); animation: hackScan 1.9s ease-in-out both; }
-/* Terminal hacker: líneas de estado que aparecen en cascada (Juan: "accediendo al sistema, acceso completado…"). */
-/* fuente TERMINAL pixel (VT323, CRT) para el efecto hacker — grande y centrada (Juan 25-jun). */
-.mh-term { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(6px, .8vw, 14px); text-align: center; font-family: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace; font-size: clamp(26px, 3.6vw, 54px); font-weight: 400; letter-spacing: 1px; line-height: 1.05; padding: 0 24px; }
-.mh-line { color: var(--brand, #ffbf10); text-shadow: 0 0 16px rgba(var(--brand-rgb),.55), 0 0 2px rgba(var(--brand-rgb),.9); white-space: nowrap; opacity: 0; transform: translateY(8px); animation: hackLine .42s cubic-bezier(.23,1,.32,1) both; }
+/* Terminal de arranque: líneas de estado en cascada (Juan: "accediendo al sistema, acceso completado…").
+   SIN línea de barrido (Juan 28-jun: "saca esa línea"). Tipografía premium-tech JetBrains Mono — limpia y
+   técnica, NO pixel/gamer (Juan 28-jun: "mejorar la letra"). */
+.mh-term { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1vw, 16px); text-align: center; font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, monospace; font-size: clamp(14px, 1.85vw, 25px); font-weight: 500; letter-spacing: .02em; line-height: 1.1; padding: 0 24px; }
+.mh-line { color: var(--brand, #ffbf10); text-shadow: 0 0 10px rgba(var(--brand-rgb),.3); white-space: nowrap; opacity: 0; transform: translateY(8px); animation: hackLine .42s cubic-bezier(.23,1,.32,1) both; }
 .mh-line:nth-child(1) { animation-delay: .15s; }
 .mh-line:nth-child(2) { animation-delay: .5s; }
 .mh-line:nth-child(3) { animation-delay: .85s; }
 .mh-line:nth-child(4) { animation-delay: 1.2s; }
 .mh-line.ok { color: #36e07f; text-shadow: 0 0 12px rgba(54,224,127,.6); font-weight: 700; animation-delay: 1.6s; }
 @keyframes hackBoot { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-@keyframes hackScan { 0% { top: -6px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 @keyframes hackLine { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .mapa-hacker { display: none; } }
 
@@ -3316,7 +3330,7 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .msw-corner.tr { top: 14px; right: 14px; border-left: 0; border-bottom: 0; }
 .msw-corner.bl { bottom: 14px; left: 14px; border-right: 0; border-top: 0; }
 .msw-corner.br { bottom: 14px; right: 14px; border-left: 0; border-top: 0; }
-.msw-term { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(6px, .7vw, 12px); text-align: center; font-family: 'VT323', ui-monospace, 'SF Mono', Menlo, monospace; font-size: clamp(22px, 3vw, 46px); letter-spacing: 1px; line-height: 1.05; padding: 0 24px; }
+.msw-term { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(7px, .8vw, 13px); text-align: center; font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, monospace; font-size: clamp(13px, 1.7vw, 23px); font-weight: 500; letter-spacing: .02em; line-height: 1.1; padding: 0 24px; }
 .msw-line { color: #c4b5fd; text-shadow: 0 0 16px rgba(124,92,240,.6), 0 0 2px rgba(124,92,240,.9); white-space: nowrap; opacity: 0; transform: translateY(8px); animation: hackLine .42s cubic-bezier(.23,1,.32,1) both; animation-delay: calc(.12s + var(--i) * .22s); }
 .msw-line em { color: var(--brand, #ffbf10); font-style: normal; text-shadow: 0 0 16px rgba(var(--brand-rgb), .6); }
 .msw-line.ok { color: #36e07f; text-shadow: 0 0 12px rgba(54,224,127,.6); font-weight: 700; }
@@ -3471,24 +3485,17 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 @keyframes mbootText { from { opacity: 0; transform: translateY(10px) scale(.94); letter-spacing: .4em; } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .mapa-boot { display: none; } }
 
-/* ════════════ Mapa · panel de telemetría HUD (no dashboard) ════════════ */
-/* bloque base: mismo lenguaje que el HUD del mapa (clip-path angular + corner tick + glass) */
-.mp-block { position: relative; padding: 19px 21px 21px; background: linear-gradient(135deg, rgba(10,10,14,.86), rgba(10,10,14,.54)); border: 1px solid rgba(var(--brand-rgb),.16); border-radius: 6px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
-.mp-block::before { content: ''; position: absolute; top: 8px; left: 8px; width: 11px; height: 11px; border-top: 2px solid rgba(var(--brand-rgb),.5); border-left: 2px solid rgba(var(--brand-rgb),.5); border-top-left-radius: 3px; pointer-events: none; z-index: 1; }
-/* aura viva: respira y deriva un brillo dorado sutil → el panel deja de verse estático */
-.mp-block::after { content: ''; position: absolute; inset: 0; border-radius: inherit; clip-path: inherit; pointer-events: none;
-  background: radial-gradient(150% 90% at 30% -8%, rgba(var(--brand-rgb),.07), transparent 58%);
-  animation: mpAura 7s ease-in-out infinite; }
-@keyframes mpAura { 0% { opacity: .45; background-position: 0% 0%; } 50% { opacity: 1; background-position: 100% 0%; } 100% { opacity: .45; background-position: 0% 0%; } }
-@media (prefers-reduced-motion: reduce) { .mp-block::after { animation: none; } }
-.mp-kick { display: block; font-size: var(--fs-2xs); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 15px; padding-left: 11px; position: relative; z-index: 2; }
-/* emoji animado del panel: bob + balanceo suave (one-shot loop sutil) */
-.mp-emo { display: inline-block; margin-right: 7px; font-size: var(--fs-xs); transform-origin: 50% 85%; animation: mpEmo 2.6s ease-in-out infinite; }
-.mp-intel .mp-emo { animation-delay: .5s; } .mp-block:last-child .mp-emo { animation-delay: 1s; }
-@keyframes mpEmo { 0%, 100% { transform: translateY(0) rotate(0); } 22% { transform: translateY(-3px) rotate(-9deg); } 55% { transform: translateY(0) rotate(7deg); } }
-@media (prefers-reduced-motion: reduce) { .mp-emo { animation: none; } }
-/* alertas: que rimen con los bloques (mismo chaflán) manteniendo el tinte rojo */
-.mp-alertas { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); border-radius: 6px; }
+/* ════════════ Mapa · paneles de inteligencia — SISTEMA UNIFICADO (Juan 28-jun) ════════════
+   Todos los bloques comparten EXACTAMENTE el mismo lenguaje: tarjeta redondeada, mismo borde/glass, misma
+   cabecera (kicker oro con barra de acento), mismo ritmo. Nada de chaflanes distintos, auras animadas ni
+   emojis saltarines (eso era ruido). Premium-tech, coherente, no "gamer desordenado". */
+.mp-block { position: relative; padding: 16px 18px; background: linear-gradient(180deg, rgba(16,17,22,.9), rgba(10,11,15,.7)); border: 1px solid var(--line); border-radius: 14px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.mp-kick { display: flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin: 0 0 14px; position: relative; z-index: 2; }
+/* barra de acento ANTES del kicker → marca común que unifica todos los bloques */
+.mp-kick::before { content: ''; width: 3px; height: 13px; border-radius: 2px; background: var(--gold); flex: none; }
+.mp-emo { display: inline-flex; font-size: var(--fs-xs); }
+/* alertas: mismo lenguaje que el resto, manteniendo el tinte rojo de aviso */
+.mp-alertas { padding: 16px 18px; border-radius: 14px; border-color: color-mix(in srgb, #ff5c5c 30%, var(--line)); }
 
 /* 1 · TU POSICIÓN (rank gigante + gauge de rating + barra de dominancia) */
 .mp-pos-main { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
@@ -3566,11 +3573,9 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .mapa-panel > * { animation-delay: .04s !important; }
 @media (prefers-reduced-motion: reduce) { .mapa-panel .mp-block, .mapa-panel .mp-alertas { animation: none; } }
 
-/* jerarquía: TU POSICIÓN = HÉROE (no un bloque más) */
-.mp-hero { border-color: rgba(var(--brand-rgb),.34); background: linear-gradient(135deg, rgba(var(--brand-rgb),.07), rgba(10,10,14,.6)); box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb),.08); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%); }
-.mp-hero::after { content: ''; position: absolute; bottom: 8px; right: 8px; width: 11px; height: 11px; border-bottom: 2px solid rgba(var(--brand-rgb),.5); border-right: 2px solid rgba(var(--brand-rgb),.5); border-bottom-right-radius: 3px; pointer-events: none; }
+/* jerarquía: TU POSICIÓN = HÉROE (mismo lenguaje, solo realzado con tinte oro — sin chaflán propio) */
+.mp-hero { border-color: rgba(var(--brand-rgb),.32); background: linear-gradient(180deg, rgba(var(--brand-rgb),.08), rgba(10,11,15,.7)); box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb),.06); }
 .mp-hero .mp-rank-pos { font-size: clamp(46px, 7vw, 62px); text-shadow: 0 2px 14px rgba(0,0,0,.6); }
-.mp-intel, .mp-threats, .mp-gaps { border-color: rgba(var(--brand-rgb),.11); } /* medio tono bajo el héroe */
 
 /* hover sincronizado: la fila enfocada se resalta (rima con el nodo .is-hot del mapa) */
 .mp-tr.is-hot, .mp-sig-row.is-hot { border-color: rgba(var(--brand-rgb),.55); background: rgba(var(--brand-rgb),.06); }
@@ -3676,13 +3681,37 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .gx-con-input::-webkit-outer-spin-button, .gx-con-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .gx-con-cur { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-xs); color: var(--muted); }
 
-/* Comparador desplegado SOBRE el mapa como tarjeta 3D (no modal a pantalla completa) */
-.cmp-stage { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; perspective: 1500px; background: radial-gradient(125% 120% at 50% 45%, rgba(8,8,10,.32), rgba(8,8,10,.6)); -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px); }
-/* Tarjeta de tamaño FIJO (no escala con zoom) y acotada en ALTO → NUNCA se sale del mapa; si hay muchas
-   reseñas, se ensancha (.wide) en vez de crecer hacia fuera. Pedido repetido de Juan. */
-.cmp-card.cmp-3d { width: min(384px, 94%); max-width: none; max-height: min(74vh, 500px); overflow: hidden; transform-origin: center bottom; transform-style: preserve-3d; will-change: transform; box-shadow: 0 50px 90px -28px rgba(0,0,0,.95), 0 0 0 1px rgba(var(--brand-rgb),.14), 0 0 80px -30px rgba(var(--brand-rgb),.18); }
-.cmp-card.cmp-3d.wide { width: min(468px, 96%); }
-.cmp-3d .cmp-body { overflow-y: auto; overscroll-behavior: contain; }
+/* ══════════ Tarjetas de competidor que OCUPAN el recuadro (Juan 28-jun) ══════════
+   El overlay es una REJILLA dentro del mapa: 1 tarjeta = a pantalla completa del recuadro; 2 = mitad y mitad
+   (responsive: en móvil se apilan). Velo oscuro detrás para que la(s) tarjeta(s) resalten sobre el mapa. */
+.cmp-stage { position: absolute; inset: 0; z-index: 20; display: grid; gap: 12px; padding: 14px; background: radial-gradient(135% 120% at 50% 40%, rgba(6,7,10,.55), rgba(6,7,10,.78)); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.cmp-stage.cols-1 { grid-template-columns: 1fr; }
+.cmp-stage.cols-2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 720px) { .cmp-stage.cols-2 { grid-template-columns: 1fr; grid-auto-rows: 1fr; } }
+
+/* La tarjeta llena su celda; cuerpo con scroll si el contenido (reseñas) excede el alto del recuadro. */
+.cmp-card.cmp-big { width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: linear-gradient(180deg, #111218, #0a0b0f); border: 1px solid var(--line-strong); box-shadow: 0 30px 80px -30px rgba(0,0,0,.9); }
+.cmp-card.cmp-big .cmp-head { position: relative; flex: none; padding: 18px 22px 16px; border-radius: 0; background: linear-gradient(180deg, rgba(var(--brand-rgb),.10), rgba(255,255,255,0)); border-bottom: 1px solid var(--line); }
+.cmp-card.cmp-big .cmp-head::after, .cmp-card.cmp-big .cmp-head-dots { display: none; }
+.cmp-card.cmp-big .cmp-kicker { position: relative; display: block; font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
+.cmp-title { margin: 6px 0 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(18px, 2.4vw, 26px); color: #fff; line-height: 1.05; letter-spacing: -.01em; }
+.cmp-x { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; border: 1px solid var(--line-strong); background: rgba(0,0,0,.4); color: var(--muted); font-size: var(--fs-sm); cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: color .15s, border-color .15s, background .15s; }
+.cmp-x:hover { color: #fff; border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); }
+/* señal del rival en la cabecera */
+.cmp-signal { display: inline-flex; align-items: center; gap: 8px; margin-top: 11px; padding: 6px 10px; border-radius: 9px; background: rgba(var(--brand-rgb),.06); border: 1px solid rgba(var(--brand-rgb),.16); }
+.cmp-sig-tag { flex: none; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #1a1404; background: var(--gold); padding: 2px 8px; border-radius: 100px; }
+.cmp-signal.s-promo .cmp-sig-tag { background: #ff8a3d; } .cmp-signal.s-social .cmp-sig-tag { background: #c46bff; color: #fff; } .cmp-signal.s-noticia .cmp-sig-tag { background: #5cc8ff; }
+.cmp-sig-txt { font-size: var(--fs-xs); color: var(--muted); line-height: 1.3; }
+.cmp-card.cmp-big .cmp-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 22px 20px; display: flex; flex-direction: column; gap: 18px; }
+/* bloque enfrentamiento (duelo) VS tu local */
+.cmp-duel { padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,.022); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 13px; }
+.cmp-duel-head { display: flex; align-items: center; justify-content: center; gap: 12px; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); color: var(--gold); }
+.cmp-duel-head b { min-width: 0; }
+.cmp-duel-head b.them { color: var(--muted); }
+.cmp-duel-x { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #1a1404; color: var(--gold); font-size: var(--fs-2xs); font-weight: 800; }
+.cmp-card.cmp-big .cmp-verdict { align-self: center; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); color: var(--ink); padding-top: 2px; }
+/* En tarjeta SOLA y ancha: stats a 4 columnas (más legible aprovechando el ancho del recuadro). */
+@media (min-width: 900px) { .cmp-solo-card .ci-stats { grid-template-columns: repeat(4, 1fr); } }
 
 /* ── Comparadores ANCLADOS al punto (24-jun): cada carta SIGUE la posición en pantalla de su rival
    (map.project, recalculado por JS en cada frame) con tamaño FIJO — NO escala con el zoom — y SIEMPRE
