@@ -1,7 +1,8 @@
 import { Card, SectionHeader, KpiTile, BarChart, DataTable, Badge, Donut, Grid } from '../components/ui'
-import { eur0, VENTAS_MES, FOOD_COST_PCT, useRealAgg } from '../lib/data'
+import { eur0, VENTAS_MES, FOOD_COST_PCT, useRealAgg, salesForMonth, HOY } from '../lib/data'
 import { useEquipo, costeMes } from '../lib/equipo'
 import { useGastos, gastosMes } from '../lib/gastos'
+import { isDemoMode } from '../lib/demo'
 
 /* ════════════════════════════════════════════════════════════════════
    RESUMEN MENSUAL — histórico DERIVADO de las mismas fuentes únicas que el
@@ -32,15 +33,19 @@ export default function Mensual() {
   useRealAgg() // facturación mensual REAL en modo real
   const roster = useEquipo() // suscribe: editar un sueldo recalcula el histórico
   useGastos() // suscribe: editar un gasto recalcula el histórico
+  const demo = isDemoMode()
   const personal = roster.reduce((s, e) => s + costeMes(e), 0) // coste fijo de plantilla (mismo cada mes)
   const gastos = gastosMes() // gasto fijo del mes (mismo cada mes)
+  const year = HOY.getFullYear()
 
   // Una fila derivada por mes (Ene–Jun del año en curso).
   const filas = MESES.map((mes, i) => {
-    const ventas = Math.round(VENTAS_MES * FACTOR[i])
+    // DEMO: rampa de escaparate hasta la facturación canónica del mes en curso.
+    // REAL: ventas REALES del mes (salesForMonth es real-aware → 0 si ese mes no tiene ventas, sin inventar rampa).
+    const ventas = demo ? Math.round(VENTAS_MES * FACTOR[i]) : Math.round(salesForMonth(year, i).total)
     const compras = Math.round(ventas * FOOD_COST_PCT)
     const neto = ventas - compras - gastos - personal
-    return { mes, corto: MES_CORTO[i], ventas, compras, gastos, personal, neto, margenPct: Math.round((neto / ventas) * 1000) / 10 }
+    return { mes, corto: MES_CORTO[i], ventas, compras, gastos, personal, neto, margenPct: ventas > 0 ? Math.round((neto / ventas) * 1000) / 10 : 0 }
   })
 
   const ytd = filas.reduce((s, f) => s + f.ventas, 0)
@@ -48,7 +53,7 @@ export default function Mensual() {
   const margenMedio = Math.round((filas.reduce((s, f) => s + f.margenPct, 0) / filas.length) * 10) / 10
   const jun = filas[filas.length - 1]
   const may = filas[filas.length - 2]
-  const crecimiento = Math.round(((jun.ventas - may.ventas) / may.ventas) * 1000) / 10
+  const crecimiento = may.ventas > 0 ? Math.round(((jun.ventas - may.ventas) / may.ventas) * 1000) / 10 : 0
 
   const margenPorMes = filas.map((f) => ({ label: f.corto, value: f.margenPct }))
 

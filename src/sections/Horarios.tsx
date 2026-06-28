@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Card, SectionHeader, KpiTile, DataTable, Badge, Donut, Grid } from '../components/ui'
 import { play } from '../lib/sound'
 import { useEquipo, toggleTurno, horasSemana, costeSemana, DIAS, DIAS_FULL } from '../lib/equipo'
+import { isDemoMode } from '../lib/demo'
 
 /* Horarios — rejilla semanal de turnos. FUENTE ÚNICA `lib/equipo`: las mismas personas que Empleados,
    y cada turno que activas/desactivas recalcula el coste REAL (horas × coste/hora de cada empleado) y
@@ -22,6 +23,7 @@ const eur0 = (n: number) => n.toLocaleString('es-ES')
 
 export default function Horarios() {
   const roster = useEquipo()
+  const demo = isDemoMode()
 
   function onToggle(id: string, di: number, slot: 'm' | 't') {
     play('tap', 0.4)
@@ -47,11 +49,11 @@ export default function Horarios() {
 
   return (
     <div className="section">
-      <SectionHeader title="Horarios" subtitle="Turnos semanales" right={<Badge tone="amber">Semana 25 · Jun 2026</Badge>} />
+      <SectionHeader title="Horarios" subtitle="Turnos semanales" right={demo ? <Badge tone="amber">Semana 25 · Jun 2026</Badge> : undefined} />
 
       <Grid cols={3} className="kpi-grid">
-        <KpiTile label="Horas semana" value={eur0(der.totalHoras)} unit="h" delta="+4 h" foot="vs semana anterior" trend="up" />
-        <KpiTile label="Empleados activos" value={String(der.activos)} delta="0" foot="plantilla completa" trend="flat" />
+        <KpiTile label="Horas semana" value={eur0(der.totalHoras)} unit="h" delta={demo ? '+4 h' : undefined} foot={demo ? 'vs semana anterior' : undefined} trend="up" />
+        <KpiTile label="Empleados activos" value={String(der.activos)} delta={demo ? '0' : undefined} foot={demo ? 'plantilla completa' : undefined} trend="flat" />
         <KpiTile label="Coste semana" value={eur0(der.coste)} unit="€" delta="real" foot="horas × coste/hora" trend="flat" />
       </Grid>
 
@@ -153,7 +155,7 @@ export default function Horarios() {
           <div className="sched-donuts">
             <Donut value={Math.round((der.totalM / der.shifts) * 100)} label="mañanas" sub={der.totalM + ' turnos'} tone="gold" />
             <Donut value={Math.round((der.totalT / der.shifts) * 100)} label="tardes" sub={der.totalT + ' turnos'} tone="blue" />
-            <Donut value={Math.round((der.totalLibres / (roster.length * 7)) * 100)} label="libres" sub={der.totalLibres + ' días'} tone="amber" />
+            <Donut value={roster.length ? Math.round((der.totalLibres / (roster.length * 7)) * 100) : 0} label="libres" sub={der.totalLibres + ' días'} tone="amber" />
           </div>
         </Card>
       </Grid>

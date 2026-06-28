@@ -30,7 +30,7 @@ export default function Coste() {
     const mes = roster.reduce((s, e) => s + costeMes(e), 0)
     const hoy = costePorDia[todayIdx]
     const media = Math.round(costePorDia.reduce((s, v) => s + v, 0) / 7)
-    const pctVentas = Math.round((mes / VENTAS_MES) * 100)
+    const pctVentas = VENTAS_MES > 0 ? Math.round((mes / VENTAS_MES) * 100) : 0 // sin ventas reales → 0 (no NaN)
     const completas = roster.filter((e) => e.jornada === 'Completa').length
     const pctCompletas = roster.length ? Math.round((completas / roster.length) * 100) : 0
     const costeFinde = costePorDia[5] + costePorDia[6]

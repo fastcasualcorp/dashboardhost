@@ -9,6 +9,7 @@ import { reduceMotion } from '../lib/data'
 import { usePower } from '../lib/power'
 import { fetchRivalsCached, type PlaceReview, type PlaceRival } from '../lib/places'
 import { LOCAL } from '../lib/local'
+import { isDemoMode } from '../lib/demo'
 
 /* Mapa de Incidencia — rastrea la competencia en un mapa 3D estilo videojuego (Mapbox GL:
    edificios extruidos y EXAGERADOS, vista inclinada, atmósfera, vuelo cinematográfico, sin
@@ -33,8 +34,9 @@ const DEMO_RIVALES: Rival[] = [
   { id: 'r8', name: 'Pizzería Bella Napoli', tipo: 'Pizzería', lat: 42.835422, lng: -8.687425, rating: 4.0, reviews: 540, precio: 11.0, signal: { k: 'social', txt: 'Sorteo en Instagram esta semana' } },
   { id: 'r9', name: 'Brión BBQ House', tipo: 'Barbacoa', lat: 42.885603, lng: -8.618971, rating: 4.5, reviews: 1740, precio: 16.5, signal: { k: 'reseña', txt: 'Suben fotos de costillas a diario' } },
 ]
-// Lista ACTIVA de rivales (mutable): arranca con la demo y se sustituye por los REALES de Google Places.
-let RIVALES: Rival[] = DEMO_RIVALES
+// Lista ACTIVA de rivales (mutable). En DEMO arranca con la demo (escaparate). En REAL arranca VACÍA:
+// solo se llena con los REALES de Google Places; si Places falla NO caemos a la demo → estado vacío honesto.
+let RIVALES: Rival[] = isDemoMode() ? DEMO_RIVALES : []
 let rivalsFetched = false // ya pedimos los reales a Places → al reconstruir el mapa (cambio de tema) NO repetir la llamada
 
 // Reseñas de DEMO de las plataformas de reparto (Glovo/Uber/Just Eat NO exponen API de reseñas → se
@@ -169,6 +171,7 @@ function heatGeo(rivals: RivD[]) {
 }
 
 export default function MapaIncidencia() {
+  const demo = isDemoMode() // DEMO = escaparate con datos de ejemplo · REAL = solo dato real o estado vacío honesto
   const { saver: powerSaver } = usePower() // Salón frío → mapa PLANO (satélite sin 3D) para ahorrar GPU/batería
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -524,9 +527,11 @@ export default function MapaIncidencia() {
         rivalsFetched = true
         setRealData(true)
         bumpRiv((n) => n + 1) // re-render del panel con los reales
-      } else if (RIVALES !== DEMO_RIVALES) {
+      } else if (RIVALES.length && RIVALES !== DEMO_RIVALES) {
         setRealData(true) // reconstrucción por tema: ya teníamos los reales cargados
       }
+      // REAL sin Places (falló / sin config): RIVALES queda VACÍA → NO caemos a la demo. El panel
+      // muestra el estado vacío honesto ("Sin datos de zona aún") y la badge "Google en vivo" no sale.
 
       // ETIQUETAS: dejar SOLO nombres de POBLACIONES (ciudades/pueblos) para ubicarse — fuera barrios (subdivision),
       // calles, POIs, agua, tránsito, etc. (Juan 25-jun: "nombres de poblaciones sí, barrios no"). Las capas de
@@ -1074,15 +1079,21 @@ export default function MapaIncidencia() {
       ctx.strokeStyle = 'rgba(255,191,16,.34)'; ctx.lineWidth = 1.4; rr(48, y, W - 96, 132, 22); ctx.stroke()
       ctx.fillStyle = GOLD; ctx.font = '800 18px Inter, sans-serif'
       ctx.fillText('TU POSICIÓN EN LA ZONA', 76, y + 42)
+      // REAL: rating/dominancia salen del LOCAL de partida (no es dato real del tenant) → no inventamos
+      // cifras en el informe; mostramos "—". En DEMO va el escaparate completo como hasta ahora.
       ctx.fillStyle = INK; ctx.font = '800 64px "Clash Grotesk", Inter, sans-serif'
-      ctx.fillText(`#${pos}`, 76, y + 104)
-      ctx.fillStyle = MUT; ctx.font = '600 24px Inter, sans-serif'
-      ctx.fillText(`de ${zona.length}`, 76 + ctx.measureText(`#${pos}`).width + 18, y + 104)
+      ctx.fillText(demo ? `#${pos}` : '—', 76, y + 104)
+      if (demo) {
+        ctx.fillStyle = MUT; ctx.font = '600 24px Inter, sans-serif'
+        ctx.fillText(`de ${zona.length}`, 76 + ctx.measureText(`#${pos}`).width + 18, y + 104)
+      }
       ctx.textAlign = 'right'
       ctx.fillStyle = INK; ctx.font = '800 40px "Clash Grotesk", Inter, sans-serif'
-      ctx.fillText(`${LOCAL.rating.toFixed(1)}★`, W - 76, y + 70)
-      ctx.fillStyle = '#34d399'; ctx.font = '700 22px Inter, sans-serif'
-      ctx.fillText(`${dominancia}% dominancia`, W - 76, y + 104)
+      ctx.fillText(demo ? `${LOCAL.rating.toFixed(1)}★` : '—', W - 76, y + 70)
+      if (demo) {
+        ctx.fillStyle = '#34d399'; ctx.font = '700 22px Inter, sans-serif'
+        ctx.fillText(`${dominancia}% dominancia`, W - 76, y + 104)
+      }
       ctx.textAlign = 'left'
       // 4) RIVALES (por amenaza)
       y += 132 + 36
@@ -1188,6 +1199,7 @@ export default function MapaIncidencia() {
                     key={r.id}
                     rival={r}
                     solo={comparados.length === 1}
+                    demo={demo}
                     onClose={() => { setComparados((prev) => prev.filter((p) => p.id !== r.id)); play('pop', 0.4, 0.9) }}
                   />
                 ))}
@@ -1245,7 +1257,7 @@ export default function MapaIncidencia() {
               </div>
               <div className="mht-stat">
                 <span>Tu rating</span>
-                <b className="g">{LOCAL.rating.toFixed(1)}★</b>
+                <b className="g">{demo ? `${LOCAL.rating.toFixed(1)}★` : '—'}</b>
               </div>
               <div className="mht-stat">
                 <span><i className="mht-live" />OP · LIVE</span>
@@ -1311,25 +1323,33 @@ export default function MapaIncidencia() {
             )}
           </AnimatePresence>
 
-          {/* 1 · TU POSICIÓN (HÉROE del panel): rank + gauge de rating + barra de dominancia */}
+          {/* 1 · TU POSICIÓN (HÉROE del panel): rank + gauge de rating + barra de dominancia.
+              REAL: el rating/precio del LOCAL aún es el de partida (no es dato real del tenant) → no
+              calculamos posición/dominancia contra cifras falsas; mostramos un estado vacío honesto. */}
           <div className="mp-block mp-pos mp-hero">
             <span className="mp-kick"><span className="mp-emo">🎯</span>Tu posición en la zona</span>
-            <div className="mp-pos-main">
-              <div className="mp-rank">
-                <span className="mp-rank-pos">#<CountValue value={String(pos)} /></span>
-                <span className="mp-rank-of">de {zona.length}</span>
-              </div>
-              <RatingGauge value={LOCAL.rating} />
-            </div>
-            <div className="mp-dom">
-              <div className="mp-dom-bar">
-                <div className="mp-dom-you" style={{ width: dominancia + '%' }} />
-              </div>
-              <div className="mp-dom-legend">
-                <span>TÚ <b><CountValue value={dominancia + '%'} /></b></span>
-                <span className="r">RIVALES <b><CountValue value={100 - dominancia + '%'} /></b></span>
-              </div>
-            </div>
+            {demo ? (
+              <>
+                <div className="mp-pos-main">
+                  <div className="mp-rank">
+                    <span className="mp-rank-pos">#<CountValue value={String(pos)} /></span>
+                    <span className="mp-rank-of">de {zona.length}</span>
+                  </div>
+                  <RatingGauge value={LOCAL.rating} />
+                </div>
+                <div className="mp-dom">
+                  <div className="mp-dom-bar">
+                    <div className="mp-dom-you" style={{ width: dominancia + '%' }} />
+                  </div>
+                  <div className="mp-dom-legend">
+                    <span>TÚ <b><CountValue value={dominancia + '%'} /></b></span>
+                    <span className="r">RIVALES <b><CountValue value={100 - dominancia + '%'} /></b></span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="vtpv-empty">Añade el rating real de tu local para ver tu posición</div>
+            )}
           </div>
 
           {/* 2 · INTELIGENCIA: mini-stats + ticker de señales + oportunidad (ya no prosa) */}
@@ -1402,7 +1422,7 @@ export default function MapaIncidencia() {
                   </button>
                 )
               })}
-              {!visibles.length && <div className="mp-empty">{enRango.length ? 'Ningún rival con este filtro' : 'Sin rivales en este radio'}</div>}
+              {!visibles.length && <div className="mp-empty">{enRango.length ? 'Ningún rival con este filtro' : !demo && !realData ? 'Sin datos de zona aún' : 'Sin rivales en este radio'}</div>}
             </div>
           </div>
 
@@ -1421,7 +1441,13 @@ export default function MapaIncidencia() {
             </div>
           )}
 
-          <p className="mp-demo-foot">Datos de demostración · con Google + IA serán reales y en vivo</p>
+          {demo ? (
+            <p className="mp-demo-foot">Datos de demostración · con Google + IA serán reales y en vivo</p>
+          ) : realData ? (
+            <p className="mp-demo-foot">Rivales en vivo desde Google · tus datos los completas en tu ficha</p>
+          ) : (
+            <p className="mp-demo-foot">Sin datos de zona aún · conecta Google Places para ver a tus rivales</p>
+          )}
         </aside>
       </div>
 
@@ -1466,7 +1492,7 @@ const METRICAS: { key: 'rating' | 'reviews' | 'precio'; label: string; max?: num
   { key: 'precio', label: 'Ticket medio', suf: ' €', dec: 2, mejor: 'info' },
 ]
 
-function Comparador({ rival, onClose, solo }: { rival: Rival & { d: number }; onClose: () => void; solo?: boolean }) {
+function Comparador({ rival, onClose, solo, demo }: { rival: Rival & { d: number }; onClose: () => void; solo?: boolean; demo?: boolean }) {
   const root = useRef<HTMLDivElement>(null)
   // Una sola vista RICA: stats del rival + enfrentamiento VS tu local + reseñas. La tarjeta OCUPA su celda del
   // recuadro (1 = todo el mapa; 2 = mitad). Sin toggle ni cromos: toda la inteligencia útil de un vistazo. (Juan 28-jun)
@@ -1501,8 +1527,9 @@ function Comparador({ rival, onClose, solo }: { rival: Rival & { d: number }; on
     return () => ctx.revert()
   }, [rival])
 
-  // Reseñas con ORIGEN: las de Google son reales (Places); Glovo/Uber/Just Eat son muestra (sin API pública).
-  const revList: PlaceReview[] = [...(rival.reviewsList ?? []), ...deliveryReviews(rival.id)]
+  // Reseñas con ORIGEN: las de Google son reales (Places). Las de Glovo/Uber/Just Eat son SINTÉTICAS
+  // (sin API pública) → solo en DEMO. En REAL mostramos únicamente las reseñas reales de Google.
+  const revList: PlaceReview[] = [...(rival.reviewsList ?? []), ...(demo ? deliveryReviews(rival.id) : [])]
     .map((rv) => ({ ...rv, source: rv.source || 'Google' })) // blindaje: nunca source vacío
     .slice(0, solo ? 5 : 3)
 
@@ -1535,7 +1562,10 @@ function Comparador({ rival, onClose, solo }: { rival: Rival & { d: number }; on
           <div className="ci-stat"><b>{fmtDist(rival.d)}</b><span>Distancia</span></div>
         </div>
 
-        {/* Enfrentamiento VS tu local: barras Tú/Ellos con el ganador resaltado */}
+        {/* Enfrentamiento VS tu local: barras Tú/Ellos con el ganador resaltado.
+            REAL: tu rating/reseñas/ticket aún es el de partida (no dato real del tenant) → no enfrentamos
+            contra cifras falsas; ocultamos el duelo hasta que haya datos reales del local. */}
+        {demo && (
         <div className="cmp-duel">
           <div className="cmp-duel-head"><b>{LOCAL.name.split('·')[0].trim()}</b><span className="cmp-duel-x">VS</span><b className="them">{rival.name.split(' ').slice(0, 2).join(' ')}</b></div>
           {METRICAS.map((m) => {
@@ -1564,6 +1594,7 @@ function Comparador({ rival, onClose, solo }: { rival: Rival & { d: number }; on
           })}
           <div className="cmp-verdict">{verdict}</div>
         </div>
+        )}
 
         {/* Reseñas por plataforma (Google real + delivery muestra) */}
         {revList.length > 0 && (

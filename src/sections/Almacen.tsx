@@ -3,6 +3,7 @@ import { Card, SectionHeader, KpiTile, DataTable, Badge, Grid } from '../compone
 import { play } from '../lib/sound'
 import { reduceMotion } from '../lib/data'
 import { useAlmacen, updateAlmacenes, setItemStock, removeItem, FOTO, type Tipo, type Almacen } from '../lib/almacen'
+import { isDemoMode } from '../lib/demo'
 
 /* Almacén (antes "Stock"). Varios almacenes como FICHAS (foto Nano Banana). Al pulsar uno, su stock se ve como
    un GRID DE PRODUCTOS estilo videojuego: foto de estudio sobre negro + % gigante (verde/ámbar/rojo) + nombre +
@@ -80,6 +81,7 @@ export default function Almacen() {
   const [idraft, setIdraft] = useState<{ actual: number; max: number; umbral: number }>({ actual: 0, max: 100, umbral: 0 })
 
   const sel = alms.find((a) => a.id === selId) ?? alms[0]
+  const demo = isDemoMode()
 
   // Totales del negocio.
   const totRefs = alms.reduce((n, a) => n + a.items.length, 0)
@@ -90,6 +92,7 @@ export default function Almacen() {
   // ── BARRAS QUE SANGRAN EN VIVO: además del consumo REAL al vender (TPV → consumirVenta), un drenaje
   //    ambiente lento (~0,18-0,38%/tick) en el almacén abierto da sensación de cocina en marcha. (escribe en el store)
   useEffect(() => {
+    if (!demo) return // REAL: el stock SOLO baja por venta real (TPV → consumirVenta); nada de drenaje ambiente.
     if (reduceMotion()) return
     const iv = window.setInterval(() => {
       updateAlmacenes((list) => list.map((a) => (a.id !== selId ? a : {
@@ -98,7 +101,7 @@ export default function Almacen() {
       })))
     }, 2200)
     return () => window.clearInterval(iv)
-  }, [selId])
+  }, [selId, demo])
 
   function pick(id: string) {
     if (id === selId) return
@@ -155,6 +158,23 @@ export default function Almacen() {
   const editMax = Math.max(0.1, idraft.max) // capacidad (referencia del %)
   const editPct = Math.max(0, Math.min(100, Math.round((idraft.actual / editMax) * 100))) // % = actual ÷ capacidad
 
+  // REAL sin almacenes (negocio nuevo): estado vacío honesto, sin reventar por sel undefined.
+  if (!sel) {
+    return (
+      <div className="section">
+        <SectionHeader title="Almacén" subtitle="Materias primas por almacén" />
+        <Card>
+          <div className="vtpv-empty">Aún no tienes almacenes. Crea uno y carga tus productos para ver el stock, las alertas y el valor en vivo.</div>
+          <div className="alm-grid" style={{ marginTop: 8 }}>
+            <button className="alm-card alm-add" onClick={nuevo}>
+              <span className="alm-add-plus">+</span><b>Nuevo almacén</b><span>Crea tu primer espacio de stock</span>
+            </button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   const selAlert = alertasDe(sel)
   const selCaducar = porCaducarDe(sel)
   const yaTengo = new Set(sel.items.map((i) => i.pid))
@@ -172,7 +192,7 @@ export default function Almacen() {
         <KpiTile label="Almacenes" value={String(alms.length)} unit="espacios" delta={`${totRefs} refs`} foot="referencias totales" trend="flat" />
         <KpiTile label="Alertas activas" value={String(totAlertas)} unit="prods" delta={totAlertas ? '+' + totAlertas : '0'} foot="bajo umbral" trend={totAlertas ? 'down' : 'flat'} />
         <KpiTile label="Por caducar" value={String(totCaducar)} unit="prods" delta={totCaducar ? '≤5 días' : 'ninguno'} foot="caducidad próxima" trend={totCaducar ? 'down' : 'flat'} />
-        <KpiTile label="Valor total" value={e0(totValor) + ',00'} unit="€" delta="-2,1%" foot="vs semana pasada" trend="down" />
+        <KpiTile label="Valor total" value={e0(totValor) + ',00'} unit="€" delta={demo ? '-2,1%' : undefined} foot={demo ? 'vs semana pasada' : undefined} trend="down" />
       </Grid>
 
       {/* ── FICHAS de almacén (foto Nano Banana + tipo + valor + alertas + ocupación) ── */}

@@ -65,8 +65,11 @@ export default function Gastos() {
       <Card>
         <div className="card-head">
           <h3>Estructura de gastos</h3>
-          <Badge tone="muted">{lider?.name} lidera · {Math.round(((lider?.value || 0) / total) * 100)}%</Badge>
+          {cats.length > 0 && <Badge tone="muted">{lider?.name} lidera · {Math.round(((lider?.value || 0) / total) * 100)}%</Badge>}
         </div>
+        {cats.length === 0 ? (
+          <div className="vtpv-empty">Aún no has registrado gastos fijos. Añádelos abajo y aquí verás su estructura y el total al mes.</div>
+        ) : (
         <div className="gx-hero">
           <div className="gx-pie-wrap">
             <div className="gx-pie" style={{ ['--pie' as string]: `conic-gradient(from -90deg, ${stops})` } as CSSProperties}>
@@ -90,6 +93,7 @@ export default function Gastos() {
             ))}
           </div>
         </div>
+        )}
       </Card>
 
       {/* Conceptos EDITABLES: cambiar la base recalcula IVA, total y todo arriba */}

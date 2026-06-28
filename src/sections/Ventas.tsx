@@ -5,6 +5,7 @@ import { eur0, eur, salesForDay, HOY, useRealAgg } from '../lib/data'
 import { useVentas, ventasPorDia, dayKey } from '../lib/ventas'
 import { useEquipo } from '../lib/equipo'
 import { play } from '../lib/sound'
+import { isDemoMode } from '../lib/demo'
 
 /* Ventas — calendario de 12 meses (uno por tarjeta). Cada día con venta lleva un
    punto cuya intensidad sube con la facturación; pie con efectivo/tarjeta/total
@@ -57,10 +58,13 @@ function combinedMonth(y: number, m: number, real: Real, ovr?: Ovr): Dia & { dia
   }
   return { e, t, d, total, dias }
 }
-// Turnos de un día: el ajuste manual si existe, si no el reparto derivado (mañana 36% / tarde 64%).
+// Turnos de un día: el ajuste manual (real, lo cierra el dueño) si existe.
+// Si no hay ajuste: en DEMO se deriva un reparto de escaparate (mañana 36% / tarde 64%);
+// en REAL no hay fuente del split por turnos → todo a cero (estado vacío honesto).
 function dayTurns(y: number, m: number, day: number, real: Real, ovr: Ovr): DayOvr {
   const o = ovr[dayKey(y, m, day)]
   if (o) return o
+  if (!isDemoMode()) { const z: Turn = { e: 0, t: 0, d: 0 }; return { man: { ...z }, tar: { ...z } } }
   const dd = combinedDay(y, m, day, real, ovr)
   const split = (f: number): Turn => ({ e: Math.round((dd?.e || 0) * f), t: Math.round((dd?.t || 0) * f), d: Math.round((dd?.d || 0) * f) })
   return { man: split(0.36), tar: split(0.64) }
@@ -236,7 +240,8 @@ export default function Ventas() {
           const shown = edit && draft ? draft : dayTurns(year, sel.m, sel.day, real, ovr)
           const dayTot = turnTotal(shown.man) + turnTotal(shown.tar)
           const ajustado = !!ovr[dayKey(year, sel.m, sel.day)]
-          const resp = roster.length ? roster[(sel.day + sel.m) % roster.length].nombre : '—'
+          // Demo: responsable derivado del roster (escaparate). Real: no hay asignación real → '—'.
+          const resp = isDemoMode() && roster.length ? roster[(sel.day + sel.m) % roster.length].nombre : '—'
           const campo = (turno: 'man' | 'tar', emo: string, lbl: string, key: keyof Turn) => (
             <div className="vtpv-dr-row">
               <span>{emo} {lbl}</span>

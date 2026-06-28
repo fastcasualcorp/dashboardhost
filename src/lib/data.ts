@@ -19,7 +19,7 @@ export const META_DIA = 2000 // meta de facturación del día (€) — la que m
 // En DEMO = 42000 (escaparate). En REAL la reescribe initRealAggregates() con la suma real del mes (RPC
 // server-side, no el .limit del cliente). Es `let` → live binding: los consumidores ven el valor real al
 // re-renderizar (useRealAgg). (auditoría 28-jun, datos reales)
-export let VENTAS_MES = 42000
+export let VENTAS_MES = isDemoMode() ? 42000 : 0 // DEMO=escaparate; REAL=0 hasta que el RPC traiga la suma real
 export const FOOD_COST_PCT = 0.3 // food cost objetivo del mes (30% s/facturación)
 // Los gastos fijos del mes ahora son fuente única reactiva en lib/gastos.ts (gastosMes), no una constante.
 
@@ -62,6 +62,8 @@ export function salesForDay(y: number, m: number, day: number): DiaVenta | null 
   if (date > HOY) return null // futuro: sin datos (gris)
   // REAL: devuelve la venta real de ese día (0 si ese día no vendió), NUNCA el mock Math.sin.
   if (_realLoaded) return _realByDay.get(_dk(y, m, day)) ?? { e: 0, t: 0, d: 0, total: 0 }
+  // REAL pero aún sin cargar (o el RPC falló): 0 honesto. El mock Math.sin es SOLO demo (escaparate).
+  if (!isDemoMode()) return { e: 0, t: 0, d: 0, total: 0 }
   if (y !== HOY.getFullYear()) return null // la demo solo tiene datos del año en curso
   const wd = date.getDay() // 0 dom … 6 sáb
   const boost = wd === 5 || wd === 6 ? 1.5 : wd === 0 ? 1.2 : wd === 1 ? 0.82 : 1

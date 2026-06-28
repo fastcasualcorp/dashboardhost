@@ -8,6 +8,7 @@ import { eur, eur0, reduceMotion, HOY } from '../lib/data'
 import { cierreDia, esMismoDia, fmtDiaLargo, addDias } from '../lib/cierre'
 import { useCajaDelDia, walletPorMetodo } from '../lib/wallet'
 import { isLive, ventasHoyCount } from '../lib/ventas'
+import { isDemoMode } from '../lib/demo'
 
 gsap.registerPlugin(useGSAP)
 
@@ -82,6 +83,9 @@ function DayBreakdown({ efe, tar, dom }: { efe: number; tar: number; dom: number
 }
 
 export default function Caja() {
+  // En REAL aún no hay datos de franjas/turnos/top platos/alertas/descuadre simulado: esos bloques vienen
+  // del simulador cierreDia() y deben ocultarse o mostrar estado vacío honesto. En DEMO, todo como ahora.
+  const demo = isDemoMode()
   const root = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLElement>(null)
   const negRef = useRef<HTMLSpanElement>(null) // número GIGANTE = facturación del negocio
@@ -174,8 +178,9 @@ export default function Caja() {
   }
 
   // Al cambiar de día, el cuadre y las barras reflejan ESE día.
+  // REAL: el descuadre viene del simulador → no lo mostramos (no hay arqueo real todavía).
   useEffect(() => {
-    setDescuadre(dia.descuadre < 0)
+    setDescuadre(demo && dia.descuadre < 0)
     fillBars()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dia])
@@ -332,16 +337,25 @@ export default function Caja() {
                 <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
                 {descuadre ? `Descuadre ${eur(descAmt)} €` : 'Caja cuadrada'}
               </div>
-              <div className="ck-cuadre-sub"><span className="cs-emo">💵</span> <b className="tnum">{eur(efectivoDia)} €</b> <span className="cs-dot">·</span> <span className="cs-emo">💳</span> <b className="tnum">{eur(tarjetaDia)} €</b></div>
+              {/* Efectivo/tarjeta: real solo HOY (wallet). Días pasados en real = simulado escalado → ocultar. */}
+              {(demo || liveHoy) && (
+                <div className="ck-cuadre-sub"><span className="cs-emo">💵</span> <b className="tnum">{eur(efectivoDia)} €</b> <span className="cs-dot">·</span> <span className="cs-emo">💳</span> <b className="tnum">{eur(tarjetaDia)} €</b></div>
+              )}
             </div>
 
             {/* UNA línea de diseño: el MISMO componente <Stat> para todos → valor grande + unidad
                 pequeña dorada + label. Imposible que se descuadre (criterio único del dashboard). */}
+            {/* REAL: Tickets/Ticket medio solo son reales HOY (liveHoy, vía ventas). Días pasados en real no
+                tienen cierre real → "—". "vs sem. pasada" y "Mejor franja" vienen del simulador → ocultos. */}
             <StatRow className="ck-statrow">
-              <Stat value={String(ticketsDia)} label="Tickets" count={false} />
-              <Stat value={eur(medioDia)} unit="€" label="Ticket medio" count={false} />
-              <Stat value={(dia.deltaSemana >= 0 ? '+' : '') + dia.deltaSemana.toFixed(1)} unit="%" label="vs sem. pasada" tone={dia.deltaSemana >= 0 ? 'green' : 'gold'} count={false} />
-              <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
+              <Stat value={demo || liveHoy ? String(ticketsDia) : '—'} label="Tickets" count={false} />
+              <Stat value={demo || liveHoy ? eur(medioDia) : '—'} unit={demo || liveHoy ? '€' : ''} label="Ticket medio" count={false} />
+              {demo && (
+                <Stat value={(dia.deltaSemana >= 0 ? '+' : '') + dia.deltaSemana.toFixed(1)} unit="%" label="vs sem. pasada" tone={dia.deltaSemana >= 0 ? 'green' : 'gold'} count={false} />
+              )}
+              {demo && (
+                <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
+              )}
             </StatRow>
 
             {/* Comparativa de 2 días: eliges AMBAS fechas en la tira; los paneles aparecen REACTIVOS y se enfrentan
@@ -408,14 +422,22 @@ export default function Caja() {
               <div className="turno turno-day" data-tilt>
                 <div className="turno-head">
                   <div className="turno-name"><span className="badge sol">€</span>Caja del día</div>
-                  <div className="turno-sub">{eur(subM + subT)}<span className="cur"> €</span></div>
+                  {demo && <div className="turno-sub">{eur(subM + subT)}<span className="cur"> €</span></div>}
                 </div>
-                <DayBreakdown efe={manana.efectivo + tarde.efectivo} tar={manana.tarjeta + tarde.tarjeta} dom={manana.domicilio + tarde.domicilio} />
-                <div className="day-split">
-                  <span className="ds-seg">☀ Mañana <b className="tnum">{eur(subM)} €</b></span>
-                  <span className="ds-dot">·</span>
-                  <span className="ds-seg">☾ Tarde <b className="tnum">{eur(subT)} €</b></span>
-                </div>
+                {/* El desglose por método y el split Mañana/Tarde vienen del simulador (no hay franjas reales
+                    todavía) → en REAL, estado vacío honesto. */}
+                {demo ? (
+                  <>
+                    <DayBreakdown efe={manana.efectivo + tarde.efectivo} tar={manana.tarjeta + tarde.tarjeta} dom={manana.domicilio + tarde.domicilio} />
+                    <div className="day-split">
+                      <span className="ds-seg">☀ Mañana <b className="tnum">{eur(subM)} €</b></span>
+                      <span className="ds-dot">·</span>
+                      <span className="ds-seg">☾ Tarde <b className="tnum">{eur(subT)} €</b></span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="vtpv-empty">Sin desglose por franja todavía</div>
+                )}
               </div>
               </div>
 
@@ -423,21 +445,29 @@ export default function Caja() {
               <div className="ck-extra">
                 <div className="ck-panel ck-platos" data-tilt>
                   <div className="ck-panel-h"><span className="ck-panel-emo">🍔</span> Platos más vendidos <small>· {fmtDiaLargo(fecha, HOY).toLowerCase()}</small></div>
-                  <div className="ck-plato-list">
-                    {dia.topPlatos.map((p, i) => (
-                      <div className={'ck-plato' + (i < 3 ? ' r' + (i + 1) : '')} key={p.name} style={{ ['--i' as string]: i }}>
-                        <span className="ck-plato-img"><img src={p.img} alt="" loading="lazy" draggable={false} /></span>
-                        <span className="ck-plato-nm">{p.name}</span>
-                        <span className="ck-plato-uds tnum" data-val={p.uds}>{p.uds}</span>
-                        <span className="ck-plato-bar"><i style={{ width: ((p.uds / maxUds) * 100).toFixed(1) + '%' }} /></span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* Top platos viene del simulador → en REAL, estado vacío honesto (sin ranking real todavía). */}
+                  {demo ? (
+                    <div className="ck-plato-list">
+                      {dia.topPlatos.map((p, i) => (
+                        <div className={'ck-plato' + (i < 3 ? ' r' + (i + 1) : '')} key={p.name} style={{ ['--i' as string]: i }}>
+                          <span className="ck-plato-img"><img src={p.img} alt="" loading="lazy" draggable={false} /></span>
+                          <span className="ck-plato-nm">{p.name}</span>
+                          <span className="ck-plato-uds tnum" data-val={p.uds}>{p.uds}</span>
+                          <span className="ck-plato-bar"><i style={{ width: ((p.uds / maxUds) * 100).toFixed(1) + '%' }} /></span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="vtpv-empty">Aún sin ventas para rankear platos</div>
+                  )}
                 </div>
 
                 <div className="ck-panel ck-stock" data-tilt>
                   <div className="ck-panel-h"><span className="ck-panel-emo">📦</span> Stock para mañana <small>· si vendes igual</small></div>
-                  {dia.alertas.length ? (
+                  {/* Las alertas cruzan ventas simuladas × stock → en REAL, estado vacío honesto. */}
+                  {!demo ? (
+                    <div className="vtpv-empty">Sin previsión de stock todavía</div>
+                  ) : dia.alertas.length ? (
                     <div className="ck-alert-list">
                       {dia.alertas.map((a, i) => (
                         <div className={'ck-alert ' + a.nivel} key={a.item} style={{ ['--i' as string]: i }}>

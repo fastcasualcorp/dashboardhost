@@ -29,6 +29,18 @@ export default function FoodCost() {
   }, [costes])
   const ahorroMes = materiaMes * (recorte / 100)
 
+  // Real sin escandallo definido: estado vacío honesto (la lib devuelve [] en modo real sin datos).
+  if (ficha.length === 0) {
+    return (
+      <div className="section">
+        <SectionHeader title="Food cost" subtitle="Ficha técnica · escandallo de la carta · toca un coste para editar" />
+        <Card>
+          <div className="vtpv-empty">Aún no has definido el escandallo de tus platos. Añade el coste de materia de cada plato de tu carta y aquí verás el food cost, el margen y el ahorro al mes.</div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="section">
       <SectionHeader title="Food cost" subtitle="Ficha técnica · escandallo de la carta · toca un coste para editar" right={<Badge tone="gold">carta activa</Badge>} />

@@ -4,6 +4,8 @@ import { SectionHeader, Badge } from '../components/ui'
 import { eur } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
+import { isDemoMode } from '../lib/demo'
+import { fichaFoodCost } from '../lib/foodcost'
 
 /* Cada producto = una "carta" tipo Pokémon. Se navega como un selector de
    videojuego (coverflow 3D), con stats superpuestos y edición integrada. */
@@ -17,11 +19,20 @@ const TYPES: Record<string, TypeInfo> = {
 }
 const typeOf = (cat: string) => TYPES[cat] ?? { label: cat, color: '#ffbf10', emoji: '⭐' }
 
-function statsOf(p: Producto) {
-  const ventas = Math.round(38 + p.price * 6 + p.mods.length * 7)
-  const margen = Math.min(74, 54 + Math.round(p.price))
-  const rating = Math.min(5, 3.9 + p.mods.length * 0.25 + (p.cat === 'Burgers' ? 0.3 : 0))
-  return { ventas, margen, rating: rating.toFixed(1) }
+// DEMO: cifras de escaparate (fórmulas a partir del precio) — NO se tocan.
+// REAL: el margen sale del escandallo real (foodcost.ts) cruzado por id; sin
+// escandallo → margen "—". Ventas/mes y Valoración NO tienen fuente real → "—".
+function statsOf(p: Producto, fcById: Record<string, { margen: number; fc: number }>): Stats {
+  if (isDemoMode()) {
+    const ventas = Math.round(38 + p.price * 6 + p.mods.length * 7)
+    const margen = Math.min(74, 54 + Math.round(p.price))
+    const rating = Math.min(5, 3.9 + p.mods.length * 0.25 + (p.cat === 'Burgers' ? 0.3 : 0))
+    return { ventas: String(ventas), margen: String(margen) + '%', rating: rating.toFixed(1) + '★' }
+  }
+  // REAL — margen % = 100 − food cost % (divisor blindado dentro de fichaFoodCost).
+  const fc = fcById[p.id]
+  const margen = fc ? String(Math.round((100 - fc.fc) * 10) / 10) + '%' : '—'
+  return { ventas: '—', margen, rating: '—' }
 }
 
 const FILTERS = ['Todos', ...CAT_ORDER]
@@ -32,7 +43,9 @@ const Pencil = () => (
   </svg>
 )
 
-type Stats = { ventas: number; margen: number; rating: string }
+// Cada métrica ya viene formateada como texto ("38" / "62%" / "4.2★" o "—"),
+// para poder mostrar un vacío honesto en REAL sin fuente real.
+type Stats = { ventas: string; margen: string; rating: string }
 
 type Draft = { name: string; price: string; img: string }
 
@@ -110,7 +123,7 @@ function CartaCard({ p, off, focus, spread, num, ti, st, onSelect, onEdit, editi
           </span>
           <span className="cc-pfoot">
             <span className="cc-pf"><b className="cc-price tnum" data-ds="carta.price">{eur(p.price)} €</b><i>Precio</i></span>
-            {focus && <span className="cc-pf right"><b className="tnum">{st.margen}% · {st.rating}★</b><i>Margen · Valoración</i></span>}
+            {focus && <span className="cc-pf right"><b className="tnum">{st.margen} · {st.rating}</b><i>Margen · Valoración</i></span>}
           </span>
         </span>
       </div>
@@ -179,6 +192,11 @@ export default function Platos() {
 
   const list = cat === 'Todos' ? prods : prods.filter((p) => p.cat === cat)
   const current = list[sel]
+
+  // REAL: margen real por id desde el escandallo (foodcost.ts). En DEMO no se usa
+  // (statsOf usa sus fórmulas de escaparate), pero el mapa es barato de construir.
+  const fcById: Record<string, { margen: number; fc: number }> = {}
+  for (const f of fichaFoodCost()) fcById[f.id] = { margen: f.margen, fc: f.fc }
 
   function go(dir: number) {
     if (editing) return
@@ -284,7 +302,7 @@ export default function Platos() {
                 spread={SPREAD}
                 num={String(prods.findIndex((x) => x.id === p.id) + 1).padStart(3, '0')}
                 ti={typeOf(p.cat)}
-                st={statsOf(p)}
+                st={statsOf(p, fcById)}
                 onSelect={() => select(i)}
                 onEdit={openEdit}
                 editing={editing}

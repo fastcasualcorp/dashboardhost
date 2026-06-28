@@ -8,6 +8,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { PRODUCTOS } from './products'
+import { isDemoMode } from './demo'
 
 // Coste de materia prima (€) por id de plato. Los platos salen de la carta; esto es su escandallo.
 const SEED: Record<string, number> = {
@@ -20,13 +21,15 @@ const KEY = 'rebell-escandallo-v1'
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function load(): Record<string, number> {
+  // REAL: el escandallo lo introduce el negocio (localStorage); sin SEED de ejemplo. DEMO = escaparate con SEED.
+  const demo = isDemoMode()
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return { ...SEED, ...(JSON.parse(raw) as Record<string, number>) }
+    if (raw) return demo ? { ...SEED, ...(JSON.parse(raw) as Record<string, number>) } : (JSON.parse(raw) as Record<string, number>)
   } catch {
     /* sin localStorage */
   }
-  return { ...SEED }
+  return demo ? { ...SEED } : {}
 }
 let costes = load()
 
@@ -95,6 +98,8 @@ function loadIng(): Record<string, number> {
 }
 let ingCostes = loadIng()
 export function getIngredientes(): Ingrediente[] {
+  // REAL: sin lista de ingredientes de ejemplo (consumo/usoMes inventado) → vacío hasta que exista gestión real.
+  if (!isDemoMode()) return []
   return ING_SEED.map((i) => ({ ...i, coste: ingCostes[i.id] ?? i.coste }))
 }
 export function setIngredienteCoste(id: string, v: number) {

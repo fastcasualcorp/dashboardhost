@@ -36,6 +36,8 @@ export const totalAlbaran = (a: Albaran) => r2(a.base + (a.base * a.iva) / 100)
 
 const KEY = 'rebell-compras-v1'
 function load(): Albaran[] {
+  // REAL: la nube manda → sin albaranes de ejemplo hasta sincronizar. La SEED es solo DEMO (escaparate).
+  if (!isDemoMode()) return []
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {

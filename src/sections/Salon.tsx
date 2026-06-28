@@ -7,9 +7,14 @@ import { fireCobro, logCobro, addWallet } from '../lib/wallet'
 import { appendVenta, isLive } from '../lib/ventas'
 import { cuentaTotal, clearCuenta } from '../lib/cuentas'
 import { loadCaja } from '../lib/caja'
+import { isDemoMode } from '../lib/demo'
 
+const demo = isDemoMode()
 // Caja cerrada ⟹ local vacío → todas las mesas libres (no hay servicio). Solo cobran vida con la caja abierta.
-const planoSegunCaja = (list: Mesa[]) => (loadCaja().abierta ? seedStates(list) : allLibre(list))
+// DEMO: el escaparate SIEMBRA estados de ejemplo (ocupada/cobrar). REAL: el plano refleja el servicio real
+// (los estados que el usuario fija tocando mesas, persistidos en el plano); sin caja abierta → todas libres.
+const planoSegunCaja = (list: Mesa[]) =>
+  loadCaja().abierta ? (demo ? seedStates(list) : list) : allLibre(list)
 import { MesaTile } from '../components/MesaTile'
 
 /* Editor de Salón — diseñas tu sala arrastrando mesas, ajustando tamaño/forma y
@@ -369,7 +374,9 @@ export default function Salon() {
     const ne = nextEstado(m.estado)
     // COBRO: cobrar → libre = se paga la mesa → moneditas vuelan a la cartera del día + apunte en el desglose
     if (m.estado === 'cobrar' && ne === 'libre') {
-      const amount = cuentaTotal(m.id) || cobroAmount(m) // importe REAL de la mesa (cuenta fijada) o la semilla estable
+      // REAL: importe REAL de la cuenta de la mesa (0 si no hay consumo registrado, nunca inventado).
+      // DEMO: si no hay cuenta, cae a la semilla estable del escaparate.
+      const amount = cuentaTotal(m.id) || (demo ? cobroAmount(m) : 0)
       const r = e?.currentTarget?.getBoundingClientRect()
       const x = r ? r.left + r.width / 2 : window.innerWidth / 2
       const y = r ? r.top + r.height / 2 : window.innerHeight / 2
@@ -384,8 +391,9 @@ export default function Salon() {
     patch(m.id, {
       estado: ne,
       since: ne === 'libre' ? undefined : ne === 'ocupada' ? Date.now() : (m.since ?? Date.now()),
-      // al ocupar, reserva de 90 min por defecto (luego vendrá del booking real); al liberar, se borra
-      reservaFin: ne === 'libre' ? undefined : ne === 'ocupada' ? Date.now() + 90 * 60000 : m.reservaFin,
+      // DEMO: al ocupar, reserva de 90 min por defecto (escaparate). REAL: sin booking real → no se inventa
+      // cuenta atrás (reservaFin queda vacío hasta que exista una reserva real). Al liberar, se borra.
+      reservaFin: ne === 'libre' ? undefined : ne === 'ocupada' ? (demo ? Date.now() + 90 * 60000 : undefined) : m.reservaFin,
     })
     play(ne === 'libre' ? 'success' : ne === 'cobrar' ? 'tap' : 'pop', 0.5, ne === 'cobrar' ? 1 : 1.12)
   }
@@ -748,9 +756,9 @@ export default function Salon() {
             const est = m.estado || 'libre'
             const occ = servicio && est !== 'libre'
             // cuenta atrás de la RESERVA (modo servicio): lo que queda hasta que llega la próxima reserva.
-            // Fallback: si una mesa ocupada no trae reservaFin (plano viejo persistido o walk-in), reserva por
-            // defecto de 90 min desde que se sentó → SIEMPRE hay cuenta atrás.
-            const fin = m.reservaFin ?? (m.since != null ? m.since + 90 * 60000 : null)
+            // DEMO: si una mesa ocupada no trae reservaFin, se asume reserva de 90 min (siempre hay cuenta atrás
+            // en el escaparate). REAL: sin reserva real → no se inventa nada (solo cuenta atrás si hay reservaFin).
+            const fin = m.reservaFin ?? (demo && m.since != null ? m.since + 90 * 60000 : null)
             const rem = occ && est === 'ocupada' && fin != null ? fin - now : null
             const over = rem != null && rem <= 0
             const heat = ESTADO_COLOR[est] // verde libre · rojo ocupada · ámbar por cobrar (solo se ve en servicio)
