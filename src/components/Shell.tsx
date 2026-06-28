@@ -65,9 +65,9 @@ export default function Shell() {
   })
   const [beast, setBeast] = useState<string>(() => {
     try {
-      return localStorage.getItem('rebell-beast') || 'lion'
+      return localStorage.getItem('rebell-beast') || 'tiger'
     } catch {
-      return 'lion'
+      return 'tiger'
     }
   })
   // Ancho del menú lateral AJUSTABLE arrastrando su borde (Juan, 28-jun). Gobierna --side-w,

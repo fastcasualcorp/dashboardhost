@@ -14,7 +14,7 @@ function savedBeast() {
   try {
     return beastById(localStorage.getItem('rebell-beast'))
   } catch {
-    return beastById('lion')
+    return beastById('tiger')
   }
 }
 
