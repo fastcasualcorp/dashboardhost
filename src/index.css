@@ -197,15 +197,24 @@ body {
 /* Badge MODO DEMO: avisa de que el panel muestra datos de ejemplo. Clic = volver a real. */
 .demo-pill {
   display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-2xs); font-weight: 800;
-  letter-spacing: .06em; color: var(--accent-ink); cursor: pointer;
-  background: linear-gradient(135deg, #ffd45e, #e8ab0c); border: 1px solid transparent;
-  padding: 6px 12px; border-radius: var(--r-pill); box-shadow: 0 2px 12px -4px rgba(232,171,12,.6);
-  transition: transform .12s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)), filter .18s;
+  letter-spacing: .06em; cursor: pointer;
+  /* APAGADO: sutil pero visible (descubrible). */
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--line);
+  padding: 6px 12px; border-radius: var(--r-pill);
+  transition: transform .12s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)), filter .18s, color .18s, background .18s, border-color .18s;
+}
+.demo-pill:hover { color: var(--ink); border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
+.demo-pill:active { transform: scale(.95); }
+.demo-dot { width: 7px; height: 7px; border-radius: 50%; background: transparent; border: 1.5px solid var(--muted); flex: none; transition: background .18s, border-color .18s, box-shadow .18s; }
+/* ENCENDIDO: lima, llama la atención (estás viendo datos de ejemplo). */
+.demo-pill.on {
+  color: var(--accent-ink); background: var(--brand); border-color: transparent;
+  box-shadow: 0 2px 12px -4px rgba(var(--brand-rgb), .6);
   animation: demoPillIn .4s var(--ease-out, cubic-bezier(.23,1,.32,1)) both;
 }
-.demo-pill:hover { filter: brightness(1.06); }
-.demo-pill:active { transform: scale(.95); }
-.demo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-ink); box-shadow: 0 0 0 3px rgba(26,20,4,.16); flex: none; }
+.demo-pill.on:hover { filter: brightness(1.06); }
+.demo-pill.on .demo-dot { background: var(--accent-ink); border-color: transparent; box-shadow: 0 0 0 3px rgba(0,0,0,.16); }
 @keyframes demoPillIn { from { opacity: 0; transform: translateY(-6px) scale(.9); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .demo-pill { animation: none; } }
 .daypill {

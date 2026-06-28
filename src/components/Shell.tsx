@@ -373,11 +373,16 @@ export default function Shell() {
             <button className="plan-pill" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Tu plan · ver y cambiar">
               <span className="plan-pill-ic" aria-hidden="true">◆</span> Plan <b>Pro</b>
             </button>
-            {isDemoMode() && (
-              <button className="demo-pill" onClick={() => setDemoMode(false)} title="Estás viendo datos de ejemplo. Pulsa para volver a los datos reales.">
-                <span className="demo-dot" /> MODO DEMO
-              </button>
-            )}
+            {/* Demo SIEMPRE visible y de doble sentido: apagado = enciende datos de ejemplo; encendido = vuelve a real.
+                Antes solo aparecía cuando ya estaba activo → no había forma de encenderlo sin entrar en Ajustes (Juan, 29-jun). */}
+            <button
+              className={'demo-pill' + (isDemoMode() ? ' on' : '')}
+              onClick={() => setDemoMode(!isDemoMode())}
+              aria-pressed={isDemoMode()}
+              title={isDemoMode() ? 'Estás viendo datos de ejemplo. Pulsa para volver a los datos reales.' : 'Pulsa para llenar el panel con datos de ejemplo (no toca ningún local real).'}
+            >
+              <span className="demo-dot" /> {isDemoMode() ? 'MODO DEMO' : 'Demo'}
+            </button>
             <WalletHoy />
             <button className="iconbtn theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a tema día' : 'Cambiar a tema noche'} aria-pressed={theme === 'light'}>
               <span className="tt-track">
