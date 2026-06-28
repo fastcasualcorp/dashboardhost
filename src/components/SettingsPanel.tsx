@@ -16,7 +16,7 @@ const FONTS: { key: FontKey; name: string; meta: string; stack: string }[] = [
 ]
 
 export const ACCENTS: { key: AccentKey; name: string; css: string; premium?: boolean }[] = [
-  { key: 'gold', name: 'Oro', css: 'linear-gradient(135deg,#ffd45e,#e8ab0c)' },
+  { key: 'gold', name: 'Lima', css: 'linear-gradient(135deg,#d9fa72,#9fd31a)' },
   { key: 'azul', name: 'Azul', css: 'linear-gradient(135deg,#7dc0ff,#2b86e0)' },
   { key: 'verde', name: 'Verde', css: 'linear-gradient(135deg,#6ee7b7,#10b981)' },
   { key: 'rosa', name: 'Rosa', css: 'linear-gradient(135deg,#ff8fae,#e0457a)' },

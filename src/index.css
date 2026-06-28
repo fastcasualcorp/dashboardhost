@@ -9,13 +9,14 @@
   --bg: #08080a; --bg-2: #0d0d10; --surface: #141417; --surface-2: #1a1a1e;
   --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.13);
   /* ── MARCA (theming): cambia estas 4 (o el data-accent) y se reviste TODO el dashboard ── */
-  --brand: #ffbf10; --brand-soft: #ffd45e; --brand-deep: #e8ab0c; --brand-rgb: 255,191,16;
+  /* LIMA = color principal de marca (Juan, 29-jun): chartreuse vivo para llamar la atención. */
+  --brand: #c4f135; --brand-soft: #d9fa72; --brand-deep: #9fd31a; --brand-rgb: 196,241,53;
   /* El ORO deriva de la marca AQUÍ (en :root) para que también valga FUERA de .app (login/intro, Planes,
      página QR). var(--brand) se resuelve en el punto de uso → los temas data-accent lo siguen recoloreando. */
   --gold: var(--brand); --gold-soft: var(--brand-soft); --gold-deep: var(--brand-deep); --cash: var(--brand);
   --ink: #f5f5f7; --muted: rgba(255,255,255,.54); --faint: rgba(255,255,255,.32);
   --card: #4aa3ff; --home: #34d399; --ok: #34d399; --warn: #f5b341;
-  --accent-ink: #1a1404;      /* default global de la tinta sobre el oro (lo afina .app[data-accent]); aquí para que el login/intro, FUERA de .app, también lo tenga */
+  --accent-ink: #16240a;      /* default global de la tinta sobre el oro (lo afina .app[data-accent]); aquí para que el login/intro, FUERA de .app, también lo tenga */
   /* ── BARRAS: fuente ÚNICA de verdad del grosor/radio de TODA barra de progreso del dashboard.
      Cambia --bar-h aquí y entra en Caja, Almacén, Cuadro, KDS, Mapa… a la vez (línea de diseño de Juan,
      25-jun). Excepciones (sliders, toggles, intro) NO usan este token a propósito. ── */
@@ -65,7 +66,7 @@
   --gold: var(--brand); --gold-soft: var(--brand-soft); --gold-deep: var(--brand-deep); --cash: var(--brand);
   /* TINTA sobre el oro de marca (texto de botones/badges/pills doradas). Fuente única; si un data-accent
      fuera claro, se redefine aquí. Antes estaba hardcodeada var(--accent-ink) en 51 sitios. (Juan, 29-jun) */
-  --accent-ink: #1a1404;
+  --accent-ink: #16240a;
   /* SEPARADOR canónico: hairline DORADO que se desvanece en los extremos y brilla en el centro
      (calco de la referencia de Juan). Sigue el data-accent vía --brand-rgb. Es un FILL, no una
      sombra → crispy, sin halo sucio. Una sola fuente de verdad para todas las líneas divisorias. */
@@ -908,7 +909,8 @@ body {
 
 /* ── stats ── */
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.stat { background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--line); border-radius: var(--card-r); padding: 16px 17px; will-change: transform; transform-style: preserve-3d; box-shadow: 0 2px 10px -4px rgba(0,0,0,.4); }
+.stat { container-type: inline-size; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--line); border-radius: var(--card-r); padding: 16px 17px; will-change: transform; transform-style: preserve-3d; box-shadow: 0 2px 10px -4px rgba(0,0,0,.4); }
+.stat .v { max-width: 100%; overflow: hidden; }
 .stat .k { color: var(--faint); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
 .stat .v { font-family: var(--font-num); font-weight: var(--num-weight); font-size: var(--fs-3xl); line-height: 1; margin-top: 8px; letter-spacing: var(--num-spacing); color: var(--ink); white-space: nowrap; }
 .stat .v small { font-size: .92em; color: var(--gold); font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
@@ -1000,7 +1002,7 @@ body {
   .hero { grid-area: hero; } .stats { grid-area: stats; } .chartcard { grid-area: chart; } .turnos { grid-area: turnos; }
   .stats { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; height: 100%; gap: 14px; }
   .stat { display: flex; flex-direction: column; justify-content: space-between; padding: 22px 24px; }
-  .stat .v { font-size: clamp(48px, 4.8vw, 64px); }
+  .stat .v { font-size: clamp(30px, 12.5cqi, 64px); }
   .stat .v small { font-size: .8em; }
   .turnos { grid-template-columns: 1fr 1fr; }
   .hero { flex-direction: row; align-items: center; text-align: left; gap: 36px; padding: 30px 36px; }
@@ -1208,7 +1210,7 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 /* KPI = mini "stat card" con el lenguaje de la Carta / banking card que aprobó Juan:
    superficie con profundidad neutra + sheen superior, número GLOSSY (gradiente sobre
    --ink → legible en claro y oscuro) y acento dorado fino. Nunca halo dorado sobre negro. */
-.kpi-tile { overflow: hidden; background: linear-gradient(180deg, var(--surface-2), var(--surface)); border-color: var(--line-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 22px 46px -26px rgba(0,0,0,.78); animation: kpiIn .52s var(--ease) both; }
+.kpi-tile { container-type: inline-size; overflow: hidden; background: linear-gradient(180deg, var(--surface-2), var(--surface)); border-color: var(--line-strong); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 22px 46px -26px rgba(0,0,0,.78); animation: kpiIn .52s var(--ease) both; }
 .kpi-tile::before { content: ''; position: absolute; inset: 0 0 auto; height: 48%; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,.06), transparent); pointer-events: none; }
 .p-grid > .kpi-tile:nth-child(2) { animation-delay: .05s; }
 .p-grid > .kpi-tile:nth-child(3) { animation-delay: .1s; }
@@ -1218,7 +1220,8 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 @keyframes kpiIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
 .kpi-tile .k { position: relative; color: var(--muted); font-size: clamp(12.5px, .95vw, 15px); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
 .kpi-tile .k::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: linear-gradient(135deg, var(--gold-soft), var(--gold-deep)); flex: none; }
-.kpi-tile .v { position: relative; font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(34px, calc(3.6vw * var(--den, 1)), calc(70px * var(--den, 1))); line-height: 1; margin-top: 14px; letter-spacing: var(--num-spacing); white-space: nowrap;
+/* el número escala con el ANCHO REAL del card (cqi), no con el viewport → cualquier cifra cabe sin salirse */
+.kpi-tile .v { position: relative; font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(22px, calc(15cqi * var(--den, 1)), calc(56px * var(--den, 1))); line-height: 1; margin-top: 14px; letter-spacing: var(--num-spacing); white-space: nowrap; max-width: 100%;
   background: linear-gradient(176deg, var(--ink) 8%, color-mix(in srgb, var(--ink) 60%, var(--surface-2)) 96%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
 .kpi-tile .v small { -webkit-text-fill-color: var(--gold); color: var(--gold); font-size: .9em; font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
