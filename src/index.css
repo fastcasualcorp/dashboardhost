@@ -1159,7 +1159,11 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
   font-size: clamp(12px, .92vw, 14px); line-height: 1.22; color: var(--ink); font-weight: 600;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.br-track { height: 12px; border-radius: var(--bar-r); background: rgba(255,255,255,.07); overflow: hidden; }
+.br-track { height: var(--bar-h, 12px); border-radius: var(--bar-r); background: rgba(255,255,255,.07); overflow: hidden; }
+/* etiqueta de canal con logo de marca (placa blanca para que el logo en color se lea) */
+.rs-canal-lbl { display: inline-flex; align-items: center; gap: 8px; }
+.rs-canal-logo { display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 5px; padding: 2px 4px; flex: none; }
+.rs-canal-logo img { height: 12px; width: auto; max-width: 46px; display: block; object-fit: contain; }
 .br-fill { display: block; height: 100%; border-radius: 100px; }
 .br-fill.c-gold { background: linear-gradient(90deg, var(--gold-deep), var(--gold)); }
 .br-fill.c-blue { background: linear-gradient(90deg, #2f7fd6, var(--card)); }

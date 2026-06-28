@@ -58,6 +58,12 @@ export const TITLEW_MIN = 500
 export const TITLEW_MAX = 900
 export const TITLEW_DEFAULT = 800
 
+// Grosor de las BARRAS (controla --bar-h: Resumen, Caja, Almacén, KDS… a la vez). (Juan 28-jun)
+const BAR_KEY = 'rebell-barh-v1'
+export const BAR_MIN = 8
+export const BAR_MAX = 34
+export const BAR_DEFAULT = 20
+
 const read = (k: string, def: Record<string, number>): Record<string, number> => {
   try {
     const r = localStorage.getItem(k)
@@ -129,6 +135,9 @@ export function applyNumW(v: number) { const app = appEl(); if (app) app.style.s
 export const loadTitleW = () => readNum(TITLEW_KEY, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT)
 export const saveTitleW = (v: number) => { try { localStorage.setItem(TITLEW_KEY, String(v)) } catch { /* */ } }
 export function applyTitleW(v: number) { const app = appEl(); if (app) app.style.setProperty('--title-weight', String(v)) }
+export const loadBar = () => readNum(BAR_KEY, BAR_MIN, BAR_MAX, BAR_DEFAULT)
+export const saveBar = (v: number) => { try { localStorage.setItem(BAR_KEY, String(v)) } catch { /* */ } }
+export function applyBar(v: number) { const app = appEl(); if (app) app.style.setProperty('--bar-h', v + 'px') }
 
 // Al arrancar la app: re-aplica lo guardado para que el diseño persista entre recargas.
 export function applySavedDesign() {
@@ -138,4 +147,5 @@ export function applySavedDesign() {
   applyTrack(loadTrack())
   applyNumW(loadNumW())
   applyTitleW(loadTitleW())
+  applyBar(loadBar())
 }

@@ -10,7 +10,7 @@ import { Card, SectionHeader, Stat, StatRow, KpiTile, BarRow, BarChart, Donut, B
 import { ACCENTS, type AccentKey, type FontKey } from './../components/SettingsPanel'
 import { SFX } from '../lib/sfx'
 import { SFX_LIST, getSfxVolume, setSfxVolume, play, playSweep, playGlitch, type SfxName } from '../lib/sound'
-import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT } from '../lib/designTokens'
+import { TYPE_SCALE, TYPE_DEFAULTS, BTN_TOKENS, BTN_DEFAULTS, loadType, saveType, applyType, loadBtn, saveBtn, applyBtn, loadWide, saveWide, applyWide, WIDE_MIN, WIDE_MAX, WIDE_DEFAULT, loadTrack, saveTrack, applyTrack, TRACK_MIN, TRACK_MAX, TRACK_DEFAULT, loadNumW, saveNumW, applyNumW, NUMW_MIN, NUMW_MAX, NUMW_DEFAULT, loadTitleW, saveTitleW, applyTitleW, TITLEW_MIN, TITLEW_MAX, TITLEW_DEFAULT, loadBar, saveBar, applyBar, BAR_MIN, BAR_MAX, BAR_DEFAULT } from '../lib/designTokens'
 
 type Theme = 'dark' | 'light'
 
@@ -75,6 +75,7 @@ function DesignSystemEditor() {
   const [track, setTrack] = useState<number>(() => loadTrack())
   const [numW, setNumW] = useState<number>(() => loadNumW())
   const [titleW, setTitleW] = useState<number>(() => loadTitleW())
+  const [barH, setBarH] = useState<number>(() => loadBar())
   const [saved, setSaved] = useState(false)
   // refs "en vivo" → evitan closures viejos al aplicar al soltar
   const liveType = useRef(type)
@@ -83,6 +84,8 @@ function DesignSystemEditor() {
   const liveTrack = useRef(track)
   const liveNumW = useRef(numW)
   const liveTitleW = useRef(titleW)
+  const liveBarH = useRef(barH)
+  const setBH = (v: number) => { liveBarH.current = v; setBarH(v); applyBar(v) }
   // Anchura de fuente: en vivo (solo transform → cero reflow). Estira los números-héroe.
   const setW = (v: number) => { liveWide.current = v; setWide(v); applyWide(v) }
   // Tracking (espaciado entre cifras): en vivo, controla --num-spacing.
@@ -96,11 +99,11 @@ function DesignSystemEditor() {
   const commitType = () => applyType(liveType.current)
   // Botones: en vivo (en Canon no se ven CTAs reales → no salta nada, y el botón-demo cambia al momento).
   const setB = (k: string, v: number) => { const next = { ...liveBtn.current, [k]: v }; liveBtn.current = next; setBtn(next); applyBtn(next) }
-  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveWide(liveWide.current); saveTrack(liveTrack.current); saveNumW(liveNumW.current); saveTitleW(liveTitleW.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
+  const aplicar = () => { applyType(liveType.current); saveType(liveType.current); saveBtn(liveBtn.current); saveWide(liveWide.current); saveTrack(liveTrack.current); saveNumW(liveNumW.current); saveTitleW(liveTitleW.current); saveBar(liveBarH.current); play('success', 0.5, 1.1); setSaved(true); window.setTimeout(() => setSaved(false), 1700) }
   const reset = () => {
-    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveWide.current = WIDE_DEFAULT; liveTrack.current = TRACK_DEFAULT; liveNumW.current = NUMW_DEFAULT; liveTitleW.current = TITLEW_DEFAULT
-    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setWide(WIDE_DEFAULT); setTrack(TRACK_DEFAULT); setNumW(NUMW_DEFAULT); setTitleW(TITLEW_DEFAULT)
-    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyWide(WIDE_DEFAULT); applyTrack(TRACK_DEFAULT); applyNumW(NUMW_DEFAULT); applyTitleW(TITLEW_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveWide(WIDE_DEFAULT); saveTrack(TRACK_DEFAULT); saveNumW(NUMW_DEFAULT); saveTitleW(TITLEW_DEFAULT)
+    liveType.current = { ...TYPE_DEFAULTS }; liveBtn.current = { ...BTN_DEFAULTS }; liveWide.current = WIDE_DEFAULT; liveTrack.current = TRACK_DEFAULT; liveNumW.current = NUMW_DEFAULT; liveTitleW.current = TITLEW_DEFAULT; liveBarH.current = BAR_DEFAULT
+    setType({ ...TYPE_DEFAULTS }); setBtn({ ...BTN_DEFAULTS }); setWide(WIDE_DEFAULT); setTrack(TRACK_DEFAULT); setNumW(NUMW_DEFAULT); setTitleW(TITLEW_DEFAULT); setBarH(BAR_DEFAULT)
+    applyType(TYPE_DEFAULTS); applyBtn(BTN_DEFAULTS); applyWide(WIDE_DEFAULT); applyTrack(TRACK_DEFAULT); applyNumW(NUMW_DEFAULT); applyTitleW(TITLEW_DEFAULT); applyBar(BAR_DEFAULT); saveType(TYPE_DEFAULTS); saveBtn(BTN_DEFAULTS); saveWide(WIDE_DEFAULT); saveTrack(TRACK_DEFAULT); saveNumW(NUMW_DEFAULT); saveTitleW(TITLEW_DEFAULT); saveBar(BAR_DEFAULT)
     play('toggle', 0.5)
   }
   return (
@@ -193,6 +196,21 @@ function DesignSystemEditor() {
           <input type="range" min={TITLEW_MIN} max={TITLEW_MAX} step={100} value={titleW}
             onChange={(e) => setTW(parseInt(e.target.value))} aria-label="Peso de títulos" />
           <span className="ds-px tnum">{titleW}</span>
+        </div>
+      </div>
+
+      <div className="ds-row ds-row-wide">
+        <div className="ds-meta">
+          <b>Grosor de barras</b>
+          <small>gráficas de barras de todo el panel</small>
+        </div>
+        <div className="ds-sample" style={{ width: 120 }}>
+          <span style={{ display: 'block', height: barH + 'px', borderRadius: 100, background: 'linear-gradient(90deg,var(--gold-deep),var(--gold))' }} />
+        </div>
+        <div className="ds-ctrl">
+          <input type="range" min={BAR_MIN} max={BAR_MAX} step={1} value={barH}
+            onChange={(e) => setBH(parseInt(e.target.value))} aria-label="Grosor de barras" />
+          <span className="ds-px tnum">{barH}px</span>
         </div>
       </div>
 

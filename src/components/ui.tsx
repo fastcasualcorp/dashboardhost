@@ -188,7 +188,7 @@ export function BarRow({
   color = 'gold',
   amount,
 }: {
-  label: string
+  label: ReactNode
   value: number
   max: number
   color?: string

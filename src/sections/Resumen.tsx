@@ -44,10 +44,10 @@ function dataFor(key: string) {
 }
 
 const CANALES = [
-  { l: 'Local / TPV', v: 742, c: 'gold' },
-  { l: 'Glovo', v: 486, c: 'amber' },
-  { l: 'Uber Eats', v: 358, c: 'blue' },
-  { l: 'Just Eat', v: 201, c: 'green' },
+  { l: 'Local / TPV', v: 742, c: 'local', logo: '' },
+  { l: 'Glovo', v: 486, c: 'glovo', logo: '/img/brands/glovo.svg' },
+  { l: 'Uber Eats', v: 358, c: 'ubereats', logo: '/img/brands/ubereats.svg' },
+  { l: 'Just Eat', v: 201, c: 'justeat', logo: '/img/brands/justeat.svg' },
 ]
 const TOP = [
   { plato: 'REBELL Classic', uds: 38, ventas: 418 },
@@ -176,7 +176,8 @@ export default function Resumen() {
           </div>
           <div className="bar-rows">
             {CANALES.map((c) => (
-              <BarRow key={c.l} label={c.l} value={c.v} max={742} color={c.c} amount={eur0(c.v * f) + ' €'} />
+              <BarRow key={c.l} value={c.v} max={742} color={c.c} amount={eur0(c.v * f) + ' €'}
+                label={<span className="rs-canal-lbl">{c.logo && <span className="rs-canal-logo"><img src={c.logo} alt="" /></span>}{c.l}</span>} />
             ))}
           </div>
         </Card>
