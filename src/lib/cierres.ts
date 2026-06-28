@@ -8,6 +8,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase, localId } from './supabase'
+import { isDemoMode } from './demo'
 
 export type Cierre = { id: string; ts: number; total: number; efectivo: number; tarjeta: number; tickets: number }
 
@@ -59,6 +60,7 @@ let _syncStarted = false
 let _live = false
 async function initSync() {
   if (_syncStarted || !supabase) return
+  if (isDemoMode()) return // INTERRUPTOR demo: datos de ejemplo, no sincroniza con la nube
   _syncStarted = true
   const { data } = await supabase.auth.getSession()
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id

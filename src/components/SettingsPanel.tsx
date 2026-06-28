@@ -3,6 +3,8 @@ import { motion } from 'motion/react'
 import { BEASTS } from '../lib/beasts'
 import { supabase } from '../lib/supabase'
 import { usePower, setSaverManual } from '../lib/power'
+import { isDemoMode, setDemoMode } from '../lib/demo'
+import LogoMark, { type LogoVariant } from './LogoMark'
 
 export type FontKey = 'clash' | 'inter' | 'roundo'
 export type AccentKey = 'gold' | 'azul' | 'verde' | 'rosa' | 'violeta' | 'atardecer' | 'aurora' | 'mono'
@@ -44,6 +46,8 @@ export default function SettingsPanel({
   comments,
   onComments,
   onCanon,
+  logoVar,
+  onLogo,
 }: {
   font: FontKey
   onFont: (f: FontKey) => void
@@ -58,6 +62,8 @@ export default function SettingsPanel({
   comments: boolean
   onComments: () => void
   onCanon: () => void
+  logoVar: LogoVariant
+  onLogo: (v: LogoVariant) => void
 }) {
   const DENSITIES: { v: number; name: string }[] = [
     { v: 0.9, name: 'Compacto' },
@@ -194,6 +200,42 @@ export default function SettingsPanel({
             <span className="spc-knob" />
           </span>
         </button>
+      </div>
+
+      <div className="sp-section">
+        <button className={'sp-comments' + (isDemoMode() ? ' on' : '')} onClick={() => setDemoMode(!isDemoMode())}>
+          <span className="spc-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </span>
+          <span className="spc-txt">
+            <b>Modo demo {isDemoMode() && <span className="sp-plan-tag">●</span>}</b>
+            <small>{isDemoMode() ? 'Activo · viendo datos de EJEMPLO (escaparate)' : 'Enseña datos de ejemplo para mostrar el panel a un cliente'}</small>
+          </span>
+          <span className="spc-sw" aria-hidden="true">
+            <span className="spc-knob" />
+          </span>
+        </button>
+      </div>
+
+      <div className="sp-section">
+        <div className="lab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" />
+            <path d="M7 12h10" />
+          </svg>
+          Logo del programa
+        </div>
+        <div className="sp-logos">
+          {(['b', 'a'] as LogoVariant[]).map((v) => (
+            <button key={v} className={'sp-logo-tile' + (logoVar === v ? ' on' : '')} onClick={() => onLogo(v)} aria-pressed={logoVar === v}>
+              <LogoMark variant={v} className="sp-logo-prev" />
+              <span>{v === 'b' ? 'Con barras' : 'Solo texto'}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="sp-section">

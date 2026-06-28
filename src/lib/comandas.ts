@@ -9,6 +9,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase, localId } from './supabase'
+import { isDemoMode } from './demo'
 import { consumirVenta, ensureAlmacenSync } from './almacen'
 
 export type CItem = { name: string; qty: number }
@@ -53,6 +54,7 @@ let _syncStarted = false
 let _live = false // hay sesión → la verdad está en Supabase
 async function initSync() {
   if (_syncStarted || !supabase) return
+  if (isDemoMode()) return // INTERRUPTOR demo: datos de ejemplo, no sincroniza con la nube
   _syncStarted = true
   const { data } = await supabase.auth.getSession()
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id

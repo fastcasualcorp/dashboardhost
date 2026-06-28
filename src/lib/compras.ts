@@ -9,6 +9,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { isDemoMode } from './demo'
 
 export type EstadoPago = 'pagado' | 'pendiente'
 export type Albaran = { id: string; ts: number; proveedor: string; concepto: string; base: number; iva: number; estado: EstadoPago }
@@ -68,6 +69,7 @@ let _live = false
 let _lid: string | null = null
 async function initSync() {
   if (_syncStarted || !supabase) return
+  if (isDemoMode()) return // INTERRUPTOR demo: datos de ejemplo, no sincroniza con la nube
   _syncStarted = true
   const { data } = await supabase.auth.getSession()
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id

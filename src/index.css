@@ -60,9 +60,10 @@
 }
 .app[data-type='inter'] {
   --font-display: 'Inter', sans-serif; --font: 'Inter', sans-serif; --font-num: 'Inter', sans-serif;
-  /* Inter pesa ÓPTICAMENTE menos que Clash a igual número → bajo Inter subimos el grosor (800) y apretamos
-     el tracking para que el número gigante se vea grueso y premium tipo Apple/SF Pro (Juan, 27-jun). */
-  --num-spacing: -2px; --num-weight: 800;
+  /* Inter pesa ÓPTICAMENTE menos que Clash a igual número → bajo Inter usamos Inter HEAVY (900) en los
+     números héroe y apretamos el tracking para que el número gigante se vea grueso y premium (Juan, 28-jun:
+     "lo quiero en Inter 28pt Heavy"). El 900 se carga en index.html. */
+  --num-spacing: -2px; --num-weight: 900;
   --body-weight: 500;
 }
 .app[data-type='roundo'] {
@@ -144,6 +145,20 @@ body {
 .brand b { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-base); letter-spacing: .2px; line-height: 1; }
 .brand span { font-size: var(--fs-2xs); color: var(--faint); font-weight: 500; }
 .top-actions { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+/* Badge MODO DEMO: avisa de que el panel muestra datos de ejemplo. Clic = volver a real. */
+.demo-pill {
+  display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-2xs); font-weight: 800;
+  letter-spacing: .06em; color: #1a1404; cursor: pointer;
+  background: linear-gradient(135deg, #ffd45e, #e8ab0c); border: 1px solid transparent;
+  padding: 6px 12px; border-radius: 100px; box-shadow: 0 2px 12px -4px rgba(232,171,12,.6);
+  transition: transform .12s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)), filter .18s;
+  animation: demoPillIn .4s var(--ease-out, cubic-bezier(.23,1,.32,1)) both;
+}
+.demo-pill:hover { filter: brightness(1.06); }
+.demo-pill:active { transform: scale(.95); }
+.demo-dot { width: 7px; height: 7px; border-radius: 50%; background: #1a1404; box-shadow: 0 0 0 3px rgba(26,20,4,.16); flex: none; }
+@keyframes demoPillIn { from { opacity: 0; transform: translateY(-6px) scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .demo-pill { animation: none; } }
 .daypill {
   display: flex; align-items: center; gap: 7px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted);
   background: var(--surface); border: 1px solid var(--line); padding: 7px 12px; border-radius: 100px;
@@ -929,7 +944,32 @@ body {
 .app[data-resizing] .panel-main { transition: none; }
 .app[data-resizing] .side-resize::after { opacity: 1; }
 /* Logo FAT SMASH del programa, encima del león, bien visible (Juan 28-jun). */
-.side-logo { display: block; width: clamp(150px, 82%, 196px); height: auto; margin: 2px auto 16px; }
+/* Logo FAT SMASH (SVG inline) → se tiñe con el ACENTO (--brand), brillo suave del acento y
+   entrada one-shot. fill=currentColor en el SVG, así que basta con 'color'. */
+.side-logo { display: block; align-self: flex-start; width: clamp(150px, 64%, 184px); aspect-ratio: var(--logo-ar, 333.91 / 59.66); margin: 2px 0 16px;
+  background: var(--brand);
+  -webkit-mask: var(--logo-src, url(/img/logo-b.svg)) left center / contain no-repeat; mask: var(--logo-src, url(/img/logo-b.svg)) left center / contain no-repeat;
+  filter: drop-shadow(0 2px 11px color-mix(in srgb, var(--brand) 26%, transparent));
+  animation: logoIn .55s var(--ease-out, cubic-bezier(.23,1,.32,1)) both; }
+.side-logo[data-logo='a'] { --logo-src: url(/img/logo-a.svg); --logo-ar: 332.09 / 40.58; }
+.side-logo[data-logo='b'] { --logo-src: url(/img/logo-b.svg); --logo-ar: 333.91 / 59.66; }
+@keyframes logoIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+/* Selector A/B del logo en el panel de ajustes */
+.sp-logos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sp-logo-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px; border-radius: 14px;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 55%, transparent); cursor: pointer;
+  transition: border-color .18s, background .18s, transform .12s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)); }
+.sp-logo-tile:hover { border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); background: color-mix(in srgb, var(--surface) 80%, transparent); }
+.sp-logo-tile:active { transform: scale(.97); }
+.sp-logo-tile.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); box-shadow: 0 0 0 1px var(--brand) inset; }
+.sp-logo-tile .sp-logo-prev { width: 86%; aspect-ratio: var(--logo-ar, 333.91 / 59.66); background: var(--ink);
+  -webkit-mask: var(--logo-src, url(/img/logo-b.svg)) center / contain no-repeat; mask: var(--logo-src, url(/img/logo-b.svg)) center / contain no-repeat; }
+.sp-logo-tile .sp-logo-prev[data-logo='a'] { --logo-src: url(/img/logo-a.svg); --logo-ar: 332.09 / 40.58; }
+.sp-logo-tile .sp-logo-prev[data-logo='b'] { --logo-src: url(/img/logo-b.svg); --logo-ar: 333.91 / 59.66; }
+.sp-logo-tile.on .sp-logo-prev { background: var(--brand); }
+.sp-logo-tile span { font-size: var(--fs-2xs); color: var(--muted); font-weight: 600; }
+.sp-logo-tile.on span { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .side-logo { animation: none; } }
 .side-brand { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; padding: 10px 12px 8px; margin-bottom: 0; border: 1px solid transparent; border-radius: 14px; background: transparent; cursor: pointer; text-align: left; transition: background .2s, border-color .2s; }
 .side-brand:hover { background: rgba(255,255,255,.05); }
 

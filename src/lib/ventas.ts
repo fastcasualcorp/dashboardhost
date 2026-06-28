@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import type { Metodo } from './wallet'
 import { supabase, localId } from './supabase'
+import { isDemoMode } from './demo'
 
 export type TipoDoc = 'ticket' | 'factura'
 export type Venta = { id: string; tipo: TipoDoc; ts: number; arts: number; total: number; metodo?: Metodo; mesa?: string | null }
@@ -66,6 +67,7 @@ let _syncStarted = false
 let _live = false
 async function initSync() {
   if (_syncStarted || !supabase) return
+  if (isDemoMode()) return // INTERRUPTOR demo: datos de ejemplo, no sincroniza con la nube
   _syncStarted = true
   const { data } = await supabase.auth.getSession()
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id

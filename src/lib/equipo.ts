@@ -20,6 +20,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { isDemoMode } from './demo'
 
 export type Role = 'encargado' | 'cocina' | 'sala' | 'reparto'
 export type Turno = { m: boolean; t: boolean }
@@ -123,6 +124,7 @@ let _syncStarted = false
 let _live = false
 async function initSync() {
   if (_syncStarted || !supabase) return
+  if (isDemoMode()) return // INTERRUPTOR demo: datos de ejemplo, no sincroniza con la nube
   _syncStarted = true
   const { data } = await supabase.auth.getSession()
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id

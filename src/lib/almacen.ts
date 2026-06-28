@@ -11,6 +11,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { isDemoMode } from './demo'
 
 export type Tipo = 'obrador' | 'refrigerado' | 'congelado' | 'seco'
 export type Item = { pid: string; nivel: number; actual: string; umbral: string; cad?: number }
@@ -107,6 +108,7 @@ export async function ensureAlmacenSync() {
 }
 async function initSync() {
   if (_syncStarted || !supabase) return
+  if (isDemoMode()) return // INTERRUPTOR demo: datos de ejemplo, no sincroniza con la nube
   _syncStarted = true
   const { data } = await supabase.auth.getSession()
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id

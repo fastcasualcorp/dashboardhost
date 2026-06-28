@@ -11,7 +11,9 @@ import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import CommentLayer from './CommentLayer'
 import WalletHoy from './WalletHoy'
 import DeployBadge from './DeployBadge'
+import LogoMark, { type LogoVariant } from './LogoMark'
 import { beastById } from '../lib/beasts'
+import { isDemoMode, setDemoMode } from '../lib/demo'
 import { renderSection } from '../sections/registry'
 import { applySavedDesign } from '../lib/designTokens'
 import Canon from '../sections/Canon'
@@ -76,6 +78,19 @@ export default function Shell() {
       return 'lion'
     }
   })
+  // Variante del logo FAT SMASH: 'b' (con barras, por defecto) o 'a' (solo lettering).
+  const [logoVar, setLogoVar] = useState<LogoVariant>(() => {
+    try {
+      return (localStorage.getItem('rebell-logo') as LogoVariant) === 'a' ? 'a' : 'b'
+    } catch {
+      return 'b'
+    }
+  })
+  function changeLogo(v: LogoVariant) {
+    setLogoVar(v)
+    try { localStorage.setItem('rebell-logo', v) } catch { /* sin localStorage */ }
+    play('tap', 0.5, 1.1)
+  }
   // Densidad ajustable (compacto/normal/cómodo) → multiplica los tamaños fluidos.
   // localStorage es por-dispositivo, así que se recuerda en cada pantalla (pedido de Juan).
   const [density, setDensity] = useState<number>(() => {
@@ -333,7 +348,7 @@ export default function Shell() {
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
         {/* Logo del programa (FAT SMASH), bien visible encima del león (Juan 28-jun). Versión negativa para fondo oscuro. */}
-        <img className="side-logo" src="/img/logo.png" alt="FAT SMASH" draggable={false} />
+        <LogoMark variant={logoVar} className="side-logo" />
         <button
           className={'side-brand' + (settingsOpen ? ' open' : '')}
           onClick={openSettings}
@@ -392,6 +407,11 @@ export default function Shell() {
             </svg>
           </button>
           <div className="top-actions">
+            {isDemoMode() && (
+              <button className="demo-pill" onClick={() => setDemoMode(false)} title="Estás viendo datos de ejemplo. Pulsa para volver a los datos reales.">
+                <span className="demo-dot" /> MODO DEMO
+              </button>
+            )}
             <WalletHoy />
             <button className="iconbtn theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a tema día' : 'Cambiar a tema noche'} aria-pressed={theme === 'light'}>
               <span className="tt-track">
@@ -475,6 +495,8 @@ export default function Shell() {
                 setSettingsOpen(false)
                 selectSection('canon')
               }}
+              logoVar={logoVar}
+              onLogo={changeLogo}
             />
           </>
         )}
