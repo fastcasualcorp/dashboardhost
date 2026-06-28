@@ -4,6 +4,7 @@ import { SectionHeader, Badge, Stat, StatRow } from '../components/ui'
 import { play } from '../lib/sound'
 import { type Mesa, type MesaForma, type MesaEstado, loadSalon, saveSalon, loadSalonDB, saveSalonDB, seatPositions, totalPlazas, seedStates, allLibre, cobroAmount, ESTADO_COLOR, elePath } from '../lib/salon'
 import { fireCobro, logCobro, addWallet } from '../lib/wallet'
+import { appendVenta, isLive } from '../lib/ventas'
 import { cuentaTotal, clearCuenta } from '../lib/cuentas'
 import { loadCaja } from '../lib/caja'
 
@@ -372,7 +373,9 @@ export default function Salon() {
       const r = e?.currentTarget?.getBoundingClientRect()
       const x = r ? r.left + r.width / 2 : window.innerWidth / 2
       const y = r ? r.top + r.height / 2 : window.innerHeight / 2
-      addWallet(amount) // EL DINERO SUBE EN ORIGEN (robusto, aunque la animación de monedas fallara)
+      // REAL: el cobro de mesa entra al LIBRO DE VENTAS → la Caja del día real lo cuenta (antes se perdía). DEMO no toca la nube.
+      if (isLive()) appendVenta({ tipo: 'ticket', arts: 1, total: amount, mesa: m.nombre })
+      addWallet(amount) // DEMO: sube el total local. REAL: no-op (el total deriva de ventas).
       logCobro(amount, 'mesa', `Mesa ${m.nombre}`)
       fireCobro({ amount, x, y, coins: 9 }) // monedas = adorno hacia la cartera
       clearCuenta(m.id) // la mesa queda saldada

@@ -12,7 +12,7 @@ import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, t
 import { registrarAcceso } from '../lib/acceso'
 import { pushComanda } from '../lib/comandas'
 import { cuentaTotal, cuentaItems, addToCuenta, seedCuenta, clearCuenta, clearAllCuentas, useCuentas } from '../lib/cuentas'
-import { appendVenta } from '../lib/ventas'
+import { appendVenta, isLive } from '../lib/ventas'
 import { consumirVenta } from '../lib/almacen'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
@@ -184,7 +184,10 @@ export default function Tpv() {
     const r = e?.currentTarget?.getBoundingClientRect()
     const x = r ? r.left + r.width / 2 : window.innerWidth / 2
     const y = r ? r.top + r.height / 2 : window.innerHeight / 2
-    addWallet(amount) // EL DINERO SUBE EN ORIGEN (robusto, no depende de la animación de monedas)
+    // En modo REAL el cobro de mesa también entra al LIBRO DE VENTAS (antes solo sumaba a la cartera y se
+    // perdía del libro/cierre). Así la Caja del día real lo cuenta. En DEMO no toca la nube. (auditoría 28-jun)
+    if (isLive()) appendVenta({ tipo: 'ticket', arts: 1, total: amount, mesa: m.nombre })
+    addWallet(amount) // DEMO: sube el total local. REAL: no-op (el total deriva de ventas), solo refresca.
     logCobro(amount, 'mesa', `Mesa ${m.nombre}`) // apunta el pedido en el desglose de la cartera
     fireCobro({ amount, x, y, coins: 9 }) // monedas = solo el adorno que vuela a la cartera
     clearCuenta(m.id) // la mesa queda saldada

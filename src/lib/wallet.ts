@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { reduceMotion } from './data'
 import { appendCierre } from './cierres'
+import { isLive, initVentas, ventasHoy, ventasHoyTotal, ventasHoyPorMetodo, ventasHoyCount } from './ventas'
 
 const KEY = 'rebell-caja-dia-v1'
 const SEED = 1787.4 // demo: "ya vendido hoy" → ambos marcadores arrancan poblados e IGUALES
@@ -51,15 +52,25 @@ function emit() {
   window.dispatchEvent(new CustomEvent('rebell:caja'))
 }
 
-export const walletTotal = () => state.total
+/* En modo REAL la Caja del día DERIVA de las ventas reales de hoy (Supabase, por local_id) → cero SEED, cero
+   doble-conteo. En DEMO sigue el state local con su SEED. Misma interfaz pública (walletTotal/Entries/…) → la
+   cartera y "Ventas hoy" no cambian de forma, solo de DÓNDE sale el número. (auditoría 28-jun, Fase 0) */
+const hoyEntries = (): CajaEntry[] =>
+  ventasHoy().map((v, i) => ({ id: i, ts: v.ts, amount: v.total, tipo: v.mesa ? 'mesa' : 'ticket', label: v.mesa ? `Mesa ${v.mesa}` : v.id, metodo: v.metodo }))
 
-export const walletEntries = () => state.entries
+export const walletTotal = () => (isLive() ? ventasHoyTotal() : state.total)
+
+export const walletEntries = () => (isLive() ? hoyEntries() : state.entries)
 // nº de PEDIDOS itemizados de hoy (los que se ven en el desglose; el SEED no cuenta como pedido)
-export const walletEntryCount = () => state.entries.length
-// "ventas anteriores" = lo que hay en el total y no está itemizado (el SEED/arrastre) → para que el desglose cuadre
-export const walletBase = () => Math.round((state.total - state.entries.reduce((s, e) => s + e.amount, 0)) * 100) / 100
+export const walletEntryCount = () => (isLive() ? ventasHoyCount() : state.entries.length)
+// "ventas anteriores" = lo que hay en el total y no está itemizado (el SEED/arrastre) → para que el desglose cuadre.
+// En REAL no hay SEED: el total = suma de entradas reales → base 0.
+export const walletBase = () => (isLive() ? 0 : Math.round((state.total - state.entries.reduce((s, e) => s + e.amount, 0)) * 100) / 100)
 
 export function addWallet(amount: number): number {
+  // REAL: el total NO se mantiene aquí (lo deriva de las ventas reales) → addWallet no suma, solo refresca.
+  // Evita el DOBLE-CONTEO: el cobro ya inserta en `ventas` (ticket via appendVenta; mesa idem en modo real).
+  if (isLive()) { emit(); return ventasHoyTotal() }
   // anti-rollover: si la app cruzó la medianoche sin cerrar caja, NO sumamos sobre el total de ayer → día nuevo a 0
   if (state.fecha !== today()) state = { fecha: today(), total: 0, entries: [] }
   state = { ...state, total: Math.round((state.total + amount) * 100) / 100 }
@@ -77,19 +88,21 @@ export function logCobro(amount: number, tipo: 'mesa' | 'ticket', label: string,
   emit()
 }
 
-// Sumas por método de pago de los cobros itemizados de hoy (para el desglose de Caja efectivo/tarjeta).
-export const walletPorMetodo = (m: Metodo) => Math.round(state.entries.filter((e) => e.metodo === m).reduce((s, e) => s + e.amount, 0) * 100) / 100
+// Sumas por método de pago de hoy (desglose Caja efectivo/tarjeta). En REAL desde las ventas reales.
+export const walletPorMetodo = (m: Metodo) => (isLive() ? ventasHoyPorMetodo(m) : Math.round(state.entries.filter((e) => e.metodo === m).reduce((s, e) => s + e.amount, 0) * 100) / 100)
 
 // CIERRE Z → libro de cierres AUDITABLE (A3/5.7). Se registra al CERRAR caja, con
 // los totales del día por método. Delega en el store `cierres` (única fuente): si hay
 // sesión va a Supabase (+realtime cross-device); en demo, al libro local. Así el
 // arqueo SIEMPRE aparece en "Arqueos", con o sin backend.
 export function registrarCierre(tickets: number) {
+  // En REAL el arqueo Z se cuadra con las VENTAS REALES de hoy (total + nº de tickets), no con el contador
+  // local; así el cierre auditable que va a Supabase deja de contaminarse con el SEED. (auditoría 28-jun)
   appendCierre({
-    total: state.total,
+    total: walletTotal(),
     efectivo: walletPorMetodo('efectivo'),
     tarjeta: walletPorMetodo('tarjeta'),
-    tickets: Math.max(0, Math.round(tickets)),
+    tickets: isLive() ? ventasHoyCount() : Math.max(0, Math.round(tickets)),
   })
 }
 
@@ -117,6 +130,7 @@ export function useCajaDelDia(): number {
   shownRef.current = shown
   const raf = useRef(0)
   useEffect(() => {
+    initVentas() // en REAL la Caja del día deriva de ventas → asegura que la sincronización esté arrancada
     const onChange = () => {
       const to = walletTotal()
       const from = shownRef.current
@@ -137,9 +151,11 @@ export function useCajaDelDia(): number {
       raf.current = requestAnimationFrame(tick)
     }
     window.addEventListener('rebell:caja', onChange)
+    window.addEventListener('rebell:ventas', onChange) // en REAL la caja del día deriva de ventas → recalcula al entrar un cobro real
     onChange() // sincroniza si el total cambió antes de montar
     return () => {
       window.removeEventListener('rebell:caja', onChange)
+      window.removeEventListener('rebell:ventas', onChange)
       cancelAnimationFrame(raf.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

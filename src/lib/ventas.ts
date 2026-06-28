@@ -127,6 +127,23 @@ export function ventasPorDia(list: Venta[] = ventas): Map<string, { e: number; t
   return map
 }
 
+/* ── AGREGADOS DE HOY (fuente real de la Caja del día en modo REAL) ──
+   La Caja del día deja de inventar un SEED: en modo real DERIVA de estas sumas sobre las ventas reales del
+   local (las mismas que ya guarda appendVenta + realtime). Sin doble-conteo: el total sale de aquí, no de un
+   contador paralelo. (auditoría 28-jun, Fase 0 datos reales) */
+export const isLive = () => _live
+// Arranca la sincronización con Supabase (idempotente). La cartera/Caja del día la llama al montar para que
+// el total real esté disponible aunque el "libro de ventas" (useVentas) no esté en pantalla. (Fase 0)
+export const initVentas = () => { void initSync() }
+const esHoy = (v: Venta) => {
+  const d = new Date(v.ts)
+  return dayKey(d.getFullYear(), d.getMonth(), d.getDate()) === (() => { const n = new Date(); return dayKey(n.getFullYear(), n.getMonth(), n.getDate()) })()
+}
+export const ventasHoy = (): Venta[] => ventas.filter(esHoy)
+export const ventasHoyTotal = () => r2(ventasHoy().reduce((s, v) => s + v.total, 0))
+export const ventasHoyPorMetodo = (m: Metodo) => r2(ventasHoy().filter((v) => (v.metodo ?? 'tarjeta') === m).reduce((s, v) => s + v.total, 0))
+export const ventasHoyCount = () => ventasHoy().length
+
 export function useVentas(): Venta[] {
   const [, force] = useState(0)
   useEffect(() => {
