@@ -76,15 +76,11 @@ async function initSync() {
   if (!lid) return // demo → localStorage
   _live = true
   _lid = lid
-  let rows = (await supabase.from('compras').select('*').eq('local_id', lid).order('ts', { ascending: false })).data as ARow[] | null
-  if (!rows || !rows.length) {
-    await supabase.from('compras').insert(SEED.map((a) => ({ local_id: lid, ts: a.ts, proveedor: a.proveedor, concepto: a.concepto, base: a.base, iva: a.iva, estado: a.estado })))
-    rows = (await supabase.from('compras').select('*').eq('local_id', lid).order('ts', { ascending: false })).data as ARow[] | null
-  }
-  if (rows) {
-    albaranes = rows.map(fromRow)
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:compras'))
-  }
+  // En REAL NO se siembra la tabla del cliente: una empresa nueva arranca con compras VACÍAS, nunca con
+  // albaranes de ejemplo (eso ensuciaba la BD real del tenant — auditoría 28-jun). La SEED es solo para DEMO.
+  const rows = (await supabase.from('compras').select('*').eq('local_id', lid).order('ts', { ascending: false })).data as ARow[] | null
+  albaranes = (rows || []).map(fromRow)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:compras'))
 }
 
 export function addAlbaran(a: { proveedor: string; concepto: string; base: number; iva: number; estado?: EstadoPago }): Albaran {

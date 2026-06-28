@@ -79,15 +79,11 @@ async function initSync() {
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
   if (!lid) return // demo → localStorage
   _live = true
-  let rows = (await supabase.from('gastos').select('*').eq('local_id', lid).order('creado_at')).data
-  if (!rows || !rows.length) {
-    await supabase.from('gastos').insert(SEED.map((g) => ({ local_id: lid, concepto: g.concepto, cat: g.cat, base: g.base, iva: g.iva })))
-    rows = (await supabase.from('gastos').select('*').eq('local_id', lid).order('creado_at')).data
-  }
-  if (rows) {
-    gastos = rows.map((r) => ({ id: r.id as string, concepto: r.concepto, cat: r.cat, base: Number(r.base), iva: r.iva }))
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:gastos'))
-  }
+  // REAL: NO se siembran gastos de ejemplo en la BD del cliente (ensuciaba su tabla — auditoría 28-jun).
+  // Empresa nueva = sin gastos. La SEED es solo para DEMO.
+  const rows = (await supabase.from('gastos').select('*').eq('local_id', lid).order('creado_at')).data
+  gastos = (rows || []).map((r) => ({ id: r.id as string, concepto: r.concepto, cat: r.cat, base: Number(r.base), iva: r.iva }))
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:gastos'))
 }
 
 export function setGastoBase(id: string, base: number) {

@@ -108,7 +108,6 @@ export const getRoster = () => roster
 /* ── Cableado Supabase (empleados por local, PII; hidrata + siembra + escribe) ── */
 type ERow = { id: string; nombre: string; role: Role; jornada: Emp['jornada']; liquido_mes: number; antig: string | null; sexo: Emp['sexo'] | null; turnos: Turno[] }
 const fromRow = (r: ERow): Emp => ({ id: r.id, nombre: r.nombre, role: r.role, jornada: r.jornada, liquidoMes: Number(r.liquido_mes), antig: r.antig ?? '', sexo: r.sexo ?? 'h', turnos: r.turnos || [] })
-const toRow = (e: Emp, lid: string) => ({ local_id: lid, nombre: e.nombre, role: e.role, jornada: e.jornada, liquido_mes: e.liquidoMes, antig: e.antig, sexo: e.sexo, turnos: e.turnos })
 function patchToDb(p: Partial<Emp>): Record<string, unknown> {
   const d: Record<string, unknown> = {}
   if (p.nombre !== undefined) d.nombre = p.nombre
@@ -130,15 +129,11 @@ async function initSync() {
   const lid = (data.session?.user?.app_metadata as { local_id?: string })?.local_id
   if (!lid) return // demo → localStorage
   _live = true
-  let rows = (await supabase.from('empleados').select('*').eq('local_id', lid).order('creado_at')).data as ERow[] | null
-  if (!rows || !rows.length) {
-    await supabase.from('empleados').insert(SEED.map((e) => toRow(e, lid)))
-    rows = (await supabase.from('empleados').select('*').eq('local_id', lid).order('creado_at')).data as ERow[] | null
-  }
-  if (rows) {
-    roster = rows.map(fromRow)
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:equipo'))
-  }
+  // REAL: NO se siembra la plantilla del cliente con empleados de ejemplo (ensuciaba su BD — auditoría 28-jun).
+  // Empresa nueva = plantilla VACÍA. La SEED es solo para DEMO.
+  const rows = (await supabase.from('empleados').select('*').eq('local_id', lid).order('creado_at')).data as ERow[] | null
+  roster = (rows || []).map(fromRow)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:equipo'))
 }
 
 export function updateEmp(id: string, patch: Partial<Emp>) {

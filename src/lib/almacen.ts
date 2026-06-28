@@ -120,8 +120,10 @@ async function initSync() {
     almacenes = row.data as Almacen[]
     emit()
   } else {
-    // .then() obligatorio: sin él el builder lazy NO envía la petición (el blob no se sembraba).
-    void supabase.from('inventario').upsert({ local_id: lid, data: almacenes }).then(({ error }) => { if (error && import.meta.env.DEV) console.warn('[almacen] seed:', error.message) }) // 1ª vez: sembrar
+    // REAL: un negocio nuevo arranca con inventario VACÍO (no el catálogo demo de hamburguesería); NO se siembra
+    // su BD (ensuciaba la tabla del cliente — auditoría 28-jun). Se creará la fila cuando añada su 1er producto.
+    almacenes = []
+    emit()
   }
 }
 
