@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { itemById } from '../nav'
+// EAGER = las pantallas de USO DIARIO (van en el bundle inicial → cero parpadeo al cambiar entre ellas).
 import Caja from './Caja'
 import Resumen from './Resumen'
 import Pedidos from './Pedidos'
@@ -7,24 +8,23 @@ import Tpv from './Tpv'
 import Salon from './Salon'
 import Kds from './Kds'
 import Online from './Online'
-import Ventas from './Ventas'
-import VentasTpv from './VentasTpv'
-import Arqueos from './Arqueos'
-import Accesos from './Accesos'
-// El MAPA arrastra mapbox-gl (~62% del bundle). Se carga LAZY → solo descarga al abrir el Mapa, no al
-// arrancar la Caja. Baja el bundle inicial de ~2,8MB a ~1,1MB (auditoría 28-jun). El resto de secciones
-// son ligeras y se quedan eager (cero parpadeo en el uso diario).
+// LAZY = el resto (informes, gestión, mapa…). Cada una es su propio chunk → solo se descarga al abrirla.
+// Baja muchísimo el bundle inicial (auditoría 28-jun). El Mapa (mapbox-gl) es el más pesado.
 const MapaIncidencia = lazy(() => import('./MapaIncidencia'))
-import Estadisticas from './Estadisticas'
-import Mensual from './Mensual'
-import Gastos from './Gastos'
-import Empleados from './Empleados'
-import Horarios from './Horarios'
-import Coste from './Coste'
-import FoodCost from './FoodCost'
-import Almacen from './Almacen'
-import Platos from './Platos'
-import Compras from './Compras'
+const Ventas = lazy(() => import('./Ventas'))
+const VentasTpv = lazy(() => import('./VentasTpv'))
+const Arqueos = lazy(() => import('./Arqueos'))
+const Accesos = lazy(() => import('./Accesos'))
+const Estadisticas = lazy(() => import('./Estadisticas'))
+const Mensual = lazy(() => import('./Mensual'))
+const Gastos = lazy(() => import('./Gastos'))
+const Empleados = lazy(() => import('./Empleados'))
+const Horarios = lazy(() => import('./Horarios'))
+const Coste = lazy(() => import('./Coste'))
+const FoodCost = lazy(() => import('./FoodCost'))
+const Almacen = lazy(() => import('./Almacen'))
+const Platos = lazy(() => import('./Platos'))
+const Compras = lazy(() => import('./Compras'))
 import SectionPreview from './SectionPreview'
 
 // Fallback mientras se descarga un chunk lazy: fondo de marca (NO blanco) + pulso sutil. Respeta la regla

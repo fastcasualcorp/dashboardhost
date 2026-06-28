@@ -1,4 +1,4 @@
-import { useEffect, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useEffect, useState, lazy, Suspense, type PointerEvent as RPointerEvent } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -10,6 +10,7 @@ import { play, playBeast, playPowerup, preloadSfx, setAudio } from '../lib/sound
 import SettingsPanel, { type FontKey, type AccentKey } from './SettingsPanel'
 import CommentLayer from './CommentLayer'
 import ErrorBoundary from './ErrorBoundary'
+import Clock from './Clock'
 import WalletHoy from './WalletHoy'
 import DeployBadge from './DeployBadge'
 import LogoMark, { type LogoVariant } from './LogoMark'
@@ -17,7 +18,8 @@ import { beastById } from '../lib/beasts'
 import { isDemoMode, setDemoMode } from '../lib/demo'
 import { renderSection } from '../sections/registry'
 import { applySavedDesign } from '../lib/designTokens'
-import Canon from '../sections/Canon'
+// Canon es una herramienta interna grande → lazy (fuera del bundle inicial; solo carga al abrirla).
+const Canon = lazy(() => import('../sections/Canon'))
 
 // Emoji animado por sección del menú lateral (bob sutil; ver .ni-emo en index.css).
 const NAV_EMOJI: Record<string, string> = {
@@ -28,12 +30,6 @@ const NAV_EMOJI: Record<string, string> = {
 }
 
 type Theme = 'dark' | 'light'
-
-// Reloj de la barra superior: fecha REAL + hora ("Sáb 27 jun · 23:46").
-const _DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-const _MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-const fmtReloj = (d: Date) =>
-  `${_DOW[d.getDay()]} ${d.getDate()} ${_MES[d.getMonth()]} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 
 export default function Shell() {
   const [active, setActive] = useState<string>(() => {
@@ -58,12 +54,7 @@ export default function Shell() {
   const [drawer, setDrawer] = useState(false)
   // Modo offline: avisamos cuando se cae la red (la app sigue con datos guardados).
   const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
-  // Reloj en vivo de la cabecera (fecha real + hora que avanza). Se refresca cada 30 s.
-  const [now, setNow] = useState<Date>(() => new Date())
-  useEffect(() => {
-    const iv = window.setInterval(() => setNow(new Date()), 30_000)
-    return () => window.clearInterval(iv)
-  }, [])
+  // El reloj de la cabecera vive AISLADO en <Clock/> → su tick ya no re-renderiza toda la app (perf).
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-theme') === 'light') return 'light'
     return 'dark'
@@ -450,26 +441,25 @@ export default function Shell() {
                 <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" />
               </svg>
             </button>
-            <span className="daypill only-wide">
-              <span className="dot" />
-              {fmtReloj(now)}
-            </span>
+            <Clock />
           </div>
         </header>
 
         <main className="panel-content" key={active}>
           <ErrorBoundary section={active}>
             {active === 'canon' ? (
-              <Canon
-                accent={accent}
-                onAccent={changeAccent}
-                font={font}
-                onFont={changeFont}
-                theme={theme}
-                onTheme={toggleTheme}
-                density={density}
-                onDensity={changeDensity}
-              />
+              <Suspense fallback={<div className="section-loading" aria-busy="true"><span className="sl-pulse" /></div>}>
+                <Canon
+                  accent={accent}
+                  onAccent={changeAccent}
+                  font={font}
+                  onFont={changeFont}
+                  theme={theme}
+                  onTheme={toggleTheme}
+                  density={density}
+                  onDensity={changeDensity}
+                />
+              </Suspense>
             ) : (
               renderSection(active)
             )}
