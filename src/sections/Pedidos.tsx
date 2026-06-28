@@ -85,6 +85,63 @@ const tot = (o: Order) => sub(o) + o.envio
 
 const ESTADOS: Estado[] = ['En cocina', 'En reparto', 'Entregado']
 
+/* Reparto por plataforma: tarta premium INTERACTIVA (igual que la de Caja) → al pasar por un quesito,
+   brilla, los demás se atenúan y el centro indica a qué plataforma corresponde. */
+function PlatBreakdown() {
+  const [hov, setHov] = useState<Plat | null>(null)
+  const totalIng = PLAT_STATS.reduce((s, p) => s + p.ing, 0)
+  const totalPed = PLAT_STATS.reduce((s, p) => s + p.ped, 0)
+  const maxIng = Math.max(...PLAT_STATS.map((p) => p.ing))
+  const r = 30, C = 2 * Math.PI * r, GAP = 13
+  let acc = 0
+  const active = hov ? PLAT_STATS.find((p) => p.plat === hov) ?? null : null
+  return (
+    <Card>
+      <div className="card-head">
+        <h3>Reparto por plataforma</h3>
+        <Badge tone="muted">hoy · {totalPed} ped · {eur0(totalIng)} €</Badge>
+      </div>
+      <div className="ped-plat" onPointerLeave={() => setHov(null)}>
+        <div className={'day-donut' + (hov ? ' hov' : '')}>
+          <svg viewBox="0 0 84 84">
+            <circle className="dd-track" cx="42" cy="42" r={r} fill="none" strokeWidth="9.5" />
+            {PLAT_STATS.map((p) => {
+              const seg = (p.ing / totalIng) * C
+              const len = Math.max(1, seg - GAP)
+              const off = -(acc + GAP / 2)
+              acc += seg
+              return (
+                <circle key={p.plat} className={'dd-seg' + (hov === p.plat ? ' on' : '')} cx="42" cy="42" r={r} fill="none" stroke={PLATFORMS[p.plat].color} strokeWidth="9.5" strokeLinecap="round"
+                  strokeDasharray={`${len.toFixed(2)} ${(C - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" style={{ ['--seg' as string]: PLATFORMS[p.plat].color }}
+                  onPointerEnter={() => setHov(p.plat)} />
+              )
+            })}
+          </svg>
+          <div className="day-donut-c" style={{ ['--seg' as string]: active ? PLATFORMS[active.plat].color : 'var(--gold)' }}>
+            <b className={'tnum' + (active ? ' on' : '')}>{active ? active.ped : totalPed}</b>
+            <span className={active ? 'on' : ''}>{active ? active.name : 'pedidos'}</span>
+          </div>
+        </div>
+        <div className="ped-legend">
+          {PLAT_STATS.map((p) => {
+            const logo = PLATFORMS[p.plat].logo
+            return (
+              <div className={'ped-leg-row' + (hov === p.plat ? ' on' : '')} key={p.plat} style={{ ['--seg' as string]: PLATFORMS[p.plat].color }} onPointerEnter={() => setHov(p.plat)}>
+                <span className="ped-leg-name">
+                  {logo ? <span className="rs-canal-logo"><img src={logo} alt="" /></span> : <span className="ped-leg-dot" style={{ background: PLATFORMS[p.plat].color }} />}
+                  {p.name}
+                </span>
+                <span className="ped-leg-bar"><span style={{ width: (p.ing / maxIng) * 100 + '%', background: PLATFORMS[p.plat].color }} /></span>
+                <span className="ped-leg-val"><b className="tnum">{eur0(p.ing)} €</b><i className="tnum">{p.ped} ped</i></span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 export default function Pedidos() {
   const [sel, setSel] = useState<Order | null>(null)
   const [statusMap, setStatusMap] = useState<Record<string, Estado>>({})
@@ -105,55 +162,7 @@ export default function Pedidos() {
         <KpiTile label="Tiempo medio" value="24" unit="min" delta="-3 m" foot="vs ayer" trend="up" />
       </Grid>
 
-      {(() => {
-        const totalIng = PLAT_STATS.reduce((s, p) => s + p.ing, 0)
-        const totalPed = PLAT_STATS.reduce((s, p) => s + p.ped, 0)
-        const maxIng = Math.max(...PLAT_STATS.map((p) => p.ing))
-        // MISMA tarta premium que la de Caja del día (r=30, cabo redondo, gaps, glow) → estética consistente
-        const r = 30, C = 2 * Math.PI * r, GAP = 13
-        let acc = 0
-        return (
-          <Card>
-            <div className="card-head">
-              <h3>Reparto por plataforma</h3>
-              <Badge tone="muted">hoy · {totalPed} ped · {eur0(totalIng)} €</Badge>
-            </div>
-            <div className="ped-plat">
-              <div className="day-donut">
-                <svg viewBox="0 0 84 84">
-                  <circle className="dd-track" cx="42" cy="42" r={r} fill="none" strokeWidth="9.5" />
-                  {PLAT_STATS.map((p) => {
-                    const seg = (p.ing / totalIng) * C
-                    const len = Math.max(1, seg - GAP)
-                    const off = -(acc + GAP / 2)
-                    acc += seg
-                    return (
-                      <circle key={p.plat} className="dd-seg" cx="42" cy="42" r={r} fill="none" stroke={PLATFORMS[p.plat].color} strokeWidth="9.5" strokeLinecap="round"
-                        strokeDasharray={`${len.toFixed(2)} ${(C - len).toFixed(2)}`} strokeDashoffset={off.toFixed(2)} transform="rotate(-90 42 42)" style={{ ['--seg' as string]: PLATFORMS[p.plat].color }} />
-                    )
-                  })}
-                </svg>
-                <div className="day-donut-c"><b className="tnum">{totalPed}</b><span>pedidos</span></div>
-              </div>
-              <div className="ped-legend">
-                {PLAT_STATS.map((p) => {
-                  const logo = PLATFORMS[p.plat].logo
-                  return (
-                    <div className="ped-leg-row" key={p.plat}>
-                      <span className="ped-leg-name">
-                        {logo ? <span className="rs-canal-logo"><img src={logo} alt="" /></span> : <span className="ped-leg-dot" style={{ background: PLATFORMS[p.plat].color }} />}
-                        {p.name}
-                      </span>
-                      <span className="ped-leg-bar"><span style={{ width: (p.ing / maxIng) * 100 + '%', background: PLATFORMS[p.plat].color }} /></span>
-                      <span className="ped-leg-val"><b className="tnum">{eur0(p.ing)} €</b><i className="tnum">{p.ped} ped</i></span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </Card>
-        )
-      })()}
+      <PlatBreakdown />
 
       <Card>
         <div className="card-head">
