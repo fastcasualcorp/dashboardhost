@@ -47,6 +47,7 @@ export default function SalesChart() {
   }, [])
 
   const values = SALES.map((s) => s.value)
+  const hasData = values.some((v) => v > 0) // sin ventas → estado vacío limpio (no la línea con degradado fea). Juan
   const vmax = Math.max(...values)
   const vmin = Math.min(...values)
   const span = vmax - vmin || 1
@@ -62,7 +63,7 @@ export default function SalesChart() {
 
   useGSAP(
     () => {
-      if (!w) return
+      if (!w || !hasData) return
       const lineEl = areaRef.current?.querySelector('.dc-line') as SVGPathElement | null
       if (!lineEl) return
       if (reduceMotion()) {
@@ -87,11 +88,11 @@ export default function SalesChart() {
         .to('.dc-dot, .dc-dot-ring, .dc-dot-ring2', { scale: 1, duration: 0.5, ease: 'back.out(2.2)', stagger: 0.04 }, '-=0.35')
         .fromTo('.dc-dot-pulse', { scale: 1, opacity: 0.7 }, { scale: 2.7, opacity: 0, duration: 0.9, ease: 'power2.out' }, '-=0.15')
     },
-    { scope: areaRef, dependencies: [w > 0] },
+    { scope: areaRef, dependencies: [w > 0, hasData] },
   )
 
   function onMove(e: React.PointerEvent) {
-    if (!w) return
+    if (!w || !hasData) return
     const rect = areaRef.current!.getBoundingClientRect()
     const x = e.clientX - rect.left
     let idx = 0,
@@ -135,7 +136,24 @@ export default function SalesChart() {
       </div>
 
       <div className="chart-area" ref={areaRef} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
-        {w > 0 && (
+        {/* sin ventas en el rango → vacío honesto, SIN la línea con degradado. (Juan, 29-jun) */}
+        {w > 0 && !hasData && (
+          <svg viewBox={`0 0 ${w} ${H}`} preserveAspectRatio="none">
+            {gridYs.map((gy, i) => (
+              <line key={i} className="dc-grid" x1={PAD_X} x2={w - PAD_X} y1={gy} y2={gy} />
+            ))}
+          </svg>
+        )}
+        {w > 0 && !hasData && (
+          <div className="dc-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="M7 15l4-4 3 3 5-6" />
+            </svg>
+            <span>Sin ventas registradas estos días</span>
+          </div>
+        )}
+        {w > 0 && hasData && (
           <svg viewBox={`0 0 ${w} ${H}`} preserveAspectRatio="none">
             <defs>
               {/* línea: oro pleno que brilla a blanco cálido hacia la punta (cometa premium) */}

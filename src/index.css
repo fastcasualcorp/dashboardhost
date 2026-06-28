@@ -862,6 +862,10 @@ body {
 .chart-area svg { width: 100%; height: 100%; overflow: visible; display: block; }
 .dc-grid { stroke: rgba(255,255,255,.055); stroke-width: 1; }
 [data-theme='light'] .dc-grid { stroke: rgba(15,20,35,.06); }
+/* estado vacío del gráfico de ventas: rejilla tenue + mensaje centrado (sin la línea con degradado). Juan 29-jun */
+.dc-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--faint); pointer-events: none; }
+.dc-empty svg { width: 30px; height: 30px; opacity: .5; }
+.dc-empty span { font-size: var(--fs-sm); letter-spacing: .01em; }
 .dc-median { stroke: rgba(255,255,255,.2); stroke-width: 1; stroke-dasharray: 3 4; }
 /* etiqueta del valor de HOY, a la IZQUIERDA del punto final (premium, como el "precio" en apps de bolsa).
    A la izquierda y centrada en vertical → no choca con la cabecera "media diaria" de arriba-derecha. */
