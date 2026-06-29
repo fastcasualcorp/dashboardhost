@@ -4,7 +4,6 @@ import { play, playBeast, preloadSfx } from '../lib/sound'
 import { beastById } from '../lib/beasts'
 import { reduceMotion } from '../lib/data'
 import { supabase, hasSupabase } from '../lib/supabase'
-import LogoMark from './LogoMark'
 import { registrarAcceso } from '../lib/acceso'
 
 // Fondos de cocina que rotan en bucle (pantalla de carga estilo videojuego),
@@ -169,9 +168,7 @@ export default function Login({ onEnter }: { onEnter: (p: Profile) => void }) {
       <div className="login-veil" />
       <div className="login-flicker" aria-hidden="true" />
       <div className="login-content">
-      <div className="login-top">
-        <LogoMark variant="b" className="lg-logo" />
-      </div>
+      {/* Logo FAT SMASH QUITADO de momento (pendiente nuevo nombre/logo). El título hace de cabecera. (Juan, 30-jun) */}
 
       <motion.h1
         className="login-title"

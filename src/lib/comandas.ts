@@ -12,26 +12,29 @@ import { supabase, localId } from './supabase'
 import { isDemoMode } from './demo'
 import { consumirVenta, ensureAlmacenSync } from './almacen'
 
-export type CItem = { name: string; qty: number }
+export type CItem = { name: string; qty: number; note?: string; aler?: string } // note = modificador (ámbar) · aler = alérgeno (rojo)
 export type CStatus = 'nueva' | 'prep' | 'lista'
 export type Comanda = { id: number; dbId?: string; n: number; src: string; color: string; mesa: string | null; items: CItem[]; born: number; status: CStatus }
 
 export const C_SOURCES: Record<string, string> = { Sala: '#ffbf10', Online: '#3ad6c8', Glovo: '#ffc244', 'Uber Eats': '#06c167', 'Just Eat': '#ff8000' }
 export const colorForSrc = (src: string) => C_SOURCES[src] || '#ffbf10'
 
-// semilla demo: unas comandas ya envejecidas para que el tablero no esté vacío y se vean los colores al entrar
-const DISHES = ['REBELL Classic', 'Doble Bacon', 'Crispy Chicken', 'Veggie Deluxe', 'Patatas Rebell', 'Nuggets x6', 'Aros de cebolla', 'Refresco', 'Cerveza', 'Brownie']
-function makeItems(s: number): CItem[] {
-  const k = 2 + (s % 3)
-  const out: CItem[] = []
-  for (let i = 0; i < k; i++) out.push({ name: DISHES[(s * 3 + i * 5) % DISHES.length], qty: 1 + ((s + i) % 2) })
-  return out
-}
+// semilla demo: comandas reales (mesa + reparto, con notas/alérgenos) para que el tablero muestre los colores
+// y los modificadores al entrar. SOLO demo; en real arranca vacío (la nube manda).
 function seed(now: number): Comanda[] {
-  const ages = [12 * 60000, 6 * 60000, 2 * 60000, 40000, 9 * 60000]
-  const statuses: CStatus[] = ['prep', 'prep', 'nueva', 'nueva', 'lista']
-  const srcs = Object.keys(C_SOURCES)
-  return ages.map((a, i) => ({ id: i + 1, n: 34 + i, src: srcs[i % srcs.length], color: colorForSrc(srcs[i % srcs.length]), mesa: null, items: makeItems(i + 1), born: now - a, status: statuses[i] }))
+  const raw: Omit<Comanda, 'color'>[] = [
+    { id: 1, n: 34, src: 'Sala', mesa: '7', items: [{ name: 'REBELL Classic', qty: 2, note: 'sin cebolla' }, { name: 'Patatas Rebell', qty: 1 }], born: now - 2 * 60000, status: 'nueva' },
+    { id: 2, n: 35, src: 'Glovo', mesa: null, items: [{ name: 'Veggie Deluxe', qty: 1 }, { name: 'Nuggets x6', qty: 1 }], born: now - 40000, status: 'nueva' },
+    { id: 3, n: 33, src: 'Sala', mesa: '5', items: [{ name: 'Doble Bacon', qty: 2, note: 'poco hecho' }, { name: 'Aros de cebolla', qty: 1 }], born: now - 9 * 60000, status: 'prep' },
+    { id: 4, n: 36, src: 'Sala', mesa: '3', items: [{ name: 'Crispy Chicken', qty: 1, aler: 'SIN gluten' }, { name: 'Doble Bacon', qty: 1 }, { name: 'Refresco', qty: 2 }], born: now - 6 * 60000, status: 'prep' },
+    { id: 5, n: 37, src: 'Uber Eats', mesa: null, items: [{ name: 'REBELL Classic', qty: 3 }], born: now - 4 * 60000, status: 'prep' },
+    { id: 6, n: 32, src: 'Sala', mesa: '2', items: [{ name: 'Crispy Chicken', qty: 1 }, { name: 'Cerveza', qty: 1 }], born: now - 90000, status: 'lista' },
+    // ── pedidos ONLINE (QR self-order) en vivo → alimentan el feed del panel Canal online ──
+    { id: 7, n: 112, src: 'Online', mesa: '7', items: [{ name: 'REBELL Classic', qty: 2 }, { name: 'Patatas Rebell', qty: 1 }], born: now - 70000, status: 'nueva' },
+    { id: 8, n: 110, src: 'Online', mesa: null, items: [{ name: 'Doble Bacon', qty: 1 }, { name: 'Refresco', qty: 1 }], born: now - 3 * 60000, status: 'prep' },
+    { id: 9, n: 108, src: 'Online', mesa: '3', items: [{ name: 'Crispy Chicken', qty: 1 }], born: now - 5 * 60000, status: 'lista' },
+  ]
+  return raw.map((c) => ({ ...c, color: colorForSrc(c.src) }))
 }
 
 let seq = 40
@@ -88,7 +91,8 @@ async function initSync() {
         }
       } else if (ev === 'UPDATE') {
         if (row.estado === 'servida') comandas = comandas.filter((c) => c.dbId !== row.id)
-        else comandas = comandas.map((c) => (c.dbId === row.id ? { ...c, status: row.estado as CStatus } : c))
+        else if (comandas.some((c) => c.dbId === row.id)) comandas = comandas.map((c) => (c.dbId === row.id ? { ...c, status: row.estado as CStatus } : c))
+        else comandas = [...comandas, fromRow(row)] // re-aparece (p.ej. "deshacer servida" hecho en otro dispositivo)
       } else if (ev === 'DELETE') {
         comandas = comandas.filter((c) => c.dbId !== oldId)
       }
@@ -116,11 +120,15 @@ export function pushComanda(input: { n?: number; mesa: string | null; items: CIt
   return c
 }
 
+// Última comanda servida (para DESHACER un toque accidental). Se pisa con cada nueva servida.
+let lastServed: Comanda | null = null
+
 /* Avanza una comanda: nueva → prep → lista → (servida = fuera). */
 export function advanceComanda(id: number): CStatus | 'served' | null {
   const t = comandas.find((c) => c.id === id)
   if (!t) return null
   const next: CStatus | 'servida' = t.status === 'lista' ? 'servida' : t.status === 'nueva' ? 'prep' : 'lista'
+  if (next === 'servida') lastServed = { ...t } // guardar ANTES de quitarla, por si hay que deshacer
   if (_live && supabase && t.dbId) {
     // optimista local + persiste (el realtime reconcilia los demás dispositivos)
     if (next === 'servida') comandas = comandas.filter((c) => c.id !== id)
@@ -138,6 +146,23 @@ export function advanceComanda(id: number): CStatus | 'served' | null {
   comandas = comandas.map((c) => (c.id === id ? { ...c, status: next as CStatus } : c))
   emit()
   return next as CStatus
+}
+
+/* Deshacer la última "Servida": la devuelve al tablero como 'lista'. Un toque sin querer ya no pierde el pedido. */
+export function undoLastServed(): boolean {
+  if (!lastServed) return false
+  const c = lastServed
+  lastServed = null
+  const restored: Comanda = { ...c, status: 'lista' }
+  if (_live && supabase && c.dbId) {
+    if (!comandas.some((x) => x.dbId === c.dbId)) comandas = [...comandas, restored]
+    emit()
+    supabase.from('comandas').update({ estado: 'lista' }).eq('id', c.dbId).then(() => {})
+    return true
+  }
+  if (!comandas.some((x) => x.id === c.id)) comandas = [...comandas, restored]
+  emit()
+  return true
 }
 
 export function useComandas(): Comanda[] {

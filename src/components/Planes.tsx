@@ -135,7 +135,7 @@ export default function Planes({ onClose, current = getPlan() }: { onClose: () =
 
       <motion.div className="planes-inner" initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 26 }}>
         <header className="planes-head">
-          <span className="planes-kick">◆ Planes FAT SMASH</span>
+          <span className="planes-kick">◆ Planes</span>
           <h1>Lleva tu negocio al siguiente nivel</h1>
           <p>Empieza gratis y sube cuando quieras. <b>Pro</b> incluye todo lo que de verdad mueve la aguja.</p>
         </header>

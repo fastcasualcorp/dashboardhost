@@ -60,7 +60,7 @@ export default function BootIntro({ onDone }: { onDone: () => void }) {
       tl.to('.br-glow', { opacity: 1, scale: 1, duration: 0.9, ease: 'power2.out' }, 0)
         // 2 · el león se materializa
         .to('.br-beast', { opacity: 1, scale: 1, y: 0, duration: 0.8, ease }, 0.1)
-        // 3 · el logo FAT SMASH + el local aparecen (suben y nítidos)
+        // 3 · el nombre del local aparece (sube y nítido)
         .to('.br-logo', { opacity: 1, scale: 1, duration: 0.8, ease }, 0.36)
         // respiración MUY sutil del bloom (one-shot, decae — nada termina de golpe)
         .to('.br-glow', { opacity: 0.72, scale: 1.04, duration: 0.8, ease: 'sine.inOut' }, 0.95)
@@ -96,7 +96,7 @@ export default function BootIntro({ onDone }: { onDone: () => void }) {
           <img src={beast.img} alt="" draggable={false} />
         </div>
         <div className="br-logo">
-          <span className="br-logo-mark" role="img" aria-label="FAT SMASH" />
+          {/* Logo FAT SMASH QUITADO de momento (pendiente nuevo nombre/logo). Queda la bestia + el local. (Juan, 30-jun) */}
           {local && <span className="br-logo-local">{local}</span>}
         </div>
       </div>

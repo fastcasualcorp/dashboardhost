@@ -72,7 +72,7 @@ export default function SettingsPanel({
         {/* El cambio de plan se hace desde la PASTILLA de plan de la cabecera (siempre visible). Aquí solo info. */}
         <div className="sp-field">
           <span className="sp-k">Plan</span>
-          <span className="sp-v gold">FAT SMASH Pro</span>
+          <span className="sp-v gold">Plan Pro</span>
         </div>
         <button className={'sp-action' + (pwOpen ? ' on' : '')} onClick={() => setPwOpen((o) => !o)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

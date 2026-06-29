@@ -5,8 +5,10 @@
 export type Beast = { id: string; name: string; img: string; color: string; accent: string; video?: string }
 
 export const BEASTS: Beast[] = [
-  // Tigre = mascota oficial (acento lima eléctrico). Foto realista anterior + su vídeo (anima al hover, como el resto). (Juan, 29-jun)
-  { id: 'tiger', name: 'Tigre', img: '/img/avatars/tiger.png', color: '#c6ff00', accent: 'lima', video: '/video/tiger.mp4' },
+  // Tigre = mascota oficial (acento lima eléctrico). MISMO tigre realista de antes pero con el FONDO
+  // repintado a VERDE lima (Vision recortó el sujeto → fondo nuevo). Juan: "el mismo de fondo rojo pero
+  // a verde". Sin vídeo: el clip viejo seguía con fondo rojo y al hover delataba el rojo. (Juan, 30-jun)
+  { id: 'tiger', name: 'Tigre', img: '/img/avatars/tiger-green.png', color: '#c6ff00', accent: 'lima' },
   { id: 'lion', name: 'León', img: '/img/avatars/lion.png', color: '#ffbf10', accent: 'gold', video: '/video/lion.mp4' },
   { id: 'panda', name: 'Panda', img: '/img/avatars/panda.png', color: '#c8c8d0', accent: 'mono', video: '/video/panda.mp4' },
   { id: 'fox', name: 'Zorro', img: '/img/avatars/fox.png', color: '#e0457a', accent: 'rosa', video: '/video/fox.mp4' },

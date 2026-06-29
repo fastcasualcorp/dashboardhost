@@ -56,14 +56,16 @@ export const WIDE_DEFAULT = 1.0
 const TRACK_KEY = 'rebell-fonttrack-v1'
 export const TRACK_MIN = -4
 export const TRACK_MAX = 3
-export const TRACK_DEFAULT = 0
+export const TRACK_DEFAULT = 1 // un pelín de aire entre cifras (Clash es muy expanded → si no, se juntan). Juan 30-jun
 
 // Peso de la tipografía POR USO (Juan 28-jun): números (héroe) y títulos de panel.
 // Pasos de 100 = los pesos que Inter tiene cargados (600-900 / 500-900).
+// Clash Display carga 400-700 → ese es el rango real. 900 caía en synthetic-bold (MUY gorda, cifras pegadas);
+// 500 quedó demasiado fina. Default 600 = punto medio (Juan 30-jun: "ni tan gorda ni tan fina").
 const NUMW_KEY = 'rebell-numweight-v1'
-export const NUMW_MIN = 600
-export const NUMW_MAX = 900
-export const NUMW_DEFAULT = 900
+export const NUMW_MIN = 400
+export const NUMW_MAX = 700
+export const NUMW_DEFAULT = 600
 const TITLEW_KEY = 'rebell-titleweight-v1'
 export const TITLEW_MIN = 500
 export const TITLEW_MAX = 900

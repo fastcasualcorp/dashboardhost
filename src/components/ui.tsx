@@ -295,7 +295,7 @@ export function DataTable({ columns, rows }: { columns: Column[]; rows: Record<s
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i}>
+            <tr key={i} className={typeof r._className === 'string' ? r._className : undefined}>
               {columns.map((c) => (
                 <td key={c.key} className={`a-${c.align || 'left'}`}>
                   {r[c.key]}

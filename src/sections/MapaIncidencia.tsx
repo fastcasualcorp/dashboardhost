@@ -1001,6 +1001,28 @@ export default function MapaIncidencia() {
   // Oportunidad: rival que flojea (reseñas negativas o rating más bajo en rango).
   const oport = enRango.find((r) => /negativ/i.test(r.signal.txt)) || [...enRango].sort((a, b) => a.rating - b.rating)[0]
 
+  // ── LECTURA LLANA + JUGADAS (acción): los mismos datos, traducidos a "dónde estás" y "qué haces". El
+  //    no-experto no interpreta "amenaza 78" → aquí se lo decimos en cristiano. (Juan: comprensible para cualquiera)
+  const short = (s: string) => s.split(' ').slice(0, 2).join(' ') // nombre corto del rival
+  const mejoresQueTu = enRango.filter((r) => r.rating > LOCAL.rating).length
+  const lider = [...enRango].sort((a, b) => b.rating - a.rating)[0]
+  const masBarato = [...enRango].sort((a, b) => a.precio - b.precio)[0]
+  // Posición en una frase (solo demo: en real aún no hay rating propio del local).
+  const posRead = mejoresQueTu === 0
+    ? 'Eres el mejor valorado de tu zona. Mantén el nivel y aprovéchalo.'
+    : `Te superan en valoración ${mejoresQueTu} de ${enRango.length}. Tu mejor palanca para subir: más reseñas buenas.`
+  type Jugada = { ic: string; txt: string }
+  const jugadas: Jugada[] = []
+  if (demo && lider && lider.rating > LOCAL.rating)
+    jugadas.push({ ic: '⭐', txt: `Acorta con ${short(lider.name)} (${lider.rating.toFixed(1)}★): pide reseña a tus clientes contentos.` })
+  if (oport)
+    jugadas.push({ ic: '◎', txt: `Capta a clientes de ${short(oport.name)}: es quien peor valoración tiene cerca.` })
+  if (huecos.length)
+    jugadas.push({ ic: '🧩', txt: `Hueco de ${huecos[0].toLowerCase()} en tu radio: nadie lo ofrece, podrías ser el primero.` })
+  if (demo && masBarato && masBarato.precio < LOCAL.precio * 0.85)
+    jugadas.push({ ic: '🛡️', txt: `${short(masBarato.name)} va barato (${masBarato.precio.toFixed(0)}€): no entres en guerra de precios, diferénciate.` })
+  const jugadasTop = jugadas.slice(0, 2)
+
   // Filtro de capa: qué rivales se VEN (en mapa y listas). El rank/dominancia siguen sobre TODO el radio.
   const activo = (r: Rival & { d: number }) =>
     filtro === 'todos' ||
@@ -1299,6 +1321,55 @@ export default function MapaIncidencia() {
         </div>
 
         <aside className={'mapa-panel' + (armed ? ' armed' : '')}>
+          {/* COLUMNA "TÚ": tu posición → tu jugada → alertas (alturas naturales, columnas independientes) */}
+          <div className="mp-col">
+          {/* 1 · TU POSICIÓN (HÉROE del panel): rank + gauge de rating + barra de dominancia.
+              REAL: el rating/precio del LOCAL aún es el de partida (no es dato real del tenant) → no
+              calculamos posición/dominancia contra cifras falsas; mostramos un estado vacío honesto. */}
+          <div className="mp-block mp-pos mp-hero">
+            <span className="mp-kick"><span className="mp-emo">🎯</span>Tu posición en la zona</span>
+            {demo ? (
+              <>
+                <div className="mp-pos-main">
+                  <div className="mp-rank">
+                    <span className="mp-rank-pos">#<CountValue value={String(pos)} /></span>
+                    <span className="mp-rank-of">de {zona.length}</span>
+                  </div>
+                  <RatingGauge value={LOCAL.rating} />
+                </div>
+                <div className="mp-dom">
+                  <div className="mp-dom-bar">
+                    <div className="mp-dom-you" style={{ width: dominancia + '%' }} />
+                  </div>
+                  <div className="mp-dom-legend">
+                    <span>TÚ <b><CountValue value={dominancia + '%'} /></b></span>
+                    <span className="r">RIVALES <b><CountValue value={100 - dominancia + '%'} /></b></span>
+                  </div>
+                  <span className="mp-cap">% de rivales a los que igualas o superas en valoración</span>
+                </div>
+                <p className="mp-read">{posRead}</p>
+              </>
+            ) : (
+              <div className="vtpv-empty">Añade el rating real de tu local para ver tu posición</div>
+            )}
+          </div>
+
+          {/* 1b · TU JUGADA (acción en lenguaje llano): traduce la inteligencia a QUÉ HACER esta semana. */}
+          {jugadasTop.length > 0 && (
+            <div className="mp-block mp-jugada">
+              <span className="mp-kick"><span className="mp-emo">🎯</span>Tu jugada de la semana</span>
+              <div className="mp-play-list">
+                {jugadasTop.map((j, i) => (
+                  <div className="mp-play" key={i}>
+                    <span className="mp-play-ic">{j.ic}</span>
+                    <span className="mp-play-txt">{j.txt}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Alertas de rivales (columna TÚ) */}
           <AnimatePresence>
             {alertas.length > 0 && (
               <motion.div className="mp-alertas" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
@@ -1322,37 +1393,11 @@ export default function MapaIncidencia() {
               </motion.div>
             )}
           </AnimatePresence>
+          </div>{/* /mp-col · TÚ */}
 
-          {/* 1 · TU POSICIÓN (HÉROE del panel): rank + gauge de rating + barra de dominancia.
-              REAL: el rating/precio del LOCAL aún es el de partida (no es dato real del tenant) → no
-              calculamos posición/dominancia contra cifras falsas; mostramos un estado vacío honesto. */}
-          <div className="mp-block mp-pos mp-hero">
-            <span className="mp-kick"><span className="mp-emo">🎯</span>Tu posición en la zona</span>
-            {demo ? (
-              <>
-                <div className="mp-pos-main">
-                  <div className="mp-rank">
-                    <span className="mp-rank-pos">#<CountValue value={String(pos)} /></span>
-                    <span className="mp-rank-of">de {zona.length}</span>
-                  </div>
-                  <RatingGauge value={LOCAL.rating} />
-                </div>
-                <div className="mp-dom">
-                  <div className="mp-dom-bar">
-                    <div className="mp-dom-you" style={{ width: dominancia + '%' }} />
-                  </div>
-                  <div className="mp-dom-legend">
-                    <span>TÚ <b><CountValue value={dominancia + '%'} /></b></span>
-                    <span className="r">RIVALES <b><CountValue value={100 - dominancia + '%'} /></b></span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="vtpv-empty">Añade el rating real de tu local para ver tu posición</div>
-            )}
-          </div>
-
-          {/* 2 · INTELIGENCIA: mini-stats + ticker de señales + oportunidad (ya no prosa) */}
+          {/* COLUMNA "ELLOS": inteligencia → rivales por amenaza */}
+          <div className="mp-col">
+          {/* 2 · INTELIGENCIA: mini-stats + ticker de señales */}
           <div className="mp-block mp-intel">
             <span className="mp-kick"><span className="mp-emo">📡</span>Inteligencia de la semana</span>
             <div className="mp-intel-stats">
@@ -1378,20 +1423,12 @@ export default function MapaIncidencia() {
                 ))}
               </div>
             )}
-            {oport && (
-              <div className="mp-oport">
-                <span className="mp-oport-ic">◎</span>
-                <div>
-                  <b>Oportunidad</b>
-                  <span>{oport.name} flojea → momento de captar a sus clientes</span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 3 · RIVALES por AMENAZA (medidor 0-100, ordenados, color por nivel) */}
           <div className="mp-block mp-threats">
             <span className="mp-kick"><span className="mp-emo">⚔️</span>Rivales por amenaza · pulsa para comparar</span>
+            <span className="mp-cap mp-cap-block">Amenaza = cerca de ti + mejor valorado + más barato + con movimiento</span>
             <div className="mp-threat-list">
               {visibles.map((r, i) => {
                 const lvl = threatLvl(r.threat)
@@ -1425,6 +1462,7 @@ export default function MapaIncidencia() {
               {!visibles.length && <div className="mp-empty">{enRango.length ? 'Ningún rival con este filtro' : !demo && !realData ? 'Sin datos de zona aún' : 'Sin rivales en este radio'}</div>}
             </div>
           </div>
+          </div>{/* /mp-col · ELLOS */}
 
           {/* 4 · SLOTS LIBRES (huecos como badges de inventario) */}
           {huecos.length > 0 && (

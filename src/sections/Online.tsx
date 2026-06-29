@@ -1,27 +1,49 @@
 /* ════════════════════════════════════════════════════════════════════
-   CANAL ONLINE — el "espejo" del cliente DENTRO del panel.
-   Juan necesita VER las vistas que no salen en el dashboard (la carta que el
-   cliente abre al escanear el QR de su mesa). Aquí la pinta dentro de un
-   mockup de móvil con la página REAL (/pedir) en un iframe — interactiva — +
-   el QR de cada mesa, listo para imprimir y pegar en la mesa. Una sola fuente:
-   la URL la calcula igual que el recibo del TPV (ordenUrl). (visión QR self-order)
+   CANAL ONLINE — centro de mando del pedido por QR (self-order).
+   Tres columnas pegadas, sin aire muerto (boceto A2 elegido por Juan):
+     1) IZQ — "Lo que ve tu cliente": la página REAL /pedir dentro de un móvil
+        (iframe en vivo) + atajo para editar la carta. Grande, para revisarla aquí.
+     2) CENTRO — el QR de la mesa (grande) + selector de mesa + imprimir/generar.
+     3) DCHA — feed EN VIVO de los pedidos online (fuente única: comandas src='Online').
+   Arriba, los KPIs reales de HOY (resumenOnlineHoy, ventas fuente='Online'): en real
+   arrancan a 0 (empty-state honesto) y suben con cada pedido. (visión QR self-order)
    ════════════════════════════════════════════════════════════════════ */
 import { useMemo, useState } from 'react'
 import { Card, SectionHeader } from '../components/ui'
-import { LOCAL } from '../lib/local'
+import { LOCAL, localSlug } from '../lib/local'
 import { loadSalon } from '../lib/salon'
+import { useVentas, resumenOnlineHoy } from '../lib/ventas'
+import { useComandas, type Comanda, type CStatus } from '../lib/comandas'
+import { PRODUCTOS } from '../lib/products'
+import { eur } from '../lib/data'
 
-// Misma URL que el QR del recibo: el origen REAL de esta app + local + mesa.
+// Misma URL que el QR del recibo: el origen REAL de esta app + local + mesa. Slug = fuente única (localSlug).
 function pedirUrl(mesa: string | null): string {
   const base = typeof window !== 'undefined' ? `${window.location.origin}/pedir` : '/pedir'
-  return `${base}?l=bertamirans${mesa ? `&m=${encodeURIComponent(mesa)}` : ''}`
+  return `${base}?l=${localSlug()}${mesa ? `&m=${encodeURIComponent(mesa)}` : ''}`
 }
 const qrSrc = (url: string, size = 220) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=0&data=${encodeURIComponent(url)}`
+const goto = (id: string) => window.dispatchEvent(new CustomEvent('rebell:goto', { detail: id }))
+
+// Precio de carta por nombre (fuente única PRODUCTOS) → importe honesto de cada pedido del feed.
+const PRICE = new Map(PRODUCTOS.map((p) => [p.name, p.price]))
+const totalComanda = (c: Comanda) => c.items.reduce((s, i) => s + (PRICE.get(i.name) ?? 0) * i.qty, 0)
+// Estado de cocina → etiqueta + color (semáforo): nuevo → en cocina → listo.
+const EST: Record<CStatus, { label: string; cls: string }> = {
+  nueva: { label: 'Recibido', cls: 'new' },
+  prep: { label: 'En cocina', cls: 'cook' },
+  lista: { label: 'Listo', cls: 'done' },
+}
 
 export default function Online() {
   const mesas = useMemo(() => loadSalon(), [])
   const [mesa, setMesa] = useState<string | null>(mesas[0]?.nombre ?? null)
   const [reload, setReload] = useState(0)
+  useVentas() // suscribe a cambios del libro (KPIs reactivos)
+  const comandas = useComandas()
+  const res = resumenOnlineHoy()
+  // Feed: pedidos ONLINE activos, los más nuevos arriba (FIFO inverso para "entrando ahora").
+  const feed = comandas.filter((c) => c.src === 'Online').slice().sort((a, b) => b.born - a.born)
 
   const url = pedirUrl(mesa)
   const iframeSrc = `${url}${url.includes('?') ? '&' : '?'}_=${reload}`
@@ -30,14 +52,8 @@ export default function Online() {
   function copy() {
     try { navigator.clipboard?.writeText(url) } catch { /* sin clipboard */ }
   }
-  // Imprime el QR de la mesa elegida como "table tent" (cartelito para la mesa).
-  function printOne() {
-    printSheet([{ nombre: mesa, url }])
-  }
-  // GENERADOR: imprime el QR de TODAS las mesas en una hoja → recortar y pegar.
-  function printAll() {
-    printSheet(mesas.map((m) => ({ nombre: m.nombre, url: pedirUrl(m.nombre) })))
-  }
+  function printOne() { printSheet([{ nombre: mesa, url }]) }
+  function printAll() { printSheet(mesas.map((m) => ({ nombre: m.nombre, url: pedirUrl(m.nombre) }))) }
   function printSheet(items: { nombre: string | null; url: string }[]) {
     const w = window.open('', '_blank', 'width=820,height=1040')
     if (!w) return
@@ -68,59 +84,81 @@ export default function Online() {
     <div className="section online">
       <SectionHeader
         title="Canal online"
-        subtitle="La carta que ven tus clientes al escanear el QR de su mesa. Aquí la ves igual que ellos, en vivo."
+        subtitle="Lo que ve tu cliente, tu QR y los pedidos que entran — todo de un vistazo."
       />
 
-      <div className="online-stage">
-        {/* ── Espejo del cliente: la página real dentro de un móvil ── */}
-        <Card className="online-preview" pad={false}>
-          <div className="online-pv-bar">
-            <span className="dot" /><span className="dot" /><span className="dot" />
-            <span className="online-pv-url">rebell.app/pedir · {destino}</span>
-            <button className="online-mini" onClick={() => setReload((n) => n + 1)} title="Recargar">⟳</button>
+      {/* ── Barra de estado + KPIs de hoy ── */}
+      <div className="ol-topbar panel-card">
+        <span className="ol-dot" />
+        <b>Recibiendo pedidos</b>
+        <span className="ol-sync">por QR · en vivo</span>
+        <div className="ol-kpis">
+          <div className="ol-kpi"><span className="k">Pedidos hoy</span><span className="v">{res.pedidos}</span></div>
+          <div className="ol-kpi"><span className="k">Facturado online</span><span className="v">{eur(res.total)}<i className="ol-cur">€</i></span></div>
+          <div className="ol-kpi"><span className="k">Ticket medio</span><span className="v">{res.pedidos ? <>{eur(res.ticket)}<i className="ol-cur">€</i></> : '—'}</span></div>
+        </div>
+      </div>
+
+      <div className="ol-main">
+        {/* ── IZQUIERDA · espejo del cliente (grande) ── */}
+        <Card className="ol-mirror" pad={false}>
+          <div className="ol-mirror-head">
+            <h3>Lo que ve tu cliente</h3>
+            <span>La carta en su móvil · {destino}</span>
           </div>
-          <div className="phone">
-            <span className="phone-notch" />
-            <iframe key={iframeSrc} className="phone-screen" src={iframeSrc} title="Carta del cliente" />
+          <div className="ol-phone">
+            <span className="ol-notch" />
+            <iframe key={iframeSrc} className="ol-screen" src={iframeSrc} title="Carta del cliente" />
+            <button className="ol-reload" onClick={() => setReload((n) => n + 1)} title="Recargar">⟳</button>
+          </div>
+          <button className="ol-edit" onClick={() => goto('platos')}>Editar lo que ve el cliente</button>
+        </Card>
+
+        {/* ── CENTRO · QR grande + mesas ── */}
+        <Card className="ol-qr">
+          <h3>QR de la mesa · {mesa ?? 'Llevar'}</h3>
+          <p className="ol-qr-sub">Pégalo en la mesa. El cliente escanea y le abre esta carta.</p>
+          <div className="ol-qrbox"><img src={qrSrc(url, 240)} width={206} height={206} alt={`QR ${destino}`} /></div>
+          <div className="ol-chips">
+            {mesas.map((m) => (
+              <button key={m.id} className={'ol-chip' + (mesa === m.nombre ? ' on' : '')} onClick={() => setMesa(m.nombre)}>{m.nombre}</button>
+            ))}
+            <button className={'ol-chip llevar' + (mesa === null ? ' on' : '')} onClick={() => setMesa(null)}>Llevar</button>
+          </div>
+          <div className="ol-acts">
+            <button className="ol-btn" onClick={copy}>Copiar enlace</button>
+            <button className="ol-btn" onClick={printOne}>Imprimir este QR</button>
+            <button className="ol-btn gold" onClick={printAll}>Generar QR de TODAS las mesas</button>
           </div>
         </Card>
 
-        {/* ── Controles + QR ── */}
-        <div className="online-side">
-          <Card className="online-qr-card">
-            <div className="card-head"><h3>QR de la mesa</h3></div>
-            <div className="online-qr"><img src={qrSrc(url, 240)} width={180} height={180} alt={`QR ${destino}`} /></div>
-            <div className="online-qr-mesa">{destino}</div>
-            <p className="online-qr-help">Pega este QR en la mesa. El cliente lo escanea con su móvil y le abre esta carta directamente.</p>
-            <div className="online-actions">
-              <button className="btn-line" onClick={() => window.open(url, '_blank')}>Abrir a pantalla completa</button>
-              <button className="btn-line" onClick={copy}>Copiar enlace</button>
-              <button className="btn-line" onClick={printOne}>Imprimir este QR</button>
-              <button className="btn-gold" onClick={printAll}>Generar QR de TODAS las mesas</button>
+        {/* ── DERECHA · feed en vivo ── */}
+        <Card className="ol-feed">
+          <div className="ol-feed-head"><h3>Pedidos online de hoy</h3><span className="ol-tag">en vivo</span></div>
+          {feed.length === 0 ? (
+            <div className="ol-empty">
+              <div className="ol-empty-ic">📲</div>
+              <b>Aún no ha entrado ningún pedido online</b>
+              <p>Pega el QR en las mesas. Cuando un cliente pida por su móvil, aparecerá aquí al instante.</p>
             </div>
-          </Card>
-
-          <Card className="online-mesas">
-            <div className="card-head"><h3>Elegir mesa</h3></div>
-            <div className="online-mesa-grid">
-              {mesas.map((m) => (
-                <button key={m.id} className={'online-mesa-chip' + (mesa === m.nombre ? ' on' : '')} onClick={() => setMesa(m.nombre)}>{m.nombre}</button>
-              ))}
-              <button className={'online-mesa-chip llevar' + (mesa === null ? ' on' : '')} onClick={() => setMesa(null)}>Llevar</button>
+          ) : (
+            <div className="ol-orders">
+              {feed.map((c) => {
+                const e = EST[c.status]
+                return (
+                  <div className="ol-ord" key={c.id}>
+                    <span className="ol-n">#{c.n}</span>
+                    <span className="ol-dst">{c.mesa ? `Mesa ${c.mesa}` : '🛵 Para llevar'}
+                      <small>{c.items.map((i) => `${i.qty}× ${i.name}`).join(' · ')}</small>
+                    </span>
+                    <span className="ol-imp">{eur(totalComanda(c))}<i className="ol-cur">€</i></span>
+                    <span className={'ol-st ' + e.cls}>{e.label}</span>
+                  </div>
+                )
+              })}
             </div>
-          </Card>
-
-          <Card className="online-loop">
-            <div className="card-head"><h3>El circuito</h3></div>
-            <ol className="online-steps">
-              <li><b>1</b> El cliente escanea el QR de su mesa</li>
-              <li><b>2</b> Ve la carta y monta su pedido</li>
-              <li><b>3</b> Paga online (sin camarero)</li>
-              <li><b>4</b> El pedido entra en <strong>Comandas</strong> (cocina) y baja el stock</li>
-            </ol>
-            <p className="online-note">Nota: que el pedido salte EN VIVO a tu cocina desde otro móvil necesita el backend (Supabase). Aquí lo ves funcionando en este mismo equipo.</p>
-          </Card>
-        </div>
+          )}
+        </Card>
       </div>
     </div>
   )

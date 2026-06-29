@@ -47,6 +47,17 @@ function load(): LocalCfg {
 // Fuente única que consume el Mapa. Se resuelve una vez al cargar el módulo (igual que antes el const LOCAL).
 export const LOCAL: LocalCfg = load()
 
+// SLUG público del local (el de la URL /pedir y del Edge Function). FUENTE ÚNICA: antes estaba hardcodeado
+// 'bertamirans' en 4 sitios (Online/Pedir/Tpv/Shell) → el QR de cualquier cliente apuntaba a Bertamiráns.
+// Sale del perfil elegido en el login ('rebell-profile'); cae a 'bertamirans' solo como demo de partida.
+export function localSlug(): string {
+  try {
+    return (localStorage.getItem('rebell-profile') || 'bertamirans').toLowerCase()
+  } catch {
+    return 'bertamirans'
+  }
+}
+
 // Para cuando exista un editor de la ficha del local (multi-tenant): persiste y devuelve la nueva config.
 export function setLocal(patch: Partial<LocalCfg>): LocalCfg {
   const next = { ...LOCAL, ...patch }

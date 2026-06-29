@@ -12,7 +12,8 @@ import { supabase, localId } from './supabase'
 import { isDemoMode } from './demo'
 
 export type TipoDoc = 'ticket' | 'factura'
-export type Venta = { id: string; tipo: TipoDoc; ts: number; arts: number; total: number; metodo?: Metodo; mesa?: string | null }
+export type Canal = 'Sala' | 'Online' // de dónde viene la venta: TPV/sala vs pedido por QR (self-order)
+export type Venta = { id: string; tipo: TipoDoc; ts: number; arts: number; total: number; metodo?: Metodo; mesa?: string | null; fuente?: Canal }
 
 // Histórico de demo (tickets/facturas recientes) → el libro arranca poblado.
 const SEED: Venta[] = [
@@ -29,8 +30,21 @@ const SEED: Venta[] = [
   { id: 'T-0001', tipo: 'ticket', ts: new Date(2026, 5, 17, 20, 5).getTime(), arts: 1, total: 11.0, metodo: 'efectivo' },
 ]
 
-const KEY = 'rebell-ventas-v1'
+const KEY = 'rebell-ventas-v2' // v2: re-siembra el libro demo con los pedidos ONLINE de hoy (Canal online)
 const r2 = (n: number) => Math.round(n * 100) / 100
+
+// Semilla DEMO de pedidos ONLINE de HOY (canal QR) → el panel "Canal online" arranca vivo (8 pedidos · 168,30€ ·
+// ticket medio 21,04€). Fechado HOY a ratos para que cuente en "online hoy". SOLO demo; en real arranca a 0.
+function seedOnlineHoy(): Venta[] {
+  const at = (h: number, min: number) => { const d = new Date(); d.setHours(h, min, 0, 0); return d.getTime() }
+  const raw: Array<[string, string | null, number, number]> = [ // [id, mesa, arts, total]
+    ['O-0108', '3', 1, 12.5], ['O-0106', '1', 3, 16.7], ['O-0104', '5', 3, 16.5],
+    ['O-0103', null, 2, 22.3], ['O-0102', '4', 4, 28.1], ['O-0101', null, 3, 28.9],
+    ['O-0110', null, 2, 24.9], ['O-0112', '7', 3, 18.4],
+  ]
+  const hrs = [12, 13, 13, 14, 14, 15, 20, 21]
+  return raw.map(([id, mesa, arts, total], i) => ({ id, tipo: 'ticket' as TipoDoc, ts: at(hrs[i], 5 + i * 7), arts, total, metodo: 'tarjeta' as Metodo, mesa, fuente: 'Online' as Canal }))
+}
 
 function load(): Venta[] {
   if (!isDemoMode()) return [] // REAL: el libro de ventas lo llena el negocio (Supabase); sin SEED de ejemplo
@@ -43,7 +57,7 @@ function load(): Venta[] {
   } catch {
     /* sin localStorage */
   }
-  return SEED.map((v) => ({ ...v }))
+  return [...seedOnlineHoy(), ...SEED.map((v) => ({ ...v }))]
 }
 let ventas: Venta[] = load()
 
@@ -59,10 +73,10 @@ function emit() {
 export const getVentas = (): Venta[] => ventas
 
 /* ── Cableado Supabase (libro real por local), solo si hay sesión ── */
-type VRow = { id: string; numero: number | null; doc: TipoDoc; total: number; metodo: Metodo | null; mesa: string | null; arts: number | null; creado_at: string }
+type VRow = { id: string; numero: number | null; doc: TipoDoc; total: number; metodo: Metodo | null; mesa: string | null; arts: number | null; creado_at: string; fuente?: string | null }
 const fmt = (n: number | null, id: string) => (n ? 'T-' + String(n).padStart(4, '0') : id.slice(0, 6))
 function fromVRow(r: VRow): Venta {
-  return { id: fmt(r.numero, r.id), tipo: r.doc, ts: new Date(r.creado_at).getTime(), arts: r.arts ?? 0, total: r.total, metodo: r.metodo ?? undefined, mesa: r.mesa }
+  return { id: fmt(r.numero, r.id), tipo: r.doc, ts: new Date(r.creado_at).getTime(), arts: r.arts ?? 0, total: r.total, metodo: r.metodo ?? undefined, mesa: r.mesa, fuente: r.fuente === 'Online' ? 'Online' : 'Sala' }
 }
 let _syncStarted = false
 let _live = false
@@ -88,7 +102,7 @@ async function initSync() {
 }
 
 // Cada cobro del TPV cae aquí → aparece en el libro al instante. Devuelve la venta creada.
-export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; metodo?: Metodo; mesa?: string | null; id?: string | null; numero?: number }): Venta {
+export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; metodo?: Metodo; mesa?: string | null; id?: string | null; numero?: number; fuente?: Canal }): Venta {
   const venta: Venta = {
     id: v.id || 'T-' + String(Date.now()).slice(-4),
     tipo: v.tipo ?? 'ticket',
@@ -97,12 +111,13 @@ export function appendVenta(v: { tipo?: TipoDoc; arts: number; total: number; me
     total: r2(v.total),
     metodo: v.metodo,
     mesa: v.mesa ?? null,
+    fuente: v.fuente ?? 'Sala',
   }
   if (_live && supabase) {
     const lid = localId()
     if (lid) {
       // La verdad va a Supabase; el realtime lo añade al libro (aquí y en otros dispositivos).
-      supabase.from('ventas').insert({ local_id: lid, total: venta.total, metodo: venta.metodo ?? 'tarjeta', mesa: venta.mesa, doc: venta.tipo, numero: v.numero ?? null, arts: venta.arts }).then(({ error }) => { if (error) { ventas = [venta, ...ventas].slice(0, 400); emit() } })
+      supabase.from('ventas').insert({ local_id: lid, total: venta.total, metodo: venta.metodo ?? 'tarjeta', mesa: venta.mesa, doc: venta.tipo, numero: v.numero ?? null, arts: venta.arts, fuente: venta.fuente }).then(({ error }) => { if (error) { ventas = [venta, ...ventas].slice(0, 400); emit() } })
       return venta
     }
   }
@@ -144,6 +159,16 @@ export const ventasHoy = (): Venta[] => ventas.filter(esHoy)
 export const ventasHoyTotal = () => r2(ventasHoy().reduce((s, v) => s + v.total, 0))
 export const ventasHoyPorMetodo = (m: Metodo) => r2(ventasHoy().filter((v) => (v.metodo ?? 'tarjeta') === m).reduce((s, v) => s + v.total, 0))
 export const ventasHoyCount = () => ventasHoy().length
+
+/* ── CANAL ONLINE (pedido por QR) · resumen de HOY ──
+   Fuente única para el panel Canal online: las ventas de hoy marcadas fuente='Online'. En real arranca a 0
+   (empty-state honesto) y sube con cada pedido por QR; en demo sale poblado por seedOnlineHoy(). */
+export const ventasOnlineHoy = (): Venta[] => ventasHoy().filter((v) => v.fuente === 'Online')
+export function resumenOnlineHoy(): { pedidos: number; total: number; ticket: number } {
+  const list = ventasOnlineHoy()
+  const total = r2(list.reduce((s, v) => s + v.total, 0))
+  return { pedidos: list.length, total, ticket: list.length ? r2(total / list.length) : 0 }
+}
 
 export function useVentas(): Venta[] {
   const [, force] = useState(0)

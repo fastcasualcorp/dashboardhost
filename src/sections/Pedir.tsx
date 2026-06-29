@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
-import { LOCAL } from '../lib/local'
+import { LOCAL, localSlug } from '../lib/local'
 import { pushComanda } from '../lib/comandas'
 import { consumirVenta } from '../lib/almacen'
 import { appendVenta } from '../lib/ventas'
@@ -160,7 +160,7 @@ export default function Pedir() {
         const res = await fetch(`${base}/functions/v1/pedido`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
-          body: JSON.stringify({ local: (qp('l') || 'bertamirans').toLowerCase(), mesa: mesaName, items, total: importe, metodo: 'tarjeta' }),
+          body: JSON.stringify({ local: (qp('l') || localSlug()).toLowerCase(), mesa: mesaName, items, total: importe, metodo: 'tarjeta' }),
         })
         const j = (await res.json().catch(() => ({}))) as { ok?: boolean; numero?: number }
         if (res.ok && j?.ok && j.numero) numero = j.numero
@@ -172,9 +172,9 @@ export default function Pedir() {
       // fallback demo (sin backend): stores locales de este navegador
       const tk = nextTicket()
       numero = ticketNum(tk)
-      pushComanda({ n: numero, mesa: mesaName, items, src: 'Sala' })
+      pushComanda({ n: numero, mesa: mesaName, items, src: 'Online' }) // entra por QR self-order → canal ONLINE (no Sala)
       consumirVenta(items)
-      appendVenta({ id: tk, tipo: 'ticket', arts: units, total: importe, metodo: 'tarjeta', mesa: mesaName, numero })
+      appendVenta({ id: tk, tipo: 'ticket', arts: units, total: importe, metodo: 'tarjeta', mesa: mesaName, numero, fuente: 'Online' })
     }
     recordOrder(items, importe) // ADN del cliente (su propia cuenta, localStorage) — siempre
     if (redeem && tieneRecompensa) redeemReward()

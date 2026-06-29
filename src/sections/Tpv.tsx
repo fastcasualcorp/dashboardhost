@@ -15,6 +15,7 @@ import { cuentaTotal, cuentaItems, addToCuenta, seedCuenta, clearCuenta, clearAl
 import { appendVenta, isLive } from '../lib/ventas'
 import { consumirVenta } from '../lib/almacen'
 import { onLocalReady, hasSupabase } from '../lib/supabase'
+import { localSlug } from '../lib/local'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
 
@@ -249,7 +250,7 @@ export default function Tpv() {
     // sirve el panel → funciona en localhost y en prod sin tocar nada). Lleva el
     // local + la mesa, así el cliente cae directo en su carta. (self-order por QR)
     const base = typeof window !== 'undefined' ? `${window.location.origin}/pedir` : '/pedir'
-    const params = `l=bertamirans${mesa ? `&m=${encodeURIComponent(mesa.nombre)}` : ''}`
+    const params = `l=${localSlug()}${mesa ? `&m=${encodeURIComponent(mesa.nombre)}` : ''}`
     return `${base}?${params}`
   }
   // HTML del justificante (recibo) — reutilizado para imprimir y para el email.

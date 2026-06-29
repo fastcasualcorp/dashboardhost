@@ -15,13 +15,13 @@ import HealthDot from './HealthDot'
 import WalletHoy from './WalletHoy'
 import ScaleControl from './ScaleControl'
 import DeployBadge from './DeployBadge'
-import LogoMark from './LogoMark'
 import { beastById } from '../lib/beasts'
 import { isDemoMode, setDemoMode } from '../lib/demo'
 import { onboardingComplete, onboardingPct } from '../lib/onboarding'
 import { getPlan, canUpgrade, planName, type Plan } from '../lib/plan'
 import { renderSection } from '../sections/registry'
 import { applySavedDesign } from '../lib/designTokens'
+import { localSlug } from '../lib/local'
 // Canon es una herramienta interna grande → lazy (fuera del bundle inicial; solo carga al abrirla).
 const Canon = lazy(() => import('../sections/Canon'))
 
@@ -304,7 +304,7 @@ export default function Shell() {
   // Identidad del LOCAL para la cabecera persistente (visible en TODAS las pestañas → el dueño con varios
   // locales sabe siempre en cuál está). Nombre/ciudad del perfil guardado; plan visible y clicable.
   const localName = (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-profile-name')) || 'Bertamiráns'
-  const localId = (typeof localStorage !== 'undefined' && localStorage.getItem('rebell-profile')) || 'bertamirans'
+  const localId = localSlug()
   const LOCAL_CITY: Record<string, string> = { bertamirans: 'A Coruña · España', madrid: 'Madrid · España', barcelona: 'Barcelona · España', central: 'Sede central · España' }
   const localCity = LOCAL_CITY[localId] || 'España'
 
@@ -327,8 +327,7 @@ export default function Shell() {
       </div>
 
       <aside className={'sidebar' + (drawer ? ' open' : '')}>
-        {/* Logo del programa (FAT SMASH), bien visible encima del león (Juan 28-jun). Versión negativa para fondo oscuro. */}
-        <LogoMark variant="b" className="side-logo" />
+        {/* Logo del programa QUITADO de momento (a Juan no le convencía el nombre/logo "FAT SMASH"). (Juan, 30-jun) */}
         <button
           className={'side-brand' + (settingsOpen ? ' open' : '')}
           onClick={openSettings}
@@ -396,22 +395,25 @@ export default function Shell() {
               <span>{localCity}</span>
             </div>
           </div>
+          {/* Plan PRO (ya eres Pro): badge OSCURO con rayos verdes (tormenta suave), a la IZQUIERDA junto al
+              local. El morado animado "Mejorar" vive arriba a la derecha (solo Basic/Free). (Juan, 30-jun) */}
+          {!canUpgrade(plan) && (
+            <button className="plan-pill plan-pill-left" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Tu plan · ver y cambiar">
+              <span className="pp-in"><span className="plan-pill-ic" aria-hidden="true">◆</span> Plan <b>{planName(plan)}</b></span>
+            </button>
+          )}
           <div className="top-actions">
             {/* Píldora de PLAN (Juan, 30-jun). DOS caras de la misma píldora, según el plan de la cuenta:
                 · Pro  → badge MORADO glossy (estilo "Get Started" de la referencia).
                 · Free/Basic → botón "Mejorar" ANIMADO (barrido de brillo + glow, calcado del vídeo).
                 Ambas abren la pantalla de Planes. Misma altura (34px) que las demás píldoras. */}
-            {canUpgrade(plan) ? (
+            {canUpgrade(plan) && (
               <button className="plan-pill upgrade" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Mejora tu plan">
                 <span className="pp-shine" aria-hidden="true" />
                 <span className="pp-in">
                   <svg className="pp-spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.55 5.1 2.7 7.25 7.8 7.8-5.1.55-7.25 2.7-7.8 7.8-.55-5.1-2.7-7.25-7.8-7.8 5.1-.55 7.25-2.7 7.8-7.8Z" /></svg>
                   Mejorar
                 </span>
-              </button>
-            ) : (
-              <button className="plan-pill" onClick={() => window.dispatchEvent(new Event('rebell:open-planes'))} title="Tu plan · ver y cambiar">
-                <span className="pp-in"><span className="plan-pill-ic" aria-hidden="true">◆</span> Plan <b>{planName(plan)}</b></span>
               </button>
             )}
             {/* Demo SIEMPRE visible y de doble sentido: apagado = enciende datos de ejemplo; encendido = vuelve a real.
