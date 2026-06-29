@@ -167,7 +167,7 @@ export default function Gastos() {
             <div className="gx-card-head"><h3>¿A dónde va?</h3><span className="gx-mut">{mil(total)} €/mes</span></div>
             <div className="gx-bar">
               {cats.map((c) => (
-                <button key={c.name} className={'gx-bar-seg' + (filtro && filtro !== c.name ? ' dim' : '')} style={{ width: pctOf(c.value, total) + '%', background: c.color }} onClick={() => toggleFiltro(c.name)} title={`${c.name} · ${mil(c.value)} €`} />
+                <button key={c.name} className={'gx-bar-seg' + (filtro && filtro !== c.name ? ' dim' : '') + (filtro === c.name ? ' on' : '')} style={{ flex: c.value, background: c.color, color: c.color }} onClick={() => toggleFiltro(c.name)} title={`${c.name} · ${mil(c.value)} €`} />
               ))}
             </div>
             <div className="gx-leg">
