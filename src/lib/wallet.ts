@@ -6,9 +6,10 @@ import { useEffect, useRef, useState } from 'react'
 import { reduceMotion } from './data'
 import { appendCierre } from './cierres'
 import { isLive, initVentas, ventasHoy, ventasHoyTotal, ventasHoyPorMetodo, ventasHoyCount } from './ventas'
+import { isDemoMode } from './demo'
 
 const KEY = 'rebell-caja-dia-v1'
-const SEED = 1787.4 // demo: "ya vendido hoy" → ambos marcadores arrancan poblados e IGUALES
+const SEED = 1787.4 // demo: "ya vendido hoy" → marcadores poblados. En REAL = 0 (un local nuevo arranca sin caja). (Juan, 29-jun)
 
 const today = () => {
   try {
@@ -34,7 +35,7 @@ function load(): State {
   } catch {
     /* sin localStorage */
   }
-  return { fecha: today(), total: SEED, entries: [] }
+  return { fecha: today(), total: isDemoMode() ? SEED : 0, entries: [] }
 }
 let entrySeq = 0
 

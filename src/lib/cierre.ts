@@ -7,6 +7,7 @@
    `ventas`/`comandas` del local; la FORMA de salida ya es la definitiva.
    ════════════════════════════════════════════════════════════════════ */
 import { CAJA, FRANJAS_M, FRANJAS_T } from './data'
+import { isDemoMode } from './demo'
 
 export type DiaTurno = { efectivo: number; tarjeta: number; domicilio: number }
 export type Plato = { name: string; emoji: string; img: string; uds: number; eur: number }
@@ -62,7 +63,16 @@ const STOCK_BASE = [
   { item: 'Patata', emoji: '🥔', img: '/img/prod/patata.jpg', stock: 28, porPlato: 0.22, unidad: 'kg' },
 ]
 
+// Cierre VACÍO (misma forma, todo a 0) — lo que devuelve el modo REAL: un local nuevo no tiene datos
+// inventados; los reales llegarán de Supabase. Evita el generador RNG demo en producción. (Juan, 29-jun)
+const cierreVacio = (): Cierre => ({
+  total: 0, tickets: 0, medio: 0, descuadre: 0, deltaSemana: 0,
+  manana: { efectivo: 0, tarjeta: 0, domicilio: 0 }, tarde: { efectivo: 0, tarjeta: 0, domicilio: 0 },
+  subM: 0, subT: 0, franjasM: [], franjasT: [], topPlatos: [], alertas: [], stockManana: [],
+})
+
 export function cierreDia(fecha: Date): Cierre {
+  if (!isDemoMode()) return cierreVacio() // REAL = sin datos falsos (solo demo usa el generador determinista)
   const r = rng(seedOf(fecha))
   const f = factorFecha(fecha, r)
   const scaleTurno = (t: DiaTurno): DiaTurno => ({

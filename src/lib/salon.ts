@@ -2,6 +2,7 @@
    Salón y el selector de mesa del TPV. Persiste en Supabase (tabla `mesas`, RLS por
    local) cuando hay sesión; localStorage hace de caché para pintar al instante. */
 import { supabase, localId } from './supabase'
+import { isDemoMode } from './demo'
 
 export type MesaForma = 'cuadrada' | 'redonda' | 'rect' | 'ele'
 export type MesaEstado = 'libre' | 'ocupada' | 'cobrar' // estado de servicio ("mesa viva")
@@ -100,7 +101,8 @@ export function loadSalon(): Mesa[] {
   } catch {
     /* sin localStorage */
   }
-  return DEFAULT_SALON
+  // REAL: lienzo VACÍO (el cliente dibuja su propio salón). El plano de ejemplo es SOLO demo. (Juan, 29-jun)
+  return isDemoMode() ? DEFAULT_SALON : []
 }
 
 // Plano CACHEADO del scope actual, o null si NO hay (sin el fallback a DEFAULT_SALON de loadSalon). Sirve para
@@ -136,6 +138,7 @@ export const totalPlazas = (mesas: Mesa[]) => mesas.reduce((s, m) => s + m.silla
 // (demo de una sesión anterior → todo "Liberar") se RE-SIEMBRA → siempre hay cuentas atrás corriendo.
 // (se aplica tanto al plano de localStorage como al de Supabase, que no guarda estado de servicio).
 export function seedStates(list: Mesa[]): Mesa[] {
+  if (!isDemoMode()) return allLibre(list) // REAL: sin ocupación/cuentas atrás inventadas (solo demo)
   const t = Date.now()
   // "Vivo" = hay al menos una mesa OCUPADA con cuenta atrás todavía corriendo. Una mesa "cobrar" NO cuenta
   // (no tiene timer): si solo quedan cobrar + ocupadas caducadas, se RE-SIEMBRA → siempre se ven tiempos.

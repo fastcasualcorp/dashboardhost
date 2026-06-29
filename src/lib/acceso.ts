@@ -9,6 +9,7 @@
    ════════════════════════════════════════════════════════════════════ */
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { isDemoMode } from './demo'
 
 export type Evento = 'login' | 'abrir_caja' | 'cerrar_caja'
 export type Acceso = { id: string; ts: number; usuario: string; evento: Evento; ip: string | null; dispositivo: string | null }
@@ -39,7 +40,7 @@ const SEED: Acceso[] = [
   { id: 's4', ts: new Date(2026, 5, 26, 16, 18).getTime(), usuario: 'encargado@rebell.app', evento: 'login', ip: '212.51.9.77', dispositivo: 'Chrome · Android (móvil)' },
 ]
 
-let accesos: Acceso[] = SEED.slice()
+let accesos: Acceso[] = isDemoMode() ? SEED.slice() : []
 
 function emit() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:accesos'))
