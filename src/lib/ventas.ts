@@ -33,6 +33,7 @@ const KEY = 'rebell-ventas-v1'
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function load(): Venta[] {
+  if (!isDemoMode()) return [] // REAL: el libro de ventas lo llena el negocio (Supabase); sin SEED de ejemplo
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {

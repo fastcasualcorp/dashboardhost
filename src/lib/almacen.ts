@@ -79,7 +79,9 @@ const RECETAS: Record<string, { pid: string; pct: number }[]> = {
 }
 
 const clone = (list: Almacen[]): Almacen[] => list.map((a) => ({ ...a, items: a.items.map((it) => ({ ...it })) }))
-let almacenes: Almacen[] = clone(ALM0)
+// DEMO = escaparate con almacén de ejemplo. REAL = vacío hasta que Supabase traiga el stock real
+// (sin esto, un local nuevo veía existencias inventadas antes de sincronizar). (Juan, 29-jun)
+let almacenes: Almacen[] = isDemoMode() ? clone(ALM0) : []
 
 function emit() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('rebell:almacen'))

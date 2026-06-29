@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "abrir": "open http://localhost:5173",
-    "build": "npm run lint:css && npm run check:baseline && tsc -b && vite build && node scripts/check-bundle.js",
+    "build": "npm test && npm run lint:css && npm run check:baseline && tsc -b && vite build && node scripts/check-bundle.js",
     "lint": "eslint .",
     "lint:css": "stylelint \"src/**/*.css\"",
     "check:baseline": "node scripts/check-baseline.js",
