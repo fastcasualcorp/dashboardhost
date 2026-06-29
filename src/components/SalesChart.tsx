@@ -31,8 +31,14 @@ const TOP = 20
 const BOTTOM = 26 // banda de la línea; el área baja hasta H (base del "monte")
 const GRID = 3 // líneas de referencia horizontales
 
-export default function SalesChart() {
+/* `today` (opcional) = la CAJA REAL de hoy en vivo. El gráfico de 10 días SIEMPRE termina HOY, así que su
+   último punto debe seguir el MISMO número que el panel "Caja hoy" (no el simulado) y actualizarse en tiempo
+   real al entrar cada pedido. Si no se pasa, el punto de hoy usa el dato de SALES (demo/RPC). (Juan, 29-jun) */
+export default function SalesChart({ today, pulse = 0 }: { today?: { value: number; e: number; t: number; d: number }; pulse?: number }) {
   useRealAgg() // en REAL repinta con las ventas reales (RPC) cuando aterrizan; en DEMO no hace nada
+  // Serie con el punto de HOY sobrescrito por la caja real en vivo (fuente única con "Caja hoy").
+  const series = today ? SALES.map((s) => (s.today ? { ...s, value: today.value, e: today.e, t: today.t, d: today.d } : s)) : SALES
+  const median = today ? series.reduce((s, p) => s + p.value, 0) / series.length : salesMedian
   const areaRef = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(0)
   // Alto REAL del .chart-area en px. El viewBox usa este alto (no 240 fijo) → el SVG mapea 1:1 con el
@@ -57,18 +63,18 @@ export default function SalesChart() {
     return () => ro.disconnect()
   }, [])
 
-  const values = SALES.map((s) => s.value)
+  const values = series.map((s) => s.value)
   const hasData = values.some((v) => v > 0) // sin ventas → estado vacío limpio (no la línea con degradado fea). Juan
   const vmax = Math.max(...values)
   const vmin = Math.min(...values)
   const span = vmax - vmin || 1
   const yOf = (v: number) => TOP + (1 - (v - vmin) / span) * (H - TOP - BOTTOM)
-  const xOf = (i: number) => PAD_L + (i * (w - PAD_L - PAD_R)) / (SALES.length - 1)
+  const xOf = (i: number) => PAD_L + (i * (w - PAD_L - PAD_R)) / (series.length - 1)
   // valor (€) que corresponde a una altura de la rejilla → etiquetas del eje Y (a la izquierda).
   const valAtY = (gy: number) => vmin + (1 - (gy - TOP) / (H - TOP - BOTTOM)) * span
   const kfmt = (v: number) => (v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + 'k' : String(Math.round(v)))
 
-  const pts: Pt[] = SALES.map((s, i) => ({ x: xOf(i), y: yOf(s.value) }))
+  const pts: Pt[] = series.map((s, i) => ({ x: xOf(i), y: yOf(s.value) }))
   const line = w ? smooth(pts) : ''
   const area = w ? `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z` : ''
   const last = pts[pts.length - 1]
@@ -121,7 +127,7 @@ export default function SalesChart() {
     if (idx !== hover) setHover(idx)
   }
 
-  const hp = hover != null ? SALES[hover] : null
+  const hp = hover != null ? series[hover] : null
   const hpt = hover != null ? pts[hover] : null
   const tipLeft = hpt ? Math.min(Math.max(hpt.x, 84), Math.max(84, w - 84)) : 0
   const tipAbove = hpt ? hpt.y > H * 0.42 : true
@@ -144,7 +150,7 @@ export default function SalesChart() {
           <div className="ch-sub">{SALES_RANGE} · Bertamiráns</div>
         </div>
         <div className="ch-stat">
-          <b className="tnum"><Money value={eur0(salesMedian)} /></b>
+          <b className="tnum"><Money value={eur0(median)} /></b>
           <small>media diaria</small>
         </div>
       </div>
@@ -206,6 +212,9 @@ export default function SalesChart() {
               <circle className="dc-dot-ring" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="6.5" fill="none" />
               <circle className="dc-dot" cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="4.2" />
             </g>
+            {/* LATIDO: cada pedido/cobro nuevo → anillo lima que se expande en el punto de HOY (el gráfico "respira"
+                con el negocio en directo). Se remonta por key → repite la animación en cada pulso. (Juan, 29-jun) */}
+            {pulse > 0 && <circle className="dc-beat" key={pulse} cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r="5" fill="none" />}
           </svg>
         )}
 
@@ -244,7 +253,7 @@ export default function SalesChart() {
       {/* eje X — fechas como eje real (base + ticks), no números sueltos */}
       <div className="ch-x">
         {w > 0 &&
-          SALES.map((s, i) => (
+          series.map((s, i) => (
             <span key={s.day} className={s.today ? 'today' : ''} style={{ left: xOf(i) }}>
               {s.today ? 'Hoy' : <>{s.day}<i> {s.mon}</i></>}
             </span>

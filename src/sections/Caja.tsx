@@ -6,9 +6,10 @@ import { Stat, StatRow, Money } from '../components/ui'
 import { play } from '../lib/sound'
 import { eur, eur0, reduceMotion, HOY } from '../lib/data'
 import { cierreDia, esMismoDia, fmtDiaLargo, addDias } from '../lib/cierre'
-import { useCajaDelDia, walletPorMetodo } from '../lib/wallet'
+import { useCajaDelDia, walletPorMetodo, walletTotal } from '../lib/wallet'
 import { isLive, ventasHoyCount } from '../lib/ventas'
 import { isDemoMode } from '../lib/demo'
+import { loadCaja } from '../lib/caja'
 
 gsap.registerPlugin(useGSAP)
 
@@ -109,6 +110,30 @@ export default function Caja() {
   const [descuadre, setDescuadre] = useState(false)
   const [shine, setShine] = useState(false)
 
+  // "Local encendido" + pulso de pedido. Caja ABIERTA → el panel héroe "Caja hoy" enciende su glow que
+  // RESPIRA (mismo lenguaje que la pestaña activa del menú). Cada cobro que SUBE el total → pulso de
+  // celebración. Escucha los mismos eventos que la cartera del día (rebell:caja / rebell:ventas). (Juan, 29-jun)
+  const [cajaOpen, setCajaOpen] = useState(() => loadCaja().abierta)
+  const [bump, setBump] = useState(0)
+  const lastTotal = useRef(walletTotal())
+  useEffect(() => {
+    const onMoney = () => {
+      setCajaOpen(loadCaja().abierta)
+      const t = walletTotal()
+      if (t > lastTotal.current + 0.001) setBump((b) => b + 1) // entró dinero → celebra
+      lastTotal.current = t
+    }
+    const onCaja = () => setCajaOpen(loadCaja().abierta) // abrir/cerrar caja desde otra pestaña
+    window.addEventListener('rebell:caja', onMoney)
+    window.addEventListener('rebell:ventas', onMoney)
+    window.addEventListener('storage', onCaja)
+    return () => {
+      window.removeEventListener('rebell:caja', onMoney)
+      window.removeEventListener('rebell:ventas', onMoney)
+      window.removeEventListener('storage', onCaja)
+    }
+  }, [])
+
   // ── Navegación por FECHA: el cierre de cualquier día (no solo hoy) ──
   const [fecha, setFecha] = useState<Date>(() => new Date(HOY))
   const dia = useMemo(() => cierreDia(fecha), [fecha])
@@ -133,6 +158,20 @@ export default function Caja() {
   const medioDia = esHoy ? (ticketsDia ? Math.round((totalDia / ticketsDia) * 100) / 100 : 0) : dia.medio
   const efectivoDia = liveHoy ? walletPorMetodo('efectivo') : sc(dia.manana.efectivo + dia.tarde.efectivo)
   const tarjetaDia = liveHoy ? walletPorMetodo('tarjeta') : sc(dia.manana.tarjeta + dia.tarde.tarjeta)
+  // El gráfico de 10 días SIEMPRE termina en HOY → su último punto debe reflejar la CAJA REAL de hoy EN VIVO
+  // (igual que el panel "Caja hoy"), no el simulado. Se calcula para HOY (no el día seleccionado) y el desglose
+  // sale de la MISMA fuente que el donut "Caja del día" → coherente. hoyTotal anima → la punta sube en directo.
+  const diaHoy = useMemo(() => cierreDia(HOY), [])
+  const kHoy = diaHoy.total > 0 ? hoyTotal / diaHoy.total : 1
+  const scH = (v: number) => Math.round(v * kHoy * 100) / 100
+  const chartToday = {
+    value: hoyTotal,
+    e: isLive() ? walletPorMetodo('efectivo') : scH(diaHoy.manana.efectivo + diaHoy.tarde.efectivo),
+    t: isLive() ? walletPorMetodo('tarjeta') : scH(diaHoy.manana.tarjeta + diaHoy.tarde.tarjeta),
+    // En REAL no hay método "domicilio" todavía → 0 (efectivo+tarjeta ya suman el total). En DEMO, su parte simulada.
+    // Así el desglose del tooltip de "Hoy" SIEMPRE cuadra con la cifra total. (revisor, 29-jun)
+    d: isLive() ? 0 : scH(diaHoy.manana.domicilio + diaHoy.tarde.domicilio),
+  }
   const descAmt = dia.descuadre < 0 ? dia.descuadre : -12.4
   const maxUds = Math.max(...dia.topPlatos.map((p) => p.uds), 1)
 
@@ -336,16 +375,26 @@ export default function Caja() {
               </button>
             </div>
 
-            {/* COCKPIT (Juan, 28-jun): UN SOLO rectángulo con los 4 datos clave, equidistantes y alineados
-                (el mismo <Stat> para todos → imposible descuadrar). El total de HOY es el primero, en lima. */}
-            <StatRow className="ck-statrow ck-statrow-top">
-              <Stat value={heroNum} unit="€" label="Caja hoy" count={false} className="rs-hoy" />
-              <Stat value={demo || liveHoy ? String(ticketsDia) : '—'} label="Tickets" count={false} />
-              <Stat value={demo || liveHoy ? eur(medioDia) : '—'} unit={demo || liveHoy ? '€' : ''} label="Ticket medio" count={false} />
-              {demo && (
-                <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
-              )}
-            </StatRow>
+            {/* COCKPIT (Juan, 29-jun): "Caja hoy" se SEPARA en un panel HÉROE con peso propio (glow que respira
+                cuando el local está abierto + pulso al entrar pedido); el resto de KPIs van agrupados al lado,
+                con el mismo <Stat> → imposible descuadrar. */}
+            <div className="ck-cockpit-top">
+              <div className={'ck-hoy-hero' + (esHoy && cajaOpen ? ' on' : '')}>
+                <span className="ck-hoy-status">
+                  <span className="chs-dot" />
+                  {esHoy ? (cajaOpen ? 'Local abierto' : 'Local cerrado') : fmtDiaLargo(fecha, HOY)}
+                </span>
+                <Stat value={heroNum} unit="€" label="Caja hoy" count={false} className="rs-hoy" />
+                {esHoy && bump > 0 && <span className="ck-hoy-pulse" key={bump} aria-hidden="true" />}
+              </div>
+              <StatRow className="ck-statrow ck-statrow-top">
+                <Stat value={demo || liveHoy ? String(ticketsDia) : '—'} label="Tickets" count={false} />
+                <Stat value={demo || liveHoy ? eur(medioDia) : '—'} unit={demo || liveHoy ? '€' : ''} label="Ticket medio" count={false} />
+                {demo && (
+                  <Stat value="20–22" unit="h" label="Mejor franja" count={false} />
+                )}
+              </StatRow>
+            </div>
             {/* Caja cuadrada → barra ANCHA y discreta debajo (Juan, 28-jun): es importante pero no debe gritar. */}
             <div className={'ck-cuadre-bar' + (descuadre ? ' warn' : '')} ref={balanceRef}>
               <span className="ck-cuadre-ic">{descuadre ? warnIcon : okIcon}</span>
@@ -411,7 +460,7 @@ export default function Caja() {
               {/* Gráfica de ventas + Caja del día LADO A LADO (ahorra espacio, todo de un vistazo).
                   En móvil se apilan. (Juan, 27-jun) */}
               <div className="ck-toprow">
-              <SalesChart />
+              <SalesChart today={chartToday} pulse={bump} />
               {/* Caja del día UNIFICADA: total + métodos en números limpios (sin barras),
                   con el split Mañana/Tarde debajo. (Juan, 27-jun: "las barras sobran, unificar en 1") */}
               <div className="turno turno-day" data-tilt>

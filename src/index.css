@@ -105,7 +105,10 @@ body {
 ::-webkit-scrollbar-thumb { background: transparent; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
-.app { font-family: var(--font); font-weight: var(--body-weight, 400); display: flex; min-height: 100dvh; --side-w: 264px; --font-wide: 1; }
+/* --top-h = altura REAL del header flotante (.panel-top): su padding clamp + los 44px de la fila de pills.
+   Token único → cualquier overlay que se incruste en el área de contenido (p.ej. el selector de mesa del TPV)
+   arranca JUSTO bajo el header en vez de solaparlo. (Juan, 29-jun) */
+.app { font-family: var(--font); font-weight: var(--body-weight, 400); display: flex; min-height: 100dvh; --side-w: 264px; --font-wide: 1; --top-h: calc(clamp(12px, 1vw, 18px) * 2 + 44px); }
 /* RADIO de panel ÚNICO: todos los paneles rectangulares comparten --card-r → "rectángulo de bordes
    suavizados" consistente en todo el dashboard (Juan, 28-jun). Pastillas (100px) y círculos (50%) van aparte. */
 /* Anchura de fuente (Canon → control vivo): ESTIRA horizontalmente los números-héroe sin tocar el
@@ -586,18 +589,22 @@ body {
    el centro toma su color y su fila se resalta. Estado de hover compartido donut↔leyenda. */
 .day-body { display: flex; align-items: center; gap: clamp(12px, 1.5vw, 17px); }
 .day-body .day-rows { flex: 1; min-width: 0; }
+/* Tamaño ÚNICO del donut (Caja del día, Reparto por plataforma…) → un solo sitio manda en TODAS las gráficas
+   redondas. vh/vw → encoge con la pantalla; ambos paneles van bajo el mismo zoom (.panel-content) → idéntico
+   tamaño en cualquier sección. Antes Pedidos usaba un tamaño base distinto al de Caja. (Juan, 29-jun) */
+.app { --donut-d: clamp(108px, min(16vh, 13vw), 190px); --donut-num: clamp(16px, min(3.3vh, 2.7vw), 32px); --donut-cap: clamp(8px, min(1.7vh, 1.4vw), 12px); }
 .day-donut { flex: 0 0 auto; position: relative; }
-.day-donut svg { width: clamp(144px, 12.6vw, 164px); height: clamp(144px, 12.6vw, 164px); display: block; overflow: visible; }
+.day-donut svg { width: var(--donut-d); height: auto; aspect-ratio: 1 / 1; max-width: 100%; display: block; overflow: visible; }
 .dd-track { stroke: rgba(255,255,255,.05); pointer-events: none; }
 [data-theme='light'] .dd-track { stroke: rgba(15,20,35,.08); }
 .dd-seg { cursor: pointer; transition: opacity .22s ease, stroke-width .22s ease, filter .22s ease; }
 .day-donut.hov .dd-seg { opacity: .22; }
 .day-donut.hov .dd-seg.on { opacity: 1; stroke-width: 11.5; filter: drop-shadow(0 0 7px color-mix(in srgb, var(--seg) 60%, transparent)); }
 .day-donut-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; line-height: 1; }
-.day-donut-c b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: clamp(26px, 2.7vw, 33px); color: var(--ink); letter-spacing: var(--num-spacing); transition: color .2s ease, text-shadow .2s ease; }
+.day-donut-c b { font-family: var(--font-num); font-weight: var(--num-weight); font-size: var(--donut-num); color: var(--ink); letter-spacing: var(--num-spacing); transition: color .2s ease, text-shadow .2s ease; }
 .day-donut-c b.on { color: var(--seg); text-shadow: 0 0 18px color-mix(in srgb, var(--seg) 45%, transparent); }
 .day-donut-c b i { font-style: normal; font-size: .62em; color: var(--muted); margin-left: 1px; }
-.day-donut-c span { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .08em; color: var(--faint); margin-top: 4px; font-weight: 700; transition: color .2s ease; }
+.day-donut-c span { font-size: var(--donut-cap); text-transform: uppercase; letter-spacing: .08em; color: var(--faint); margin-top: 4px; font-weight: 700; transition: color .2s ease; }
 .day-donut-c span.on { color: color-mix(in srgb, var(--seg) 78%, #fff); }
 
 /* Gráfica de ventas + Caja del día LADO A LADO (desktop); apiladas en móvil */
@@ -661,6 +668,45 @@ body {
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); padding: 12px clamp(8px,1.5vw,20px); }
 .caja-full .ck-statrow .rstat { padding: 4px clamp(6px, 1vw, 16px); gap: 5px; }
 .caja-full .ck-statrow .rstat-val { font-size: clamp(22px, 2.4vw, 32px); }
+
+/* ── "Caja hoy" = panel HÉROE separado (Juan, 29-jun) ─────────────────────────────────────────────
+   Se saca de la fila para darle PESO: estado del local + número grande en lima. ENCENDIDO (local abierto)
+   → marco cónico que ORBITA (mismo lenguaje que la pestaña activa del menú) + aura que RESPIRA = "vivo".
+   APAGADO → borde tenue, quieto. Cada pedido que entra dispara un destello lima (one-shot). Reduced-motion OK. */
+.ck-hoy-hero { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: clamp(6px, 1vh, 10px); padding: clamp(14px, 1.8vh, 22px) clamp(16px, 1.8vw, 26px);
+  border: 1px solid var(--line); border-radius: var(--card-r); background: rgba(10,10,14,.5);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); transition: border-color .4s ease; }
+.ck-hoy-hero .rstat { align-items: flex-start; padding: 0; gap: 4px; position: relative; z-index: 3; }
+.ck-hoy-hero .rstat-val { font-size: clamp(34px, 4vw, 56px); }
+/* estado del local (punto + texto) — SOLO LECTURA, nunca con pinta de botón */
+.ck-hoy-status { position: relative; z-index: 3; display: inline-flex; align-items: center; gap: 7px;
+  font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.ck-hoy-status .chs-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; }
+/* ENCENDIDO: punto lima latiendo + marco que orbita + aura que respira */
+.ck-hoy-hero.on { border-color: transparent; }
+.ck-hoy-hero.on .ck-hoy-status { color: var(--brand); }
+.ck-hoy-hero.on .chs-dot { background: var(--brand); animation: chsPing 2.4s ease-out infinite; }
+.ck-hoy-hero.on::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.6px;
+  background: conic-gradient(from var(--ang), rgba(var(--brand-rgb),.14) 0deg, rgba(var(--brand-rgb),.14) 205deg,
+    var(--gold) 250deg, #fff 270deg, var(--gold-soft) 290deg, rgba(var(--brand-rgb),.14) 335deg, rgba(var(--brand-rgb),.14) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: orbit 7s linear infinite; pointer-events: none; z-index: 2; }
+.ck-hoy-hero.on::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  box-shadow: 0 0 22px -6px rgba(var(--brand-rgb),.55), 0 0 0 1px rgba(var(--brand-rgb),.22);
+  animation: hoyBreath 3.4s ease-in-out infinite; }
+@keyframes hoyBreath { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
+@keyframes chsPing { 0% { box-shadow: 0 0 0 0 rgba(var(--brand-rgb),.5); } 70%,100% { box-shadow: 0 0 0 7px rgba(var(--brand-rgb),0); } }
+/* PULSO al entrar un pedido: destello del borde interior (no escala → no se recorta ni empuja layout) */
+.ck-hoy-pulse { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 0 2px rgba(var(--brand-rgb),.9), inset 0 0 30px -2px rgba(var(--brand-rgb),.5);
+  animation: hoyPulse .85s ease-out forwards; }
+@keyframes hoyPulse { 0% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ck-hoy-hero.on::before, .ck-hoy-hero.on::after, .ck-hoy-hero.on .chs-dot, .ck-hoy-pulse { animation: none; }
+  .ck-hoy-hero.on::after { opacity: .7; }
+}
+@media (max-width: 720px) { .caja-full .ck-cockpit-top { grid-template-columns: 1fr; } }
 /* gráfica|caja y platos|stock — tarjetas de IGUAL alto en cada fila (armonía); tamaño = su contenido */
 .caja-full .ck-sub { margin: 0; flex: none; display: flex; flex-direction: column; gap: clamp(11px, 1.5vh, 18px); }
 /* Filas de ALTO NATURAL (calco de la preview): cada tarjeta ocupa lo que su contenido necesita; NO se
@@ -675,12 +721,8 @@ body {
 .caja-full .day-body { flex: none; display: flex; align-items: center; gap: clamp(12px, 1.6vw, 24px); min-width: 0; }
 /* DONUT grande pero que ENCOGE con el espacio real (flex-shrink + svg max-width:100%) → nunca pisa los
    métodos al estrechar la tarjeta o al hacer zoom. Suelo legible. (Juan: grande + responsive) */
+/* tamaño/centro del donut → tokens únicos --donut-* (arriba, junto a .day-donut). Aquí solo el flex del contenedor. */
 .caja-full .day-donut { flex: 0 1 auto; min-width: 0; width: auto; height: auto; }
-.caja-full .day-donut svg { width: clamp(108px, min(16vh, 13vw), 190px); height: auto; aspect-ratio: 1 / 1; max-width: 100%; }
-/* El % del centro ESCALA CON EL DONUT (mismo min(vh,vw) que el svg) → en pantalla pequeña el donut encoge y
-   el "47%" encoge con él, no se queda gigante. (Juan, 29-jun: "el 47 se hace muy grande en pantallas pequeñas") */
-.caja-full .day-donut-c b { font-size: clamp(20px, min(4.9vh, 4vw), 46px); }
-.caja-full .day-donut-c span { font-size: clamp(8px, min(1.7vh, 1.4vw), 12px); }
 /* La gráfica trae 240px fijos de área → demasiado alta para el cockpit. La encogemos para que la fila de
    arriba quepa y deje sitio a Platos/Stock abajo. preserveAspectRatio="none" → la curva se reescala sola. */
 .caja-full .chart-area { height: clamp(108px, 13.5vh, 142px); }
@@ -705,9 +747,10 @@ body {
 .caja-full .ck-plato-nm, .caja-full .ck-alert-tx b { font-size: clamp(15px, 1.9vh, 19px); }
 .caja-full .ck-plato-uds { font-size: clamp(16px, 2.1vh, 21px); }
 .caja-full .ck-alert-tx small { font-size: clamp(12px, 1.5vh, 15px); }
-/* En Caja el panel-top es absolute a ancho de viewport → en desktop hay que desplazarlo el ancho del
-   sidebar para que la identidad (izquierda) NO pise el logo. En móvil el sidebar está fuera → left:0. */
-@media (min-width: 900px) { .panel-main.caja-full .panel-top { left: var(--side-w); } }
+/* En Caja el panel-top es absolute a ancho de viewport → SOLO desplazarlo el ancho del sidebar cuando el
+   sidebar EXISTE de verdad (≥1024px, igual que su breakpoint). Antes era 900px → entre 900 y 1024 no hay
+   sidebar pero la cabecera dejaba 264px de hueco vacío y la identidad se iba al centro (Juan, 29-jun). */
+@media (min-width: 1024px) { .panel-main.caja-full .panel-top { left: var(--side-w); } }
 .ck-kick { font-size: var(--fs-2xs); letter-spacing: .2em; text-transform: uppercase; color: var(--gold-soft); font-weight: 700; }
 /* número GIGANTE (facturación negocio). El brillo SIGUE LA FORMA del texto (background-clip:text), no un
    rectángulo invisible. Pedido de Juan (24-jun). */
@@ -1049,6 +1092,11 @@ body {
 .dc-dot-ring { stroke: var(--gold); stroke-width: 2; }
 .dc-dot-ring2 { stroke: rgba(var(--brand-rgb),.34); stroke-width: 1.2; }
 .dc-dot-pulse { stroke: rgba(var(--brand-rgb),.6); stroke-width: 1.5; }
+/* LATIDO en el punto de HOY al entrar un pedido/cobro: anillo lima que se expande y se desvanece (one-shot por key). */
+.dc-beat { stroke: var(--brand); fill: none; opacity: 0; transform-box: fill-box; transform-origin: center;
+  filter: drop-shadow(0 0 5px rgba(var(--brand-rgb),.7)); animation: dcBeat .95s cubic-bezier(.22,.61,.36,1); }
+@keyframes dcBeat { 0% { r: 4; opacity: .9; stroke-width: 3.2; } 100% { r: 18; opacity: 0; stroke-width: .4; } }
+@media (prefers-reduced-motion: reduce) { .dc-beat { display: none; } }
 .ch-median-lab { position: absolute; right: 0; font-size: var(--fs-3xs); color: var(--faint); font-weight: 600; letter-spacing: .3px; transform: translateY(-50%); background: var(--surface); padding-left: 5px; pointer-events: none; }
 /* eje X */
 /* eje X como eje REAL: línea base + ticks → los días leen como ejes, no números sueltos */
@@ -1368,6 +1416,31 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .section-head p { color: var(--muted); font-size: clamp(13px, 1vw, 16.5px); margin-top: 4px; }
 .sh-right { flex: none; }
 
+/* ════════ PEDIDOS · rediseño con el canon de Caja (Juan, 29-jun) ════════ */
+.sh-titlerow { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
+/* "EN DIRECTO" (rojo, late) / "CERRADO" (gris). El parpadeo se acelera con --live-dur (pedidos en cocina). */
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ff5b5b; background: rgba(255,75,75,.1); border: 1px solid rgba(255,75,75,.3); border-radius: var(--r-pill); padding: 5px 12px 5px 10px; }
+.live .ldot { position: relative; width: 9px; height: 9px; border-radius: 50%; background: #ff4444; flex: none; box-shadow: 0 0 8px rgba(255,68,68,.8); }
+.live .ldot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid #ff4444; animation: livePulse var(--live-dur, 1.9s) cubic-bezier(.23,1,.32,1) infinite; }
+@keyframes livePulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.6); opacity: 0; } }
+.live.off { color: var(--faint); background: rgba(255,255,255,.04); border-color: var(--line); }
+.live.off .ldot { background: var(--faint); box-shadow: none; }
+.live.off .ldot::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .live .ldot::after { animation: none; } }
+/* pie de variación opcional bajo un <Stat> (delta + contexto) */
+.rstat-foot { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.rstat-foot b { font-weight: 700; color: var(--muted); }
+.rstat-foot.up b { color: var(--brand); }
+.rstat-foot.down b { color: var(--warn); }
+.rstat-foot i { font-style: normal; color: var(--muted); }
+/* KPI en RECTÁNGULO ÚNICO (mismo <Stat> que Caja) — 4 columnas IGUALES (equidistancia real) */
+.ped-statrow { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--card-r); padding: 4px; }
+.ped-statrow .rstat { align-items: flex-start; text-align: left; padding: 16px clamp(14px, 1.9vw, 28px); gap: 7px; }
+.ped-statrow .rstat-val { font-size: clamp(30px, 3.1vw, 42px); }
+.ped-statrow .rstat.lead .rstat-val { color: var(--brand); }
+.ped-statrow .rstat + .rstat::before { top: 18px; bottom: 18px; }
+@media (max-width: 720px) { .ped-statrow { grid-auto-flow: row; grid-template-columns: 1fr 1fr; } .ped-statrow .rstat + .rstat::before { display: none; } }
+
 /* De-box: tarjetas más ligeras (fondo semi-translúcido + sombra suave + hairline)
    → menos "encasillado", más libre y premium. */
 .panel-card { position: relative; background: color-mix(in srgb, var(--surface) 64%, transparent); border: 1px solid var(--line); border-radius: var(--card-r); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 2px 10px -4px rgba(0,0,0,.4), 0 22px 48px -30px rgba(0,0,0,.7); }
@@ -1675,6 +1748,15 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .ped-leg-val { text-align: right; display: flex; flex-direction: column; line-height: 1.15; min-width: 84px; }
 .ped-leg-val b { font-family: var(--font-num); font-weight: 700; color: var(--ink); font-size: var(--fs-sm); }
 .ped-leg-val i { font-style: normal; font-size: var(--fs-2xs); color: var(--muted); }
+/* neto real por plataforma (lo que queda tras la comisión) — regla ROI de Juan */
+.ped-leg-val .net { font-size: var(--fs-2xs); color: var(--muted); }
+.ped-leg-val .net b { color: var(--brand); font-weight: 700; }
+/* ESTADO de pedido = SOLO LECTURA (punto + texto), nunca con pinta de botón (regla de Juan) */
+.ord-st { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; padding: 4px 11px 4px 9px; border-radius: var(--r-pill); background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.ord-st .d { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ord-st.cocina { color: var(--warn); } .ord-st.cocina .d { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.ord-st.reparto { color: #5b8bff; } .ord-st.reparto .d { background: #5b8bff; }
+.ord-st.entregado { color: var(--muted); } .ord-st.entregado .d { background: var(--brand); }
 .plat-chip.lg { font-size: var(--fs-sm); padding: 7px 15px 7px 11px; }
 .plat-chip.lg svg { width: 17px; height: 17px; }
 
@@ -2951,8 +3033,14 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 /* en escritorio el picker se incrusta tras la barra lateral. El scrim CUBRE DESDE ARRIBA (top:0) y queda
    POR DEBAJO de la cabecera (z-index 35 < 40) → la cabecera FLOTA transparente encima (igual que en Caja),
    sin la costura/"barra superior fea" que dejaba el antiguo top:62. La barra de pills y la CARTERA del día
-   siguen visibles y clicables sobre el fondo difuminado (las moneditas vuelan a la cartera). (Juan, 30-jun) */
-@media (min-width: 1024px) { .tpv-mesa-scrim { left: var(--side-w); top: 0; z-index: 35; } }
+   siguen visibles y clicables sobre el fondo difuminado (las moneditas vuelan a la cartera). (Juan, 30-jun)
+   FIX (Juan, 29-jun): el PANEL se centraba subiendo hasta la franja del header → su cabecera "¿A qué mesa
+   va?" SOLAPABA "REBELL · Bertamiráns". Ahora el scrim reserva --top-h arriba y el panel LLENA el resto
+   (height:100%) → arranca justo bajo el header, sin chocar; el blur sigue difuminando bajo la cabecera. */
+@media (min-width: 1024px) {
+  .tpv-mesa-scrim { left: var(--side-w); top: 0; z-index: 35; padding: calc(var(--top-h) + 8px) 18px 18px; }
+  .tpv-mesa-panel { height: 100%; }
+}
 
 .tms-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--line); }
 .tms-htxt { display: flex; flex-direction: column; gap: 5px; }
@@ -2975,6 +3063,16 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .tpv-mesa-plano::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: var(--r-input); border: 2px solid transparent; background-clip: padding-box; }
 .tpv-mesa-plano::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.3); background-clip: padding-box; }
 .tpv-mesa-plano::-webkit-scrollbar-track { background: transparent; }
+/* Esqueleto del plano mientras se resuelve el LOCAL (sesión async): mesas en gris pulsando → cero parpadeo
+   de "mesas que no son las mías" en el primer acceso. Se va en cuanto llega el plano real. (Juan, 29-jun) */
+.tmp-skeleton { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: clamp(16px, 2.4vw, 32px);
+  width: min(820px, 92%); }
+.tmp-skel { height: clamp(96px, 14vh, 150px); border-radius: var(--card-r); border: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, transparent), color-mix(in srgb, var(--ink) 3%, transparent));
+  animation: tmpSkel 1.5s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 0.12s); }
+@keyframes tmpSkel { 0%, 100% { opacity: .35; } 50% { opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .tmp-skel { animation: none; opacity: .5; } }
+
 /* Lienzo escalado por transform → las mesas se renderizan a px REALES y se reescalan en bloque, IGUAL que el
    Salón (mismo MesaTile + clases .salon-mesa.srv.e-*). La mesa del picker = mesa del Salón, sin duplicar nada. */
 .tmp-fit { position: relative; }

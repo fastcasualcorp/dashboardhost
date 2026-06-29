@@ -5,7 +5,7 @@ import { SectionHeader, Badge } from '../components/ui'
 import { eur, eur0, reduceMotion } from '../lib/data'
 import { PRODUCTOS, CAT_ORDER, MENU_SLOTS, MENU_DISCOUNT, isMenu, colorOf, type Producto } from '../lib/products'
 import { play } from '../lib/sound'
-import { loadSalonLive, loadSalon, allLibre, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, type Mesa } from '../lib/salon'
+import { loadSalonLive, loadSalon, loadSalonCached, loadSalonDB, allLibre, saveSalon, mesaRemaining, cobroAmount, ESTADO_COLOR, type Mesa } from '../lib/salon'
 import { fireCobro, resetWallet, addWallet, walletTotal, useCajaDelDia, logCobro, registrarCierre, type Metodo } from '../lib/wallet'
 import { MesaTile } from '../components/MesaTile'
 import { loadCaja, abrirCaja, cerrarCaja, nextTicket, ticketsHoy, GERENTE_PIN, type CajaEstado } from '../lib/caja'
@@ -14,6 +14,7 @@ import { pushComanda } from '../lib/comandas'
 import { cuentaTotal, cuentaItems, addToCuenta, seedCuenta, clearCuenta, clearAllCuentas, useCuentas } from '../lib/cuentas'
 import { appendVenta, isLive } from '../lib/ventas'
 import { consumirVenta } from '../lib/almacen'
+import { onLocalReady, hasSupabase } from '../lib/supabase'
 
 type Line = { id: string; name: string; price: number; qty: number; detail?: string }
 
@@ -48,7 +49,12 @@ export default function Tpv() {
   const [pickOpen, setPickOpen] = useState(true) // se abre AL ENTRAR: primero hay que decir a qué mesa va
   const [mesaChosen, setMesaChosen] = useState(false) // hasta elegir mesa/llevar, no se puede tocar el menú
   // Plano: si la caja está CERRADA, el local está vacío → todas libres; si está abierta, mesas vivas (estado + reservas).
-  const [mesas, setMesas] = useState<Mesa[]>(() => (loadCaja().abierta ? loadSalonLive() : allLibre(loadSalon())))
+  // CARRERA + dispositivo nuevo: si hay BD (Supabase) pero AÚN no tenemos el plano cacheado de ESTE local (sesión
+  // sin resolver, o caché vacía), NO pintamos nada todavía (esqueleto) → jamás se ve el salón DEFAULT ("mesas que no
+  // son las mías"). Solo el demo puro (sin Supabase) parte del plano local de inmediato. (Juan, 29-jun)
+  const deferSalon = () => hasSupabase && !loadSalonCached()
+  const [mesas, setMesas] = useState<Mesa[]>(() => (deferSalon() ? [] : loadCaja().abierta ? loadSalonLive() : allLibre(loadSalon())))
+  const [salonLoading, setSalonLoading] = useState(deferSalon) // esqueleto mientras llega el plano real (caché o BD)
   const [now, setNow] = useState(() => Date.now()) // reloj 1s → la cuenta atrás de las reservas avanza
   const [ticket, setTicket] = useState<string | null>(null) // nº de ticket del pedido en curso (T-013)
   // ── Caja (abrir/cerrar con PIN del encargado) ──
@@ -361,9 +367,36 @@ export default function Tpv() {
     setCash('')
   }
 
+  // Carrera de sesión: al montar, localId() puede no estar resuelto aún → el plano salía con el scope
+  // 'anon' (mesas DEFAULT, "no son las mías", solo el primer acceso). Cuando el local está listo: (1) pinta
+  // con la caché del scope correcto; (2) refresca desde la BD por si este dispositivo nunca abrió "Salón" y
+  // su caché está vacía. El editor de Salón ya tiraba de loadSalonDB; el TPV no → este efecto lo iguala. (Juan, 29-jun)
+  useEffect(() => {
+    let alive = true
+    const paint = (list: Mesa[]) => {
+      if (!alive) return
+      setMesas(loadCaja().abierta ? loadSalonLive() : allLibre(list))
+      setSalonLoading(false)
+    }
+    const off = onLocalReady(() => {
+      const cached = loadSalonCached()
+      if (cached) { paint(cached); return } // hay plano del local en caché → pinta YA, sin tocar la BD
+      // dispositivo nuevo / primer acceso: tráelo de la BD; mientras, sigue el esqueleto (nunca el DEFAULT)
+      void loadSalonDB()
+        .then((rows) => {
+          if (!alive) return
+          if (rows && rows.length) { saveSalon(rows); paint(rows) } // plano real del local → cachea y pinta
+          else paint(loadSalon()) // ni caché ni BD (demo / local sin plano) → DEFAULT honesto, ya como último recurso
+        })
+        .catch(() => { if (alive) paint(loadSalon()) }) // BD caída/red → NO dejar el esqueleto colgado para siempre
+    })
+    return () => { alive = false; off() }
+  }, [])
+
   // Coherencia caja↔salón: con caja ABIERTA el plano cobra vida; con caja CERRADA (local vacío) todas las mesas
   // quedan LIBRES y se saldan las cuentas. Reacciona al abrir/cerrar caja. (Juan, 27-jun)
   useEffect(() => {
+    if (deferSalon()) return // sin plano del local todavía → lo carga el efecto de arriba (sin flash de DEFAULT ni contaminar 'anon')
     if (caja.abierta) {
       setMesas(loadSalonLive())
     } else {
@@ -742,7 +775,12 @@ export default function Tpv() {
                     })}
                   </div>
                 </div>
-                {!mesas.length && <div className="salon-empty">Aún no hay salón · créalo en “Salón”</div>}
+                {!mesas.length && salonLoading && (
+                  <div className="tmp-skeleton" aria-hidden="true">
+                    {[0, 1, 2, 3, 4, 5].map((i) => <span key={i} className="tmp-skel" style={{ ['--i' as string]: i }} />)}
+                  </div>
+                )}
+                {!mesas.length && !salonLoading && <div className="salon-empty">Aún no hay salón · créalo en “Salón”</div>}
               </div>
 
 

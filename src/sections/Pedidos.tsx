@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Card, SectionHeader, KpiTile, Badge, Grid } from '../components/ui'
+import { Card, SectionHeader, Badge, Stat, StatRow } from '../components/ui'
 import { imgFor } from '../lib/products'
 import { eur0 } from '../lib/data'
 import { play } from '../lib/sound'
@@ -37,7 +37,7 @@ const PLATFORMS: Record<Plat, { color: string; ink: string; chip: string; bar: s
     glyph: <><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></>,
   },
   Local: {
-    color: '#f0f0f4', ink: '#15151a', chip: 'linear-gradient(180deg,#ffffff,#e6e6ec)', bar: 'local',
+    color: '#9aa0a8', ink: '#15151a', chip: 'linear-gradient(180deg,#ffffff,#e6e6ec)', bar: 'local',
     glyph: <><path d="M4 9l1-4h14l1 4" /><path d="M4 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" /><path d="M5 11v8h14v-8" /></>,
   },
 }
@@ -64,7 +64,19 @@ function PlatChip({ plat, lg = false }: { plat: Plat; lg?: boolean }) {
 }
 
 type Estado = 'En cocina' | 'En reparto' | 'Entregado'
-const estadoTone: Record<Estado, 'amber' | 'blue' | 'green'> = { 'En cocina': 'amber', 'En reparto': 'blue', Entregado: 'green' }
+// Estado = SOLO LECTURA (punto + texto), no botón. Clase por estado para el color del punto.
+const estadoCls: Record<Estado, string> = { 'En cocina': 'cocina', 'En reparto': 'reparto', Entregado: 'entregado' }
+function EstadoTag({ e }: { e: Estado }) {
+  return <span className={'ord-st ' + estadoCls[e]}><span className="d" />{e}</span>
+}
+// Comisión aproximada por plataforma (delivery ~30%, local 0) → "neto" real que le queda al negocio (regla ROI).
+const COM: Record<Plat, number> = { Glovo: 0.3, 'Uber Eats': 0.3, 'Just Eat': 0.3, Local: 0 }
+// Indicador EN DIRECTO (rojo, late) / CERRADO (gris). El pulso se ACELERA con pedidos en cocina (Juan, 29-jun).
+function LiveDot({ live, enCocina }: { live: boolean; enCocina: number }) {
+  if (!live) return <span className="live off"><span className="ldot" />Cerrado</span>
+  const dur = (enCocina > 0 ? Math.max(0.9, 1.8 - enCocina * 0.12) : 2.2).toFixed(2) + 's'
+  return <span className="live" style={{ ['--live-dur' as string]: dur }}><span className="ldot" />En directo</span>
+}
 
 type Item = { name: string; qty: number; price: number }
 type Order = {
@@ -122,14 +134,19 @@ function PlatBreakdown({ stats, money }: { stats: PlatStat[]; money: boolean }) 
   const totalIng = stats.reduce((s, p) => s + p.ing, 0) || 1
   const totalPed = stats.reduce((s, p) => s + p.ped, 0)
   const maxIng = Math.max(1, ...stats.map((p) => p.ing))
-  const r = 30, C = 2 * Math.PI * r, GAP = 13
+  // Donut = el MISMO desglose que las barras (cada gajo con el color de SU plataforma → leyenda 1:1, cero
+  // ambigüedad). El "% por delivery" (la pregunta de negocio) va como texto en la cabecera. Colores de
+  // plataforma FIJOS (no dependen del acento del tema) → nunca chocan con el oro/lima de la marca.
+  const localIng = stats.filter((s) => s.plat === 'Local').reduce((a, b) => a + b.ing, 0)
+  const delivPct = Math.round(((totalIng - localIng) / totalIng) * 100)
+  const r = 30, C = 2 * Math.PI * r, GAP = 12
   let acc = 0
   const active = hov ? stats.find((p) => p.plat === hov) ?? null : null
   return (
     <Card>
       <div className="card-head">
         <h3>Reparto por plataforma</h3>
-        <Badge tone="muted">hoy · {totalPed} ped{money ? ` · ${eur0(stats.reduce((s, p) => s + p.ing, 0))} €` : ''}</Badge>
+        <Badge tone="muted">{delivPct}% por delivery{money ? ` · ${eur0(totalIng)} €` : ` · ${totalPed} ped`}</Badge>
       </div>
       <div className="ped-plat" onPointerLeave={() => setHov(null)}>
         <div className={'day-donut' + (hov ? ' hov' : '')}>
@@ -147,7 +164,7 @@ function PlatBreakdown({ stats, money }: { stats: PlatStat[]; money: boolean }) 
               )
             })}
           </svg>
-          <div className="day-donut-c" style={{ ['--seg' as string]: active ? PLATFORMS[active.plat].color : 'var(--gold)' }}>
+          <div className="day-donut-c" style={{ ['--seg' as string]: active ? PLATFORMS[active.plat].color : 'var(--brand)' }}>
             <b className={'tnum' + (active ? ' on' : '')}>{active ? active.ped : totalPed}</b>
             <span className={active ? 'on' : ''}>{active ? active.name : 'pedidos'}</span>
           </div>
@@ -155,6 +172,7 @@ function PlatBreakdown({ stats, money }: { stats: PlatStat[]; money: boolean }) 
         <div className="ped-legend">
           {stats.map((p) => {
             const logo = PLATFORMS[p.plat].logo
+            const net = Math.round(p.ing * (1 - (COM[p.plat] ?? 0)))
             return (
               <div className={'ped-leg-row' + (hov === p.plat ? ' on' : '')} key={p.plat} style={{ ['--seg' as string]: PLATFORMS[p.plat].color }} onPointerEnter={() => setHov(p.plat)}>
                 <span className="ped-leg-name">
@@ -162,7 +180,10 @@ function PlatBreakdown({ stats, money }: { stats: PlatStat[]; money: boolean }) 
                   {p.name}
                 </span>
                 <span className="ped-leg-bar"><span style={{ width: (p.ing / maxIng) * 100 + '%', background: PLATFORMS[p.plat].color }} /></span>
-                <span className="ped-leg-val">{money ? <b className="tnum">{eur0(p.ing)} €</b> : null}<i className="tnum">{p.ped} ped</i></span>
+                <span className="ped-leg-val">
+                  <b className="tnum">{money ? `${eur0(p.ing)} €` : `${p.ped} ped`}</b>
+                  {money ? <i className="net tnum">{p.ped} ped · <b>{eur0(net)} € neto</b></i> : null}
+                </span>
               </div>
             )
           })}
@@ -208,17 +229,19 @@ export default function Pedidos() {
   const enCocina = demo ? 6 : comandas.filter((c) => c.status !== 'lista').length
   const enReparto = demo ? 3 : comandas.filter((c) => c.status === 'lista').length
   const pedidosHoy = demo ? 84 : ventasHoyCount()
+  // "En directo": local abierto / con actividad. (Cuando haya horario de apertura real, se enchufa aquí.)
+  const live = demo ? true : pedidosHoy > 0 || enCocina > 0
 
   return (
     <div className="section">
-      <SectionHeader title="Pedidos" subtitle="Delivery · últimos pedidos" right={<Badge tone="amber">⚡ {enCocina} en cocina</Badge>} />
+      <SectionHeader title="Pedidos" subtitle="Delivery · últimos pedidos" afterTitle={<LiveDot live={live} enCocina={enCocina} />} />
 
-      <Grid cols={4} className="kpi-grid">
-        <KpiTile label="Pedidos hoy" value={String(pedidosHoy)} unit="ped." delta={demo ? '+12%' : undefined} foot={demo ? 'vs ayer' : 'reales'} trend="up" />
-        <KpiTile label="En cocina" value={String(enCocina)} unit="ped." delta={demo ? '+2' : undefined} foot={demo ? 'hace 1 min' : 'ahora'} trend="flat" />
-        <KpiTile label="En reparto" value={String(enReparto)} unit="ped." delta={demo ? '-1' : undefined} foot={demo ? 'vs hora pico' : 'listos'} trend="down" />
-        <KpiTile label="Tiempo medio" value={demo ? '24' : '—'} unit={demo ? 'min' : ''} delta={demo ? '-3 m' : undefined} foot={demo ? 'vs ayer' : 'sin datos'} trend="up" />
-      </Grid>
+      <StatRow className="ped-statrow">
+        <Stat className="lead" count={false} value={String(pedidosHoy)} unit="ped" label="Pedidos hoy" delta={demo ? '+12%' : undefined} foot={demo ? 'vs ayer' : 'reales'} trend="up" />
+        <Stat count={false} value={String(enCocina)} unit="ped" label="En cocina" delta={demo ? '+2' : undefined} foot={demo ? 'hace 1 min' : 'ahora'} trend="up" />
+        <Stat count={false} value={String(enReparto)} unit="ped" label="En reparto" delta={demo ? '−1' : undefined} foot={demo ? 'vs hora pico' : 'listos'} trend="down" />
+        <Stat count={false} value={demo ? '24' : '—'} unit={demo ? 'min' : ''} label="Tiempo medio" delta={demo ? '−3m' : undefined} foot={demo ? 'vs ayer' : 'sin datos'} trend="up" />
+      </StatRow>
 
       {platStats.length > 0 ? <PlatBreakdown stats={platStats} money={money} /> : <DeliveryEmpty />}
 
@@ -240,7 +263,7 @@ export default function Pedidos() {
                 <span className="ord-right">
                   <span className="ord-items tnum">{o.items.reduce((s, i) => s + i.qty, 0)} art.</span>
                   {money ? <span className="ord-total tnum">{eur(tot(o))} €</span> : null}
-                  <Badge tone={estadoTone[stOf(o)]}>{stOf(o)}</Badge>
+                  <EstadoTag e={stOf(o)} />
                   <svg className="ord-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </span>
               </button>
@@ -280,7 +303,7 @@ export default function Pedidos() {
 
               <div className="od-tags">
                 <PlatChip plat={sel.plat} lg />
-                <Badge tone={estadoTone[stOf(sel)]}>{stOf(sel)}</Badge>
+                <EstadoTag e={stOf(sel)} />
               </div>
 
               <div className="od-status">

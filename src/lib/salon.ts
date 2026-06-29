@@ -103,6 +103,24 @@ export function loadSalon(): Mesa[] {
   return DEFAULT_SALON
 }
 
+// Plano CACHEADO del scope actual, o null si NO hay (sin el fallback a DEFAULT_SALON de loadSalon). Sirve para
+// distinguir "este local no tiene plano en esta caché" de "el plano por defecto" → así el TPV no pinta el
+// DEFAULT mientras espera el plano real de la BD (evita el flash de "mesas que no son las mías"). (Juan, 29-jun)
+export function loadSalonCached(): Mesa[] | null {
+  try {
+    // SOLO la key scopeada por local — NUNCA la key GLOBAL legacy (KEY_BASE): leerla aquí podría devolver el
+    // plano de OTRO local (fuga multi-tenant). La adopción/migración de la legacy vive solo en loadSalon(). (Juan, 29-jun)
+    const raw = localStorage.getItem(salonKey())
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr) && arr.length) return arr as Mesa[]
+    }
+  } catch {
+    /* sin localStorage */
+  }
+  return null
+}
+
 export function saveSalon(mesas: Mesa[]) {
   try {
     localStorage.setItem(salonKey(), JSON.stringify(mesas))

@@ -82,15 +82,20 @@ export function SectionHeader({
   title,
   subtitle,
   right,
+  afterTitle,
 }: {
   title: string
   subtitle?: string
   right?: ReactNode
+  afterTitle?: ReactNode // se pinta JUNTO al título (p.ej. el indicador "EN DIRECTO")
 }) {
   return (
     <div className="section-head">
       <div>
-        <h1>{title}</h1>
+        <div className="sh-titlerow">
+          <h1>{title}</h1>
+          {afterTitle}
+        </div>
         {subtitle && <p>{subtitle}</p>}
       </div>
       {right && <div className="sh-right">{right}</div>}
@@ -158,6 +163,9 @@ export function Stat({
   tone = 'gold',
   count = true,
   className = '',
+  delta,
+  foot,
+  trend = 'flat',
 }: {
   value: ReactNode
   unit?: string
@@ -165,6 +173,9 @@ export function Stat({
   tone?: 'gold' | 'green'
   count?: boolean
   className?: string
+  delta?: string // variación opcional (p.ej. "+12%") bajo la etiqueta
+  foot?: string // texto de contexto (p.ej. "vs ayer")
+  trend?: 'up' | 'down' | 'flat'
 }) {
   return (
     <div className={'rstat' + (className ? ' ' + className : '')}>
@@ -173,6 +184,12 @@ export function Stat({
         {unit && <i>{unit}</i>}
       </b>
       <span className="rstat-lbl">{label}</span>
+      {(delta || foot) && (
+        <span className={'rstat-foot' + (trend === 'up' ? ' up' : trend === 'down' ? ' down' : '')}>
+          {delta && <b>{trend === 'down' ? '↘' : trend === 'up' ? '↗' : ''} {delta}</b>}
+          {foot && <i>{foot}</i>}
+        </span>
+      )}
     </div>
   )
 }

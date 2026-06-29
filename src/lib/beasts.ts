@@ -5,8 +5,8 @@
 export type Beast = { id: string; name: string; img: string; color: string; accent: string; video?: string }
 
 export const BEASTS: Beast[] = [
-  // Tigre LIMA = mascota oficial de la marca (acento lima eléctrico). Primero y por defecto. (Juan, 29-jun)
-  { id: 'tiger', name: 'Tigre', img: '/img/avatars/tiger-lime.png', color: '#c6ff00', accent: 'lima' },
+  // Tigre = mascota oficial (acento lima eléctrico). Foto realista anterior + su vídeo (anima al hover, como el resto). (Juan, 29-jun)
+  { id: 'tiger', name: 'Tigre', img: '/img/avatars/tiger.png', color: '#c6ff00', accent: 'lima', video: '/video/tiger.mp4' },
   { id: 'lion', name: 'León', img: '/img/avatars/lion.png', color: '#ffbf10', accent: 'gold', video: '/video/lion.mp4' },
   { id: 'panda', name: 'Panda', img: '/img/avatars/panda.png', color: '#c8c8d0', accent: 'mono', video: '/video/panda.mp4' },
   { id: 'fox', name: 'Zorro', img: '/img/avatars/fox.png', color: '#e0457a', accent: 'rosa', video: '/video/fox.mp4' },
