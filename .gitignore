@@ -44,3 +44,8 @@ dist-ssr
 .agents/
 _verify/
 skills-lock.json
+
+# Herramienta personal + bocetos/docs de trabajo (no exponer en prod)
+/_docs/
+public/instrucciones.html
+public/gastos-prop-*.html

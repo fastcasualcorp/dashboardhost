@@ -17,6 +17,9 @@
   --gold: var(--brand); --gold-soft: var(--brand-soft); --gold-deep: var(--brand-deep); --cash: var(--brand);
   --ink: #f5f5f7; --muted: rgba(255,255,255,.54); --faint: rgba(255,255,255,.32);
   --card: #4aa3ff; --home: #34d399; --ok: #34d399; --warn: #f5b341;
+  /* Semántica financiera (fuente única): suma/ingreso/beneficio = VERDE (lima) · gasto/negativo = ROJO.
+     Cambia aquí y se actualiza en TODOS los paneles. (Juan, 29-jun) */
+  --pos: var(--brand); --neg: #ff5b5b;
   --accent-ink: #16240a;      /* default global de la tinta sobre el oro (lo afina .app[data-accent]); aquí para que el login/intro, FUERA de .app, también lo tenga */
   /* ── BARRAS: fuente ÚNICA de verdad del grosor/radio de TODA barra de progreso del dashboard.
      Cambia --bar-h aquí y entra en Caja, Almacén, Cuadro, KDS, Mapa… a la vez (línea de diseño de Juan,
@@ -51,6 +54,7 @@
      El editor "Sistema de diseño" los sobreescribe inline en .app, que gana para la app sin tocar el login. */
   --card-r: 18px; --card-r-lg: 22px; --card-r-xl: 26px;
   --r-pill: 100px;            /* radio de pastilla (= radio máx); unifica los 999px sueltos */
+  --ctl-h: 36px;              /* ALTURA ÚNICA de pastillas/controles de una misma fila (botones + badge) → todas iguales (Juan, 29-jun) */
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, monospace;  /* terminal del Mapa */
   --takeaway: #ff8a3d;        /* naranja semántico "Para llevar" */
   --vs: #c4b5fd;              /* morado del comparador (vs / fecha B) */
@@ -593,6 +597,26 @@ body {
    redondas. vh/vw → encoge con la pantalla; ambos paneles van bajo el mismo zoom (.panel-content) → idéntico
    tamaño en cualquier sección. Antes Pedidos usaba un tamaño base distinto al de Caja. (Juan, 29-jun) */
 .app { --donut-d: clamp(108px, min(16vh, 13vw), 190px); --donut-num: clamp(16px, min(3.3vh, 2.7vw), 32px); --donut-cap: clamp(8px, min(1.7vh, 1.4vw), 12px); }
+
+/* ════════ MOTION TOKENIZADO (Juan, 29-jun) ════════════════════════════════════════════════════════
+   Animaciones de ENTRADA con una sola fuente. Cada TIPO de elemento tiene su gesto (las barras crecen,
+   los paneles suben, …). Son OPT-IN: solo animan los descendientes con clase .m-* dentro de un ancestro
+   con .anim. Una pantalla pone .anim SOLO la 1ª vez que el usuario la ve (hook useRevealOnce) → entra una
+   vez "de golpe" y luego se queda ESTÁTICA al volver (no satura). Cambiar estos tokens cambia el gesto en
+   TODAS las gráficas/barras/paneles a la vez. Respeta prefers-reduced-motion. */
+.app { --m-rise: 14px; --m-enter: .5s; --m-grow: .62s; --m-stagger: 45ms; }
+/* destacado del elemento ACTUAL: SOLO color de marca + glow (nunca blanco, rompe la estética). Token único. */
+.app { --hot-glow: 0 0 24px -2px rgba(var(--brand-rgb), .72); }
+@keyframes mRise { from { opacity: 0; transform: translateY(var(--m-rise)); } to { opacity: 1; transform: none; } }
+@keyframes mGrowY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes mFade { from { opacity: 0; } to { opacity: 1; } }
+.anim .m-rise { animation: mRise var(--m-enter) var(--ease) both; animation-delay: calc(var(--i, 0) * var(--m-stagger)); }
+.anim .m-bar  { animation: mGrowY var(--m-grow) var(--ease) both; animation-delay: calc(var(--i, 0) * var(--m-stagger)); transform-origin: bottom; }
+.anim .m-fade { animation: mFade var(--m-enter) var(--ease) both; animation-delay: calc(var(--i, 0) * var(--m-stagger)); }
+@media (prefers-reduced-motion: reduce) {
+  .anim .m-rise, .anim .m-bar, .anim .m-fade { animation: none; }
+}
+
 .day-donut { flex: 0 0 auto; position: relative; }
 .day-donut svg { width: var(--donut-d); height: auto; aspect-ratio: 1 / 1; max-width: 100%; display: block; overflow: visible; }
 .dd-track { stroke: rgba(255,255,255,.05); pointer-events: none; }
@@ -995,6 +1019,9 @@ body {
 .money-u { font-style: normal; font-size: .82em; font-weight: 700; color: var(--brand); }
 .money.money-ink .money-num { color: var(--ink); }
 .money.money-muted .money-num { color: var(--muted); }
+/* tonos semánticos: el número Y el símbolo van del mismo color (verde suma / rojo gasto) */
+.money.money-pos, .money.money-pos .money-num, .money.money-pos .money-u { color: var(--pos); }
+.money.money-neg, .money.money-neg .money-num, .money.money-neg .money-u { color: var(--neg); }
 .rstat-lbl { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.66); }
 .ck-statrow { margin-top: 30px; }
 /* Stats del hero más contenidos (Juan: "todo muy grande") */
@@ -1441,6 +1468,115 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .ped-statrow .rstat + .rstat::before { top: 18px; bottom: 18px; }
 @media (max-width: 720px) { .ped-statrow { grid-auto-flow: row; grid-template-columns: 1fr 1fr; } .ped-statrow .rstat + .rstat::before { display: none; } }
 
+/* ════════ RESUMEN MENSUAL · cockpit de UNA SOLA VISTA (Juan, 29-jun) ════════════════════════════════
+   Mismo tratamiento que Caja: la pantalla se acota al viewport (sin scroll). Zonas fijas (header, hero,
+   tabla) + la gráfica FLEXA y absorbe el alto sobrante → cabe en cualquier pantalla. */
+.panel-main.mensual-pane .panel-content { padding: 0; overflow: hidden; }
+.mensual-full {
+  height: calc((100dvh - var(--top-h)) / var(--ui-scale, 1));
+  display: flex; flex-direction: column; gap: clamp(6px, .85vh, 11px);
+  /* el padding inferior reserva sitio para el control flotante "Ajustar" (.scalebar, fijo abajo-dcha) → no tapa el P&L */
+  padding: clamp(7px, 1.1vh, 14px) clamp(16px, 2.4vw, 34px) clamp(54px, 6.2vh, 66px); max-width: 1820px; margin: 0 auto;
+}
+.mensual-full > * { flex: none; }
+/* La gráfica es la PROTAGONISTA (Juan la quiere grande): FLEXA y agarra todo el alto libre tras compactar el
+   resto, con un mínimo generoso y un techo para que no se dispare en monitores enormes. Sin scroll (el flex
+   reparte dentro del viewport); si en una pantalla muy alta sobra hueco abajo, no pasa nada. */
+.mensual-full > .men-year { flex: 1 1 auto; min-height: clamp(240px, 34vh, 440px); max-height: 600px; }
+.mensual-full > .men-pl { flex: none; }
+.mensual-full > .men-pl.expanded { flex: none; }
+.mensual-full .section-head { margin: 0; }
+.men-statrow .rstat.lead.neg .rstat-val, .men-statrow .rstat.lead.neg .rstat-val i { color: var(--neg); }
+/* cards de Mensual: padding más justo que el .pad global → más alto para la gráfica */
+.mensual-full .panel-card.pad { padding: clamp(11px, 1.4vh, 16px) clamp(14px, 1.6vw, 20px); }
+.mensual-full .card-head { margin-bottom: clamp(6px, 1vh, 12px); }
+/* hero un punto más compacto (deja respirar a la gráfica) */
+.men-statrow .rstat { padding: clamp(5px, .8vh, 11px) clamp(14px, 1.9vw, 28px); gap: 4px; }
+.men-statrow .rstat-val { font-size: clamp(24px, 2.4vw, 35px); }
+/* separador que ENMARCA todo el bloque (de la cima del número al pie), no centrado en la caja → ya no parece caído */
+.men-statrow .rstat + .rstat::before { top: 12px; bottom: 12px; }
+
+/* gráfica "cuánto se queda" — barras anchas, eje € a la izquierda, costes + punta lima de beneficio */
+.men-year { display: flex; flex-direction: column; min-height: 0; }
+.men-chart { position: relative; flex: 1; min-height: 0; padding-left: 52px; margin-top: 8px; }
+.men-grid { position: absolute; left: 52px; right: 0; top: 16px; bottom: 26px; pointer-events: none; }
+.men-gl { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
+.men-gly { position: absolute; left: -52px; width: 46px; text-align: right; transform: translateY(-50%); font-family: var(--font-num); font-weight: 600; font-size: var(--fs-2xs); color: var(--faint); }
+.men-gly i { font-style: normal; font-size: .8em; color: var(--brand); margin-left: 1px; }
+.men-bars { position: absolute; left: 52px; right: 0; top: 16px; bottom: 26px; display: flex; align-items: flex-end; gap: clamp(8px, 1.4vw, 20px); }
+.men-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  appearance: none; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.men-col:hover .men-prof { filter: brightness(1.08); }
+.men-col:hover .men-cost { background: repeating-linear-gradient(135deg, rgba(255,255,255,.11) 0 7px, rgba(255,255,255,.05) 7px 14px); }
+.men-plabel { font-family: var(--font-num); font-weight: 600; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 6px; white-space: nowrap; }
+.men-col.hot .men-plabel { color: var(--brand); }
+.men-bar { width: 100%; max-width: 108px; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px; }
+.men-prof { border-radius: var(--r-input); min-height: 3px; background: linear-gradient(180deg, #e7ff7a, var(--brand)); box-shadow: 0 0 16px -3px rgba(var(--brand-rgb), .5); }
+/* mes actual destacado: SOLO lima + glow (token), sin el blanco que rompía la estética */
+.men-col.hot .men-prof { background: linear-gradient(180deg, #eaff8a, var(--brand)); box-shadow: var(--hot-glow); }
+.men-cost { border-radius: var(--r-input); background: repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 7px, rgba(255,255,255,.035) 7px 14px); border: 1px solid rgba(255,255,255,.05); }
+.men-xlabels { position: absolute; left: 52px; right: 0; bottom: 0; display: flex; gap: clamp(8px, 1.4vw, 20px); }
+.men-xlabels span { flex: 1; text-align: center; font-size: var(--fs-2xs); color: var(--faint); font-weight: 600; }
+.men-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; font-size: var(--fs-2xs); color: var(--muted); font-weight: 600; flex: none; }
+.men-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 7px; vertical-align: -1px; }
+.men-legend .lp { background: var(--brand); }
+.men-legend .lc { background: repeating-linear-gradient(135deg, rgba(255,255,255,.2) 0 4px, rgba(255,255,255,.07) 4px 8px); }
+.men-legend .lpr { background: rgba(var(--brand-rgb), .28); border: 1px dashed rgba(var(--brand-rgb), .55); }
+/* PROYECCIÓN de cierre — toggle + barras fantasma (Jul–Dic) + divisor real|futuro */
+.men-chart-tools { display: flex; align-items: center; gap: 10px; }
+.men-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 6px 12px; cursor: pointer; transition: background .2s, border-color .2s, color .2s; }
+.men-toggle svg { width: 14px; height: 14px; }
+.men-toggle:hover { color: var(--ink); border-color: rgba(var(--brand-rgb), .3); }
+.men-toggle.on { color: #0a0a0a; background: var(--brand); border-color: var(--brand); }
+.men-col.proy .men-prof { background: rgba(var(--brand-rgb), .30); box-shadow: none; }
+.men-col.proy .men-cost { background: repeating-linear-gradient(135deg, rgba(255,255,255,.045) 0 7px, rgba(255,255,255,.015) 7px 14px); border: 1px dashed rgba(255,255,255,.10); }
+.men-col.proy .men-plabel { color: var(--faint); font-weight: 600; }
+.men-col.proy:hover .men-prof { filter: brightness(1.12); }
+.men-xlabels span.proy { color: rgba(255,255,255,.28); }
+.men-proj-divider { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px dashed rgba(255,255,255,.18); transform: translateX(-50%); pointer-events: none; z-index: 1; }
+
+/* P&L resumido + expandible (opción C) */
+.men-pl { display: flex; flex-direction: column; min-height: 0; }
+.men-expand { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: 700; color: var(--ink); background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 8px 14px; cursor: pointer; transition: background .2s, border-color .2s; }
+.men-expand:hover { background: rgba(var(--brand-rgb), .12); border-color: rgba(var(--brand-rgb), .3); }
+.men-expand svg { width: 15px; height: 15px; transition: transform .25s var(--ease); }
+.men-expand.on svg { transform: rotate(180deg); }
+.men-csum { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; margin-top: 8px; border: 1px solid var(--line); border-radius: var(--card-r); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.men-csum-cell { position: relative; padding: clamp(6px, .85vh, 11px) clamp(14px, 1.6vw, 24px); display: flex; flex-direction: column; gap: 3px;
+  appearance: none; background: none; border: 0; font: inherit; color: inherit; text-align: left; }
+.men-csum-cell.clickable { cursor: pointer; border-radius: var(--r-input); transition: background .15s var(--ease); }
+.men-csum-cell.clickable:hover { background: rgba(var(--brand-rgb), .07); }
+.men-csum-cell.clickable:hover .k { color: var(--muted); }
+.men-csum-cell + .men-csum-cell::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 1px; background: var(--line); }
+.men-csum-cell .k { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 700; }
+.men-csum-cell .v { font-family: var(--font-num); font-weight: 600; font-size: clamp(18px, 2vw, 28px); }
+/* % SOBRE VENTAS con SEMÁFORO de hostelería (verde sano · ámbar aviso · rojo peligro) → lectura de un vistazo */
+.men-pct { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-xs); letter-spacing: .01em; }
+.men-pct--pos { color: var(--pos); }
+.men-pct--warn { color: var(--warn); }
+.men-pct--neg { color: var(--neg); }
+.men-pct--muted { color: var(--faint); font-weight: 600; }
+/* % de margen en la tabla desplegada (mismo semáforo, en pastilla discreta) */
+.men-pctt { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-xs); }
+.men-pctt--pos { color: var(--pos); }
+.men-pctt--warn { color: var(--warn); }
+.men-pctt--neg { color: var(--neg); }
+/* nota de la leyenda: aclara que compras es estimación s/food cost (honestidad del dato) */
+.men-legend-note { color: var(--faint); font-weight: 600; margin-left: auto; }
+/* herramientas de cabecera: exportar CSV + badge del periodo */
+.men-head-tools { display: flex; align-items: center; gap: 10px; }
+.men-export { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-xs); font-weight: 700; color: var(--ink); background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 8px 14px; cursor: pointer; transition: background .2s, border-color .2s; }
+.men-export:hover { background: rgba(var(--brand-rgb), .12); border-color: rgba(var(--brand-rgb), .3); }
+.men-export svg { width: 15px; height: 15px; }
+/* al desplegar, la tabla ocupa el alto que dejó la gráfica (oculta) y scrollea dentro si hace falta */
+.mensual-full > .men-pl.expanded { flex: none; }
+.men-pl.expanded .men-pl-table { max-height: 56vh; }
+.men-pl-table { overflow-y: auto; max-height: 46vh; min-height: 0; margin-top: 6px; }
+.men-pl-table .dtable td { padding: clamp(6px, .8vh, 11px) clamp(10px, 1.1vw, 18px); }
+.men-pl-table .dtable tbody tr:last-child td { border-top: 1px solid var(--line-strong); border-bottom: 0; font-weight: 700; }
+.men-neto { font-family: var(--font-num); font-weight: 600; }
+@media (max-width: 720px) { .men-csum { grid-auto-flow: row; grid-template-columns: 1fr 1fr; } .men-csum-cell + .men-csum-cell::before { display: none; } }
+
 /* De-box: tarjetas más ligeras (fondo semi-translúcido + sombra suave + hairline)
    → menos "encasillado", más libre y premium. */
 .panel-card { position: relative; background: color-mix(in srgb, var(--surface) 64%, transparent); border: 1px solid var(--line); border-radius: var(--card-r); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 2px 10px -4px rgba(0,0,0,.4), 0 22px 48px -30px rgba(0,0,0,.7); }
@@ -1478,6 +1614,12 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
   background: linear-gradient(176deg, var(--ink) 8%, color-mix(in srgb, var(--ink) 60%, var(--surface-2)) 96%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
 .kpi-tile .v small { -webkit-text-fill-color: var(--gold); color: var(--gold); font-size: .9em; font-weight: 600; font-family: var(--font-num); margin-left: 4px; letter-spacing: 0; }
+/* color SEMÁNTICO del KPI (token único): dinero que SALE = rojo, dinero que ENTRA = lima.
+   Mantiene el relleno-gradiente premium pero en el color semántico (mismo idioma que el P&L). */
+.kpi-tile .v.v-neg { background: linear-gradient(176deg, #ff9c9c 8%, var(--neg) 96%); -webkit-background-clip: text; background-clip: text; }
+.kpi-tile .v.v-neg small { -webkit-text-fill-color: var(--neg); color: var(--neg); }
+.kpi-tile .v.v-pos { background: linear-gradient(176deg, #eaff8a 8%, var(--pos) 96%); -webkit-background-clip: text; background-clip: text; }
+.kpi-tile .v.v-pos small { -webkit-text-fill-color: var(--pos); color: var(--pos); }
 @media (prefers-reduced-motion: reduce) { .kpi-tile { animation: none; } }
 
 .p-grid { display: grid; gap: clamp(12px, calc(1.2vw * var(--den, 1)), calc(24px * var(--den, 1))); grid-template-columns: 1fr; }
@@ -4021,6 +4163,8 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 .gx-kpi-l { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; letter-spacing: .01em; }
 .gx-kpi-v { font-family: var(--font-num); font-weight: 800; font-size: clamp(26px, 3vw, 34px); color: var(--ink); line-height: 1; letter-spacing: -1px; display: flex; align-items: baseline; gap: 3px; }
 .gx-kpi-v i { font-size: .5em; font-style: normal; color: var(--muted); font-weight: 700; }
+/* total de gastos = dinero que SALE → rojo (mismo token semántico que el P&L) */
+.gx-kpi-v.neg, .gx-kpi-v.neg i { color: var(--neg); }
 .gx-kpi-f { font-size: var(--fs-2xs); color: var(--faint); font-weight: 500; }
 
 /* HÉROE: tarta + barras */
@@ -4034,6 +4178,7 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
 @keyframes gxSweep { to { transform: rotate(360deg); } }
 .gx-pie-hole { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .gx-pie-hole b { font-family: var(--font-num); font-weight: 800; font-size: clamp(28px, 4vw, 40px); color: var(--ink); display: block; line-height: 1; letter-spacing: -1.5px; }
+.gx-pie-hole b.neg { color: var(--neg); }
 .gx-pie-hole > span { display: block; font-size: var(--fs-2xs); color: var(--muted); text-transform: uppercase; letter-spacing: .14em; margin-top: 6px; }
 /* Barras GORDAS por categoría (etiqueta ENCIMA, nunca tocando la barra) */
 .gx-cats { display: grid; gap: 18px; min-width: 0; }
@@ -4465,6 +4610,9 @@ body.map-fullscreen .panel-top { opacity: 0; transform: translateY(-20px); point
   /* La Caja es inmersiva (su botón "Cerrar caja" vive abajo) → sin barra ahí */
   .panel-main.caja-full .btab { display: none; }
   .panel-main.caja-full .panel-content { padding-bottom: 0; }
+  /* Mensual: la vista es de alto acotado (overflow hidden) → descontar la barra inferior fija para que el
+     P&L del fondo NO quede tapado ni pida scroll (la verificación a >768px no lo cazaba). (revisor, 29-jun) */
+  .panel-main.mensual-pane .mensual-full { height: calc((100dvh - var(--top-h) - 74px - env(safe-area-inset-bottom)) / var(--ui-scale, 1)); }
   /* Mapa a pantalla completa: experiencia inmersiva → ocultar la nav y su hueco */
   body.map-fullscreen .btab { display: none; }
   body.map-fullscreen .panel-content { padding-bottom: 0; }
@@ -5282,3 +5430,138 @@ html[data-saver='1'] .side-beast-vid { display: none; }
 
 /* "por método" tras el título de Caja del día (ya no repite el total) */
 .turno-name .turno-tag { font-size: var(--fs-sm); color: var(--faint); font-weight: 500; margin-left: 2px; }
+
+/* ════════════════════════════════════════════════════════════════════════════════════════
+   GASTOS FIJOS · combo A+B (Juan, 29-jun) — hero + calendario (cuándo) + barra-filtro (dónde) +
+   lista editable (qué). Paneles a su tamaño; la lista scrollea DENTRO de su tarjeta (one-view, no estira).
+   ════════════════════════════════════════════════════════════════════════════════════════ */
+.panel-main.gastos-pane .panel-content { padding: 0; overflow: hidden; }
+.gastos-full { height: calc((100dvh - var(--top-h)) / var(--ui-scale, 1)); display: flex; flex-direction: column;
+  gap: clamp(8px, 1.1vh, 13px); padding: clamp(8px, 1.2vh, 16px) clamp(16px, 2.4vw, 32px) clamp(50px, 6vh, 62px); max-width: 1640px; margin: 0 auto; }
+.gastos-full > * { flex: none; }
+.gx-head .section-head { margin: 0; }
+/* pastillas de cabecera: MISMA altura por token --ctl-h (lo que pidió Juan) */
+.gx-tools { display: flex; align-items: center; gap: 10px; }
+.gx-pill { display: inline-flex; align-items: center; gap: 7px; height: var(--ctl-h); padding: 0 16px; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); color: var(--ink); background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: var(--r-pill); cursor: pointer; transition: background .18s, border-color .18s; }
+.gx-pill:hover { background: rgba(var(--brand-rgb), .12); border-color: rgba(var(--brand-rgb), .3); }
+.gx-pill.primary { background: var(--brand); color: var(--accent-ink); border-color: var(--brand); }
+.gx-pill svg { width: 15px; height: 15px; }
+.gx-tools .badge-pill { height: var(--ctl-h); display: inline-flex; align-items: center; }
+
+/* hero — semáforo en el % sobre ventas */
+.gx-statrow .rstat.lead .rstat-val, .gx-statrow .rstat.lead .rstat-val i { color: var(--brand); }
+.gx-sem--pos .rstat-val, .gx-sem--pos .rstat-val i { color: var(--pos); }
+.gx-sem--warn .rstat-val, .gx-sem--warn .rstat-val i { color: var(--warn); }
+.gx-sem--neg .rstat-val, .gx-sem--neg .rstat-val i { color: var(--neg); }
+
+/* zona principal: izq (calendario + barra) · dcha (lista) */
+.gx-main { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1.4fr 1fr; gap: 13px; }
+/* HUD flotante del modo foco: resumen de la categoría enfocada */
+.gx-foco { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 15px; padding: 10px 10px 10px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--c); border-radius: var(--r-pill); box-shadow: 0 18px 44px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.05); -webkit-backdrop-filter: blur(12px) saturate(1.3); backdrop-filter: blur(12px) saturate(1.3); animation: gxFoco .3s var(--ease-spring); }
+@keyframes gxFoco { from { opacity: 0; transform: translate(-50%, 14px); } }
+.gx-foco-cat { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--fs-sm); color: var(--c); }
+.gx-foco-cat i { width: 10px; height: 10px; border-radius: 3px; }
+.gx-foco-sep { width: 1px; height: 22px; background: var(--line-strong); }
+.gx-foco-stat { display: flex; flex-direction: column; line-height: 1.12; }
+.gx-foco-stat b { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-sm); }
+.gx-foco-stat i { font-style: normal; font-size: var(--fs-3xs); color: var(--faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+.gx-foco-x { width: 28px; height: 28px; display: grid; place-content: center; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--muted); cursor: pointer; flex: none; }
+.gx-foco-x:hover { color: var(--ink); }
+.gx-foco-x svg { width: 13px; height: 13px; }
+.gx-col { display: flex; flex-direction: column; gap: 13px; min-height: 0; }
+.gx-card { padding: 15px 17px; display: flex; flex-direction: column; }
+.gx-listcard { min-height: 0; }
+.gx-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+.gx-card-head h3 { font-size: var(--fs-md); font-weight: 600; }
+.gx-mut { font-size: var(--fs-2xs); color: var(--faint); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+
+/* calendario (celdas a tamaño natural) */
+.gcal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 7px; }
+.gcal-dow span { text-align: center; font-size: var(--fs-2xs); color: var(--faint); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.gcal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 56px; gap: 7px; }
+.gcal-d { position: relative; border: 1px solid var(--line); border-radius: var(--r-input); background: rgba(255,255,255,.015); padding: 6px 7px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; transition: opacity .2s var(--ease), border-color .2s; }
+.gcal-d.empty { border: 0; background: none; }
+.gcal-dn { font-size: var(--fs-2xs); color: var(--muted); font-weight: 600; white-space: nowrap; }
+.gcal-d.today { border-color: rgba(var(--brand-rgb), .55); background: rgba(var(--brand-rgb), .06); }
+.gcal-d.today .gcal-dn { color: var(--brand); font-weight: 700; }
+.gcal-d.next { border-color: rgba(var(--brand-rgb), .4); }
+.gastos-full.foco .gcal-d.dim { opacity: .2; }
+.gcal-pay { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+.gcal-amt { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-2xs); letter-spacing: -.5px; }
+.gcal-dots { display: flex; gap: 3px; }
+.gcal-dots i { width: 6px; height: 6px; border-radius: 2px; }
+
+/* barra ÚNICA "¿a dónde va?" + leyenda — clicable → filtro/modo foco */
+.gx-bar { display: flex; height: 14px; border-radius: var(--r-pill); overflow: hidden; margin-top: 2px; }
+.gx-bar-seg { height: 100%; border: 0; padding: 0; cursor: pointer; transition: opacity .2s; }
+.gastos-full.foco .gx-bar-seg.dim { opacity: .22; }
+.gx-leg { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 12px; }
+.gx-leg-i { display: inline-flex; align-items: center; font-family: var(--font); font-size: var(--fs-2xs); color: var(--muted); font-weight: 600; background: none; border: 0; cursor: pointer; padding: 2px 0; transition: opacity .2s, color .2s; }
+.gx-leg-i i { width: 9px; height: 9px; border-radius: 3px; margin-right: 7px; }
+.gx-leg-i:hover, .gx-leg-i.on { color: var(--ink); }
+.gastos-full.foco .gx-leg-i.dim { opacity: .35; }
+
+/* lista editable por vencimiento (scrollea dentro de la tarjeta) */
+.gx-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -6px; padding: 0 6px; }
+.gx-g { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 12px; padding: 7px 8px; border-radius: var(--r-input); background: none; border: 0; cursor: pointer; text-align: left; font-family: var(--font); color: inherit; transition: background .15s, opacity .2s; }
+.gx-g:hover { background: rgba(255,255,255,.04); }
+.gastos-full.foco .gx-g.dim { opacity: .2; }
+.gx-day { width: 38px; text-align: center; border-radius: var(--r-input); background: rgba(255,255,255,.04); border: 1px solid var(--line); padding: 4px 0; flex: none; }
+.gx-day b { display: block; font-family: var(--font-num); font-weight: 700; font-size: var(--fs-sm); line-height: 1.05; }
+.gx-day i { font-style: normal; font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 700; }
+.gx-g.soon .gx-day { background: rgba(var(--brand-rgb), .12); border-color: rgba(var(--brand-rgb), .3); }
+.gx-g.soon .gx-day b { color: var(--brand); }
+.gx-g-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gx-g-name { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gx-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.gx-g-sub { font-size: var(--fs-2xs); color: var(--faint); font-weight: 600; padding-left: 17px; }
+.gx-g-iva { font-size: var(--fs-3xs); font-weight: 700; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: var(--r-chip); padding: 3px 7px; white-space: nowrap; }
+.gx-g-amt { font-family: var(--font-num); font-weight: 600; font-size: var(--fs-base); text-align: right; white-space: nowrap; letter-spacing: -.5px; }
+.gx-g-amt i { font-style: normal; font-size: .6em; color: var(--brand); margin-left: 2px; }
+.gx-list-foot { margin-top: 9px; padding-top: 11px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex: none; }
+.gx-add { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font); font-weight: 700; font-size: var(--fs-xs); color: var(--brand); background: rgba(var(--brand-rgb), .1); border: 1px dashed rgba(var(--brand-rgb), .4); border-radius: var(--r-pill); padding: 8px 14px; cursor: pointer; }
+.gx-add svg { width: 15px; height: 15px; }
+.gx-tot { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.gx-tot b { color: var(--ink); font-family: var(--font-num); }
+.gx-clear { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font); font-size: var(--fs-2xs); font-weight: 700; color: var(--brand); background: rgba(var(--brand-rgb), .12); border: 1px solid rgba(var(--brand-rgb), .3); border-radius: var(--r-pill); padding: 5px 11px; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
+.gx-clear svg { width: 12px; height: 12px; }
+
+/* empty-state */
+.gx-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 40px; }
+.gx-empty-ic { width: 64px; height: 64px; display: grid; place-content: center; border-radius: var(--card-r); background: rgba(var(--brand-rgb), .1); color: var(--brand); }
+.gx-empty-ic svg { width: 30px; height: 30px; }
+.gx-empty b { font-size: var(--fs-lg); font-weight: 600; }
+.gx-empty p { font-size: var(--fs-sm); color: var(--muted); max-width: 42ch; line-height: 1.5; }
+.gx-empty .gx-pill { margin-top: 6px; }
+
+/* modal alta/edición */
+.gx-scrim { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: gxScrim .2s ease; }
+@keyframes gxScrim { from { opacity: 0; } }
+.gx-modal { position: fixed; z-index: 81; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(440px, 92vw); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--card-r-lg); box-shadow: var(--shadow-modal); padding: 20px; animation: gxModal .26s var(--ease-spring); }
+@keyframes gxModal { from { opacity: 0; transform: translate(-50%, -46%) scale(.97); } }
+.gx-modal-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+.gx-modal-kick { display: block; font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .1em; color: var(--brand); font-weight: 700; margin-bottom: 3px; }
+.gx-modal-head b { font-size: var(--fs-lg); font-weight: 600; }
+.gx-x { width: 32px; height: 32px; display: grid; place-content: center; border-radius: var(--r-input); border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--muted); cursor: pointer; flex: none; }
+.gx-x svg { width: 16px; height: 16px; }
+.gx-f { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; }
+.gx-f > span { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 700; }
+.gx-f input, .gx-f select { font-family: var(--font); font-size: var(--fs-sm); color: var(--ink); background: rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: var(--r-input); padding: 10px 12px; transition: border-color .15s; }
+.gx-f input:focus, .gx-f select:focus { outline: none; border-color: rgba(var(--brand-rgb), .45); }
+.gx-cats-pick { display: flex; flex-wrap: wrap; gap: 7px; }
+.gx-cat-opt { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font); font-size: var(--fs-xs); font-weight: 600; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 6px 12px; cursor: pointer; transition: border-color .15s, color .15s; }
+.gx-cat-opt i { width: 9px; height: 9px; border-radius: 3px; }
+.gx-f-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 11px; }
+.gx-f-dia input { text-align: center; }
+.gx-prev { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; margin: 4px 0 16px; background: rgba(var(--brand-rgb), .08); border: 1px solid rgba(var(--brand-rgb), .2); border-radius: var(--r-input); }
+.gx-prev span { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.gx-prev b { font-family: var(--font-num); font-weight: 700; font-size: var(--fs-md); color: var(--brand); }
+.gx-modal-actions { display: flex; gap: 10px; }
+.gx-save { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font); font-weight: 700; font-size: var(--fs-sm); color: var(--accent-ink); background: var(--brand); border: 0; border-radius: var(--btn-radius); padding: 13px; cursor: pointer; }
+.gx-save svg { width: 17px; height: 17px; }
+.gx-del { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font); font-weight: 700; font-size: var(--fs-sm); color: var(--neg); background: rgba(255,91,91,.1); border: 1px solid rgba(255,91,91,.3); border-radius: var(--btn-radius); padding: 13px 16px; cursor: pointer; }
+.gx-del svg { width: 16px; height: 16px; }
+
+@media (max-width: 900px) { .gx-main { grid-template-columns: 1fr; } .gx-f-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 720px) { .panel-main.gastos-pane .panel-content { overflow: auto; } .gastos-full { height: auto; min-height: calc(100dvh - var(--top-h) - 74px); } .gx-list { overflow: visible; } }
+@media (prefers-reduced-motion: reduce) { .gx-scrim, .gx-modal, .gx-foco { animation: none; } }

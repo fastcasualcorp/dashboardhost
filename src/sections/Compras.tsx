@@ -85,9 +85,9 @@ export default function Compras() {
       />
 
       <Grid cols={3} className="kpi-grid">
-        <KpiTile label="Compras del mes" value={e0(total)} unit="€" delta={`${nProv} proveedores`} foot="con IVA · este mes" trend="up" />
+        <KpiTile label="Compras del mes" value={e0(total)} unit="€" delta={`${nProv} proveedores`} foot="con IVA · este mes" trend="up" tone="neg" />
         <KpiTile label="Proveedores activos" value={String(nProv)} unit="" delta={`${albaranes.length} albaranes`} foot="este mes" trend="flat" />
-        <KpiTile label="Pendiente de pago" value={e0(pendiente)} unit="€" delta={`${albaranes.filter((a) => a.estado === 'pendiente').length} facturas`} foot="por pagar" trend="down" />
+        <KpiTile label="Pendiente de pago" value={e0(pendiente)} unit="€" delta={`${albaranes.filter((a) => a.estado === 'pendiente').length} facturas`} foot="por pagar" trend="down" tone="neg" />
       </Grid>
 
       {/* DONUT ÚNICO: distribución del gasto por proveedor + leyenda con barras (mismo donut premium que Gastos) */}
@@ -103,7 +103,7 @@ export default function Compras() {
             <div className="gx-pie-wrap">
               <div className="gx-pie" style={{ ['--pie' as string]: `conic-gradient(from -90deg, ${stops})` }}>
                 <div className="gx-pie-hole">
-                  <b className="tnum">{e0(total)} €</b>
+                  <b className="tnum neg">{e0(total)} €</b>
                   <span>este mes</span>
                 </div>
               </div>

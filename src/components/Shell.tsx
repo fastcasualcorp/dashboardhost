@@ -118,6 +118,14 @@ export default function Shell() {
     return () => window.removeEventListener('rebell:plan', onPlan)
   }, [])
 
+  // Drill-down entre pestañas: cualquier vista puede pedir "llévame a X" (p.ej. el P&L del Resumen mensual
+  // → la pestaña Compras/Gastos/Coste/Ventas al pulsar una línea). Una sola puerta de navegación.
+  useEffect(() => {
+    const onGoto = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (id) setActive(id) }
+    window.addEventListener('rebell:goto', onGoto as EventListener)
+    return () => window.removeEventListener('rebell:goto', onGoto as EventListener)
+  }, [])
+
   // Escuchar caídas/recuperación de red para el aviso de modo offline.
   useEffect(() => {
     const up = () => setOnline(true)
@@ -364,7 +372,7 @@ export default function Shell() {
       />
       {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
-      <div className={'panel-main' + (active === 'caja' ? ' caja-full' : '')}>
+      <div className={'panel-main' + (active === 'caja' ? ' caja-full' : active === 'mensual' ? ' mensual-pane' : active === 'gastos' ? ' gastos-pane' : '')}>
         <header className="panel-top">
           <button className="iconbtn only-mobile" onClick={() => setDrawer(true)} aria-label="Abrir menú">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

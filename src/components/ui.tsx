@@ -116,6 +116,7 @@ export function KpiTile({
   delta,
   foot,
   trend = 'flat',
+  tone,
 }: {
   label: string
   value: ReactNode
@@ -123,12 +124,13 @@ export function KpiTile({
   delta?: string
   foot?: string
   trend?: 'up' | 'down' | 'flat'
+  tone?: 'pos' | 'neg' // pos = dinero que ENTRA (lima) · neg = dinero que SALE / gasto (rojo)
 }) {
   return (
     <div className="panel-card pad kpi-tile">
       <div className="k">{label}</div>
       <div className="kpi-body">
-        <div className="v tnum">
+        <div className={'v tnum' + (tone ? ' v-' + tone : '')}>
           <CountValue value={value} />
           {unit && <small> {unit}</small>}
         </div>
@@ -210,7 +212,7 @@ export function Money({
 }: {
   value: ReactNode
   unit?: string
-  tone?: 'ink' | 'muted'
+  tone?: 'ink' | 'muted' | 'pos' | 'neg' // pos = suma/ingreso (verde) · neg = gasto/negativo (rojo)
   className?: string
 }) {
   return (
