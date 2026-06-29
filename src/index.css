@@ -1721,6 +1721,38 @@ img { -webkit-user-drag: none; -khtml-user-drag: none; user-select: none; -webki
 .sp-card p { color: var(--muted); font-size: var(--fs-xs); line-height: 1.55; }
 .sp-tag { display: inline-block; margin-top: 18px; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--gold); background: rgba(var(--brand-rgb),.1); border: 1px solid rgba(var(--brand-rgb),.22); padding: 5px 12px; border-radius: var(--r-pill); }
 
+/* ════ PRIMEROS PASOS · semáforo de onboarding (solo modo real) ════
+   Panel a SU tamaño: lista corta, NO se estira a pantalla completa (hueco abajo = correcto). */
+.pp { max-width: 720px; }
+.pp-hero { display: flex; align-items: center; gap: clamp(18px, 3vw, 34px); padding: clamp(18px, 2.4vw, 28px) clamp(20px, 2.6vw, 30px); margin-bottom: 16px; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--line); border-radius: var(--card-r-lg); box-shadow: 0 2px 10px -4px rgba(0,0,0,.4); }
+.pp-hero .donut { width: clamp(86px, 14vw, 118px); }
+.pp-hero-txt h1 { font-family: var(--font-display); font-weight: var(--title-weight, 600); font-size: clamp(21px, 3.2vw, 30px); letter-spacing: -.5px; line-height: 1.08; }
+.pp-hero-txt p { max-width: 42ch; margin-top: 8px; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }
+
+.pp-list { display: flex; flex-direction: column; gap: 9px; }
+.pp-step { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 14px; width: 100%; padding: 13px 15px; text-align: left; font-family: var(--font); color: var(--ink); background: color-mix(in srgb, var(--surface) 55%, transparent); border: 1px solid var(--line); border-radius: var(--card-r); cursor: pointer; transition: transform .16s var(--ease), border-color .2s, background .2s; }
+.pp-step:hover { transform: translateY(-1px); border-color: var(--line-strong); background: color-mix(in srgb, var(--surface) 78%, transparent); }
+.pp-step:active { transform: translateY(0); }
+.pp-emo { width: 46px; height: 46px; display: grid; place-items: center; flex: none; font-size: var(--fs-lg); background: rgba(255,255,255,.045); border: 1px solid var(--line); border-radius: var(--r-input); }
+.pp-step.done .pp-emo { background: rgba(var(--brand-rgb),.12); border-color: rgba(var(--brand-rgb),.28); }
+.pp-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pp-main b { font-size: var(--fs-base); font-weight: 650; letter-spacing: -.2px; }
+.pp-main span { font-size: var(--fs-xs); color: var(--muted); }
+.pp-step.done .pp-main span { color: var(--pos); font-weight: 600; }
+.pp-status { flex: none; }
+.pp-check { display: grid; place-items: center; width: 28px; height: 28px; font-size: var(--fs-sm); font-weight: 800; color: var(--pos); background: rgba(var(--brand-rgb),.15); border-radius: 50%; }
+.pp-cta { display: inline-flex; align-items: center; padding: 7px 13px; font-size: var(--fs-xs); font-weight: 700; color: var(--gold); white-space: nowrap; background: rgba(var(--brand-rgb),.12); border: 1px solid rgba(var(--brand-rgb),.24); border-radius: var(--r-pill); transition: background .2s; }
+.pp-step:hover .pp-cta { background: rgba(var(--brand-rgb),.2); }
+
+/* reveal one-shot en cascada (solo la 1ª vez en la sesión; respeta reduced-motion) */
+.pp-rev .pp-step { animation: ppIn .42s var(--ease) both; animation-delay: var(--d, 0ms); }
+@keyframes ppIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .pp-rev .pp-step { animation: none; } }
+
+/* badge de % en el item de menú "Primeros pasos" */
+.ni-onbpct { margin-left: auto; padding: 2px 7px; font-size: var(--fs-3xs); font-weight: 800; color: var(--gold); background: rgba(var(--brand-rgb),.16); border-radius: var(--r-pill); font-variant-numeric: tabular-nums; }
+.nav-item.on .ni-onbpct { background: rgba(var(--brand-rgb),.24); }
+
 /* ════ TPV funcional ════ */
 .tpv-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 @media (min-width: 900px) { .tpv-grid { grid-template-columns: 1.7fr 1fr; align-items: start; } }

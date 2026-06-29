@@ -13,6 +13,7 @@ import { getAccesos } from './acceso'
 import { cierreDia } from './cierre'
 import { VENTAS_MES, salesForMonth, salesForDay } from './data'
 import { cuentaTotal } from './cuentas'
+import { onboardingPct, onboardingComplete, pasosOnboarding } from './onboarding'
 
 /* ════════════════════════════════════════════════════════════════════════════
    ESCUDO "real = 0" — el guardrail anti-dato-falso (idea de Juan, 29-jun).
@@ -96,5 +97,11 @@ describe('modo real = sin datos falsos (un local nuevo arranca vacío)', () => {
   it('Cuentas de mesa: cualquier mesa a 0 €', () => {
     expect(cuentaTotal('1')).toBe(0)
     expect(cuentaTotal('cualquiera')).toBe(0)
+  })
+
+  it('Onboarding: 0% y todos los pasos pendientes (coherente con "real=0")', () => {
+    expect(onboardingPct()).toBe(0)
+    expect(onboardingComplete()).toBe(false)
+    expect(pasosOnboarding().every((p) => !p.hecho)).toBe(true)
   })
 })

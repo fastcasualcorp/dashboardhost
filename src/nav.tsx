@@ -6,6 +6,14 @@ export type NavGroup = { g: string; items: NavItem[]; accent?: boolean }
 
 export const NAV: NavGroup[] = [
   {
+    // Solo se muestra en modo REAL mientras falte algo por configurar (Shell lo filtra). Es el
+    // semáforo de onboarding: en demo NO aparece (el escaparate ya está lleno). (Juan, 29-jun)
+    g: 'Empieza aquí',
+    items: [
+      { id: 'primeros', t: 'Primeros pasos', s: 'Configura tu local', desc: 'Una lista guiada para poner tu local a punto: gastos fijos, plano de sala, equipo, coste de platos y almacén. Te dice qué tienes y qué te falta, y te lleva a rellenarlo.' },
+    ],
+  },
+  {
     g: 'Operación',
     items: [
       { id: 'caja', t: 'Caja diaria', s: 'Cierre del día', desc: 'El laboratorio de cierre del día: total, turnos, cuadre y la secuencia de recompensa al cerrar.' },
@@ -60,6 +68,7 @@ export const itemById = (id: string) => ALL_ITEMS.find((i) => i.id === id)
 
 /* ── iconos (línea, 24×24, stroke currentColor) ── */
 const PATHS: Record<string, ReactNode> = {
+  primeros: <><path d="M5 13l4 4L19 7" /><path d="M4 20h16" /></>,
   caja: <><path d="M3 8h18M3 8l1.5-3h15L21 8M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8" /><path d="M9 12h6" /></>,
   resumen: <><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></>,
   pedidos: <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18M16 10a4 4 0 0 1-8 0" /></>,

@@ -18,6 +18,7 @@ import DeployBadge from './DeployBadge'
 import LogoMark from './LogoMark'
 import { beastById } from '../lib/beasts'
 import { isDemoMode, setDemoMode } from '../lib/demo'
+import { onboardingComplete, onboardingPct } from '../lib/onboarding'
 import { getPlan, canUpgrade, planName, type Plan } from '../lib/plan'
 import { renderSection } from '../sections/registry'
 import { applySavedDesign } from '../lib/designTokens'
@@ -26,6 +27,7 @@ const Canon = lazy(() => import('../sections/Canon'))
 
 // Emoji animado por sección del menú lateral (bob sutil; ver .ni-emo en index.css).
 const NAV_EMOJI: Record<string, string> = {
+  primeros: '🚀',
   caja: '💰', tpv: '🛒', salon: '🪑', pedidos: '🛵', kds: '🍳',
   mapa: '🛰️', resumen: '📊', cuadro: '📈', mensual: '🗓️', gastos: '🧾',
   ventas: '📅', ventastpv: '📖', empleados: '👥', horarios: '⏰', coste: '💶',
@@ -306,6 +308,11 @@ export default function Shell() {
   const LOCAL_CITY: Record<string, string> = { bertamirans: 'A Coruña · España', madrid: 'Madrid · España', barcelona: 'Barcelona · España', central: 'Sede central · España' }
   const localCity = LOCAL_CITY[localId] || 'España'
 
+  // Semáforo de onboarding: SOLO en modo real y mientras falte algo (en demo el escaparate ya está
+  // lleno). El % se recalcula en cada render → sube según el cliente rellena sus datos. (Juan, 29-jun)
+  const showOnboarding = !isDemoMode() && !onboardingComplete()
+  const onbPct = onboardingPct()
+
   return (
     <div className="app" data-theme={theme} data-accent={accent} data-resizing={resizing ? '1' : undefined} style={{ ['--side-w' as string]: sideW + 'px' }}>
       <div className="bg-aura" />
@@ -339,8 +346,8 @@ export default function Shell() {
           {/* Texto "REBELL · Bertamiráns" QUITADO: ya está en la cabecera de Caja, y el logo nuevo lo incluirá (Juan 28-jun). */}
         </button>
         <nav className="side-nav">
-          {NAV.map((group) => (
-            <div className="nav-group" key={group.g}>
+          {NAV.filter((group) => group.g !== 'Empieza aquí' || showOnboarding).map((group) => (
+            <div className={'nav-group' + (group.g === 'Empieza aquí' ? ' ng-onb' : '')} key={group.g}>
               <div className={'ng-label' + (group.accent ? ' ng-ia' : '')}>
                 {group.accent ? <><span className="ng-ia-spark">✦</span>{group.g}</> : group.g}
               </div>
@@ -348,7 +355,9 @@ export default function Shell() {
                 <button key={it.id} className={'nav-item' + (active === it.id ? ' on' : '')} onClick={() => selectSection(it.id)}>
                   <span className="ni-ic ni-emo" aria-hidden="true">{NAV_EMOJI[it.id] || '•'}</span>
                   <span className="ni-txt">{it.t}</span>
-                  {it.tag ? (
+                  {it.id === 'primeros' ? (
+                    <span className="ni-onbpct">{onbPct}%</span>
+                  ) : it.tag ? (
                     <span className={'ni-tag' + (it.alert ? ' pulse' : '')}>{it.tag}</span>
                   ) : (
                     it.alert && <span className={'ni-dot a-' + it.alert} />
